@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
 import RunnerMap from '@/components/RunnerMap';
 import { fetchLiveWeather, WeatherData } from '@/lib/weather';
 import {
@@ -39,6 +40,7 @@ import {
   Gauge,
   Navigation2,
   SlidersHorizontal,
+  Lock,
 } from 'lucide-react';
 
 const PRESETS = [
@@ -134,6 +136,12 @@ export default function RunnerApp() {
     if (user.weightKg) {
       setWeightKg(user.weightKg);
     }
+    // Sync with Admin panel registered athletes roster
+    fetch('/api/admin/athletes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(user),
+    }).catch(() => {});
   };
 
   const handleLogout = () => {
@@ -247,6 +255,14 @@ export default function RunnerApp() {
           completedRunsCount: (prev.completedRunsCount || 0) + 1,
         };
         saveGoogleUser(updated);
+
+        // Sync with admin roster
+        fetch('/api/admin/athletes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updated),
+        }).catch(() => {});
+
         return updated;
       });
     }
@@ -451,6 +467,13 @@ export default function RunnerApp() {
             >
               <Crosshair className={`w-4 h-4 text-emerald-400 ${isCheckingGps ? 'animate-spin' : ''}`} />
             </button>
+            <Link
+              href="/admin"
+              className="p-1 sm:p-1.5 rounded-xl text-gray-400 hover:text-cyan-400 hover:bg-gray-800 transition flex items-center justify-center"
+              title="Панель администратора (boss)"
+            >
+              <Lock className="w-3.5 h-3.5" />
+            </Link>
           </div>
 
           {/* Google Sign-in / Profile Button */}
