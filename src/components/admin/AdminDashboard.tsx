@@ -21,6 +21,7 @@ import {
   RefreshCw,
   Mail,
   Calendar,
+  Volume2,
 } from 'lucide-react';
 
 interface RegisteredAthlete {
@@ -57,6 +58,19 @@ export default function AdminDashboard() {
   });
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [banNotification, setBanNotification] = useState<string | null>(null);
+
+  const playBanSound = () => {
+    try {
+      const audio = new Audio('/sounds/ban.mp3');
+      audio.volume = 1.0;
+      audio.play().catch((err) => {
+        console.warn('Audio play error:', err);
+      });
+    } catch (e) {
+      console.warn('Audio playback error:', e);
+    }
+  };
 
   // Check saved boss session
   useEffect(() => {
@@ -122,6 +136,11 @@ export default function AdminDashboard() {
 
   const handleToggleBan = async (athleteId: string, currentBanned: boolean) => {
     try {
+      // If we are banning an athlete (not unbanning), play the custom boss sound!
+      if (!currentBanned) {
+        playBanSound();
+      }
+
       const res = await fetch('/api/admin/athletes', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -131,6 +150,12 @@ export default function AdminDashboard() {
         setAthletes((prev) =>
           prev.map((a) => (a.id === athleteId ? { ...a, isBanned: !currentBanned } : a)),
         );
+
+        if (!currentBanned) {
+          const target = athletes.find((a) => a.id === athleteId);
+          setBanNotification(`🔨 БАН ВЫДАН: ${target?.name || 'Пользователь'} заблокирован шефом!`);
+          setTimeout(() => setBanNotification(null), 4000);
+        }
       }
     } catch (e: any) {
       alert(`Ошибка: ${e.message}`);
@@ -271,6 +296,15 @@ export default function AdminDashboard() {
           </Link>
 
           <button
+            onClick={playBanSound}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-purple-950/60 hover:bg-purple-900 border border-purple-500/40 text-purple-300 text-xs font-bold transition"
+            title="Проверить коронный звук бана шефа"
+          >
+            <Volume2 className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Звук бана</span>
+          </button>
+
+          <button
             onClick={fetchAthletes}
             disabled={isLoading}
             className="p-2 rounded-xl bg-gray-900 hover:bg-gray-800 border border-gray-800 text-gray-400 hover:text-white transition"
@@ -291,6 +325,20 @@ export default function AdminDashboard() {
 
       {/* Main Container */}
       <div className="max-w-6xl mx-auto space-y-6">
+        {banNotification && (
+          <div className="bg-gradient-to-r from-rose-950 via-rose-900 to-black border-2 border-rose-500 text-rose-200 px-5 py-3 rounded-2xl shadow-2xl flex items-center justify-between animate-bounce">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">⚡</span>
+              <span className="font-black text-sm tracking-wide">{banNotification}</span>
+            </div>
+            <button
+              onClick={() => setBanNotification(null)}
+              className="text-xs text-rose-400 hover:text-white px-2 py-1 bg-rose-950 rounded-lg"
+            >
+              ✕
+            </button>
+          </div>
+        )}
         {/* KPI Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <div className="bg-[#0E1420] border border-gray-800 p-4 rounded-2xl">
