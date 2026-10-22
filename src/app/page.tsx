@@ -15,6 +15,9 @@ import {
   GPS_ACCURACY_THRESHOLD_METERS,
   GpsStatus,
 } from '@/lib/gps';
+import { GoogleUser, getSavedGoogleUser, saveGoogleUser } from '@/lib/auth';
+import GoogleAuthModal from '@/components/auth/GoogleAuthModal';
+import UserProfileButton from '@/components/auth/UserProfileButton';
 import {
   Flame,
   CloudRain,
@@ -54,6 +57,10 @@ const PACES = [
 ];
 
 export default function RunnerApp() {
+  // Google User State
+  const [googleUser, setGoogleUser] = useState<GoogleUser | null>(null);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
+
   // GPS & Location State
   const [startPos, setStartPos] = useState<[number, number]>([41.311081, 69.279737]);
   const [gpsStatus, setGpsStatus] = useState<GpsStatus | null>(null);
@@ -102,8 +109,17 @@ export default function RunnerApp() {
   };
 
   useEffect(() => {
+    // Load saved athlete profile & Google user
+    const savedUser = getSavedGoogleUser();
+    if (savedUser) {
+      setGoogleUser(savedUser);
+      if (savedUser.weightKg) {
+        setWeightKg(savedUser.weightKg);
+      }
+    }
+
     const savedWeight = localStorage.getItem('runner_weight');
-    if (savedWeight) {
+    if (savedWeight && !savedUser?.weightKg) {
       setWeightKg(parseFloat(savedWeight));
     }
     runStrictGpsVerification();
@@ -112,6 +128,18 @@ export default function RunnerApp() {
       stopTracking();
     };
   }, []);
+
+  const handleUserLogin = (user: GoogleUser) => {
+    setGoogleUser(user);
+    if (user.weightKg) {
+      setWeightKg(user.weightKg);
+    }
+  };
+
+  const handleLogout = () => {
+    setGoogleUser(null);
+    saveGoogleUser(null);
+  };
 
   // Fetch Weather on position change
   useEffect(() => {
@@ -207,6 +235,22 @@ export default function RunnerApp() {
 
   const stopTracking = () => {
     setIsTrackingActive(false);
+
+    // Save run stats to Google User profile if active
+    if (distanceTraversedKm > 0.05) {
+      setGoogleUser((prev) => {
+        if (!prev) return null;
+        const updated: GoogleUser = {
+          ...prev,
+          totalCaloriesBurned: (prev.totalCaloriesBurned || 0) + activeCaloriesBurned,
+          totalKmRun: (prev.totalKmRun || 0) + distanceTraversedKm,
+          completedRunsCount: (prev.completedRunsCount || 0) + 1,
+        };
+        saveGoogleUser(updated);
+        return updated;
+      });
+    }
+
     if (watchIdRef.current !== null && navigator.geolocation) {
       navigator.geolocation.clearWatch(watchIdRef.current);
       watchIdRef.current = null;
@@ -367,45 +411,54 @@ export default function RunnerApp() {
           </div>
         </div>
 
-        {/* Map Styles & GPS Target */}
-        <div className="pointer-events-auto flex items-center gap-1 sm:gap-1.5 bg-black/85 backdrop-blur-md border border-gray-800 p-1 sm:p-1.5 rounded-2xl shadow-2xl">
-          <button
-            onClick={() => setMapStyle('dark')}
-            className={`px-2 sm:px-2.5 py-1 rounded-xl text-[11px] font-bold transition flex items-center gap-1 ${
-              mapStyle === 'dark' ? 'bg-emerald-500 text-black shadow' : 'text-gray-400 hover:text-white'
-            }`}
-            title="Тёмная карта"
-          >
-            <span>🌙</span>
-            <span className="hidden md:inline">Тёмная</span>
-          </button>
-          <button
-            onClick={() => setMapStyle('satellite')}
-            className={`px-2 sm:px-2.5 py-1 rounded-xl text-[11px] font-bold transition flex items-center gap-1 ${
-              mapStyle === 'satellite' ? 'bg-emerald-500 text-black shadow' : 'text-gray-400 hover:text-white'
-            }`}
-            title="Спутник"
-          >
-            <span>🛰</span>
-            <span className="hidden md:inline">Спутник</span>
-          </button>
-          <button
-            onClick={() => setMapStyle('streets')}
-            className={`px-2 sm:px-2.5 py-1 rounded-xl text-[11px] font-bold transition flex items-center gap-1 ${
-              mapStyle === 'streets' ? 'bg-emerald-500 text-black shadow' : 'text-gray-400 hover:text-white'
-            }`}
-            title="Улицы"
-          >
-            <span>🗺</span>
-            <span className="hidden md:inline">Улицы</span>
-          </button>
-          <button
-            onClick={runStrictGpsVerification}
-            className="p-1 sm:p-1.5 rounded-xl text-gray-300 hover:text-emerald-400 hover:bg-gray-800 transition flex items-center justify-center"
-            title="Определить точный GPS"
-          >
-            <Crosshair className={`w-4 h-4 text-emerald-400 ${isCheckingGps ? 'animate-spin' : ''}`} />
-          </button>
+        {/* Map Styles & GPS Target + Google User */}
+        <div className="pointer-events-auto flex items-center gap-1.5 sm:gap-2">
+          <div className="flex items-center gap-1 sm:gap-1.5 bg-black/85 backdrop-blur-md border border-gray-800 p-1 sm:p-1.5 rounded-2xl shadow-2xl">
+            <button
+              onClick={() => setMapStyle('dark')}
+              className={`px-2 sm:px-2.5 py-1 rounded-xl text-[11px] font-bold transition flex items-center gap-1 ${
+                mapStyle === 'dark' ? 'bg-emerald-500 text-black shadow' : 'text-gray-400 hover:text-white'
+              }`}
+              title="Тёмная карта"
+            >
+              <span>🌙</span>
+              <span className="hidden md:inline">Тёмная</span>
+            </button>
+            <button
+              onClick={() => setMapStyle('satellite')}
+              className={`px-2 sm:px-2.5 py-1 rounded-xl text-[11px] font-bold transition flex items-center gap-1 ${
+                mapStyle === 'satellite' ? 'bg-emerald-500 text-black shadow' : 'text-gray-400 hover:text-white'
+              }`}
+              title="Спутник"
+            >
+              <span>🛰</span>
+              <span className="hidden md:inline">Спутник</span>
+            </button>
+            <button
+              onClick={() => setMapStyle('streets')}
+              className={`px-2 sm:px-2.5 py-1 rounded-xl text-[11px] font-bold transition flex items-center gap-1 ${
+                mapStyle === 'streets' ? 'bg-emerald-500 text-black shadow' : 'text-gray-400 hover:text-white'
+              }`}
+              title="Улицы"
+            >
+              <span>🗺</span>
+              <span className="hidden md:inline">Улицы</span>
+            </button>
+            <button
+              onClick={runStrictGpsVerification}
+              className="p-1 sm:p-1.5 rounded-xl text-gray-300 hover:text-emerald-400 hover:bg-gray-800 transition flex items-center justify-center"
+              title="Определить точный GPS"
+            >
+              <Crosshair className={`w-4 h-4 text-emerald-400 ${isCheckingGps ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
+
+          {/* Google Sign-in / Profile Button */}
+          <UserProfileButton
+            user={googleUser}
+            onOpenAuth={() => setIsAuthModalOpen(true)}
+            onLogout={handleLogout}
+          />
         </div>
       </header>
 
@@ -827,6 +880,14 @@ export default function RunnerApp() {
           </div>
         </div>
       )}
+
+      {/* Google Authentication Modal */}
+      <GoogleAuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        onUserLogin={handleUserLogin}
+        currentUserWeight={weightKg}
+      />
     </div>
   );
 }
