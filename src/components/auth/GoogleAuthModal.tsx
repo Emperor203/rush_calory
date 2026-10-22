@@ -1,8 +1,22 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { GoogleUser, saveGoogleUser, decodeGoogleJwt } from '@/lib/auth';
-import { X, Check, Sparkles, User, Mail, ShieldCheck } from 'lucide-react';
+import {
+  GoogleUser,
+  getStoredGoogleClientId,
+  saveStoredGoogleClientId,
+  triggerRealGoogleOAuth,
+  saveGoogleUser,
+} from '@/lib/auth';
+import {
+  X,
+  ExternalLink,
+  ShieldCheck,
+  AlertCircle,
+  Key,
+  CheckCircle2,
+  Sparkles,
+} from 'lucide-react';
 
 interface GoogleAuthModalProps {
   isOpen: boolean;
@@ -40,70 +54,57 @@ export default function GoogleAuthModal({
   onUserLogin,
   currentUserWeight = 70,
 }: GoogleAuthModalProps) {
-  const [customName, setCustomName] = useState('');
-  const [customEmail, setCustomEmail] = useState('');
-  const [isCustomOpen, setIsCustomOpen] = useState(false);
+  const [clientId, setClientId] = useState<string>('');
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [showConfig, setShowConfig] = useState<boolean>(false);
 
-  const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-
-  // Load Google Identity Services script if Client ID is configured
   useEffect(() => {
-    if (!googleClientId || typeof window === 'undefined') return;
-
-    const script = document.createElement('script');
-    script.src = 'https://accounts.google.com/gsi/client';
-    script.async = true;
-    script.defer = true;
-    script.onload = () => {
-      const google = (window as any).google;
-      if (google?.accounts?.id) {
-        google.accounts.id.initialize({
-          client_id: googleClientId,
-          callback: (response: any) => {
-            const decoded = decodeGoogleJwt(response.credential);
-            if (decoded && decoded.email) {
-              const fullUser: GoogleUser = {
-                id: decoded.id || `google-${Date.now()}`,
-                name: decoded.name || 'Google Athlete',
-                email: decoded.email,
-                avatar:
-                  decoded.avatar ||
-                  `https://api.dicebear.com/7.x/bottts/svg?seed=${decoded.email}`,
-                weightKg: currentUserWeight,
-                totalCaloriesBurned: 0,
-                totalKmRun: 0,
-                completedRunsCount: 0,
-                joinedAt: new Date().toISOString(),
-              };
-              saveGoogleUser(fullUser);
-              onUserLogin(fullUser);
-              onClose();
-            }
-          },
-        });
-        const container = document.getElementById('google-native-signin-btn');
-        if (container) {
-          google.accounts.id.renderButton(container, {
-            theme: 'filled_black',
-            size: 'large',
-            shape: 'pill',
-            width: 320,
-          });
-        }
-      }
-    };
-    document.body.appendChild(script);
-
-    return () => {
-      if (document.body.contains(script)) {
-        document.body.removeChild(script);
-      }
-    };
-  }, [googleClientId]);
+    const existing = getStoredGoogleClientId();
+    if (existing) {
+      setClientId(existing);
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
-  const handleQuickSignIn = (name: string, email: string) => {
+  const handleLaunchRealGoogle = (targetClientId: string) => {
+    if (!targetClientId) {
+      setShowConfig(true);
+      setError('Для авторизации на серверах Google укажите ваш Google Client ID');
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    saveStoredGoogleClientId(targetClientId);
+
+    triggerRealGoogleOAuth(
+      targetClientId,
+      (user) => {
+        setIsLoading(false);
+        onUserLogin(user);
+        onClose();
+      },
+      (err) => {
+        setIsLoading(false);
+        setError(err);
+      },
+      currentUserWeight,
+    );
+  };
+
+  const handleSaveAndLaunch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!clientId.trim()) {
+      setError('Пожалуйста, вставьте полученный Google Client ID');
+      return;
+    }
+    handleLaunchRealGoogle(clientId.trim());
+  };
+
+  const handleDemoSignIn = (email: string, name: string) => {
     const user: GoogleUser = {
       id: `google-${Date.now()}`,
       name,
@@ -120,25 +121,20 @@ export default function GoogleAuthModal({
     onClose();
   };
 
-  const handleCustomSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!customEmail) return;
-    const name = customName.trim() || customEmail.split('@')[0];
-    handleQuickSignIn(name, customEmail.toLowerCase());
-  };
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in safe-bottom">
-      <div className="relative w-full max-w-sm bg-[#0E1420] border border-gray-800 rounded-3xl p-6 text-white shadow-2xl space-y-5">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fade-in safe-bottom">
+      <div className="relative w-full max-w-md bg-[#0E1420] border border-gray-800 rounded-3xl p-6 text-white shadow-2xl space-y-5">
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-gray-800">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-white flex items-center justify-center shadow">
+            <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center shadow">
               <GoogleIcon className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-black text-sm text-white">Вход через Google</h3>
-              <p className="text-[10px] text-gray-400 font-mono">Синхронизация профиля атлета</p>
+              <h3 className="font-black text-sm text-white">Вход через аккаунт Google</h3>
+              <p className="text-[10px] text-gray-400 font-mono">
+                Официальный Google OAuth 2.0
+              </p>
             </div>
           </div>
           <button
@@ -149,127 +145,126 @@ export default function GoogleAuthModal({
           </button>
         </div>
 
-        {/* Real Google OAuth button if client ID configured */}
-        {googleClientId && (
-          <div className="flex flex-col items-center justify-center py-2">
-            <div id="google-native-signin-btn" />
-            <div className="text-[10px] text-gray-500 mt-2">или быстрый вход:</div>
+        {error && (
+          <div className="p-3 rounded-2xl bg-rose-950/80 border border-rose-500/50 text-rose-300 text-xs flex items-start gap-2">
+            <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+            <div className="space-y-0.5">{error}</div>
           </div>
         )}
 
-        {/* Quick Instant Google Accounts */}
-        <div className="space-y-2">
-          <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wide">
-            Выберите аккаунт Google:
-          </label>
-
+        {/* Big Official Google Sign-In Button */}
+        <div className="space-y-3">
           <button
             type="button"
-            onClick={() => handleQuickSignIn('Abdurahmon', 'farmonovabdurahmon7@gmail.com')}
-            className="w-full p-3 rounded-2xl bg-gray-900/90 hover:bg-gray-850 border border-gray-800 hover:border-emerald-500/50 text-left flex items-center justify-between transition group active:scale-98"
+            disabled={isLoading}
+            onClick={() => handleLaunchRealGoogle(clientId)}
+            className="w-full py-3.5 px-4 bg-white hover:bg-gray-100 text-black font-black text-sm rounded-2xl shadow-xl transition flex items-center justify-center gap-3 active:scale-98 disabled:opacity-50"
           >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-emerald-500 to-cyan-500 flex items-center justify-center text-black font-black text-sm shadow">
-                A
-              </div>
-              <div className="truncate">
-                <div className="font-bold text-xs text-white group-hover:text-emerald-400 transition truncate">
-                  Abdurahmon
-                </div>
-                <div className="text-[11px] text-gray-400 truncate">
-                  farmonovabdurahmon7@gmail.com
-                </div>
-              </div>
-            </div>
-            <GoogleIcon className="w-4 h-4 shrink-0 opacity-80 group-hover:opacity-100" />
+            {isLoading ? (
+              <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <>
+                <GoogleIcon className="w-5 h-5" />
+                <span>Открыть настоящее окно Google</span>
+              </>
+            )}
           </button>
 
-          <button
-            type="button"
-            onClick={() => handleQuickSignIn('Calorie Athlete', 'runner@gmail.com')}
-            className="w-full p-3 rounded-2xl bg-gray-900/90 hover:bg-gray-850 border border-gray-800 hover:border-emerald-500/50 text-left flex items-center justify-between transition group active:scale-98"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-500 to-indigo-600 flex items-center justify-center text-white font-black text-sm shadow">
-                CA
-              </div>
-              <div className="truncate">
-                <div className="font-bold text-xs text-white group-hover:text-cyan-400 transition truncate">
-                  Calorie Athlete
-                </div>
-                <div className="text-[11px] text-gray-400 truncate">
-                  runner@gmail.com
-                </div>
-              </div>
-            </div>
-            <GoogleIcon className="w-4 h-4 shrink-0 opacity-80 group-hover:opacity-100" />
-          </button>
+          <p className="text-[11px] text-gray-400 text-center leading-relaxed">
+            При нажатии откроется официальное защищённое всплывающее окно{' '}
+            <span className="font-mono text-cyan-300">accounts.google.com</span> для выбора вашего аккаунта.
+          </p>
         </div>
 
-        {/* Custom Google Email Collapse */}
-        <div className="pt-2 border-t border-gray-800">
-          {!isCustomOpen ? (
+        {/* Client ID Configuration Section */}
+        <div className="pt-3 border-t border-gray-800">
+          {!showConfig ? (
             <button
               type="button"
-              onClick={() => setIsCustomOpen(true)}
-              className="w-full text-center text-[11px] text-gray-400 hover:text-emerald-400 font-semibold transition"
+              onClick={() => setShowConfig(true)}
+              className="w-full flex items-center justify-between text-xs text-gray-400 hover:text-emerald-400 py-1 font-semibold transition"
             >
-              + Войти с другим адресом @gmail.com
+              <span className="flex items-center gap-1.5">
+                <Key className="w-3.5 h-3.5" />
+                {clientId ? 'Изменить Google Client ID' : 'Как подключить настоящий Google Client ID?'}
+              </span>
+              <span className="text-[10px] text-emerald-400">
+                {clientId ? 'Настроен ✓' : 'Инструкция'}
+              </span>
             </button>
           ) : (
-            <form onSubmit={handleCustomSubmit} className="space-y-2.5 text-xs">
-              <div>
-                <label className="block text-gray-400 text-[10px] mb-1">Имя пользователя</label>
-                <div className="relative">
-                  <User className="w-3.5 h-3.5 text-gray-500 absolute left-2.5 top-2.5" />
-                  <input
-                    type="text"
-                    placeholder="Например: Иван"
-                    value={customName}
-                    onChange={(e) => setCustomName(e.target.value)}
-                    className="w-full bg-gray-900 border border-gray-800 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
-                  />
+            <form onSubmit={handleSaveAndLaunch} className="space-y-3 bg-gray-900/80 p-3.5 rounded-2xl border border-gray-800 text-xs">
+              <div className="space-y-1 text-[11px] text-gray-300">
+                <div className="font-bold text-white flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+                  Как получить Client ID от Google (бесплатно за 1 минуту):
                 </div>
+                <ol className="list-decimal pl-4 space-y-0.5 text-gray-400">
+                  <li>
+                    Откройте{' '}
+                    <a
+                      href="https://console.cloud.google.com/apis/credentials"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-cyan-400 underline inline-flex items-center gap-0.5"
+                    >
+                      Google Cloud Console <ExternalLink className="w-2.5 h-2.5" />
+                    </a>
+                  </li>
+                  <li>Нажмите <strong>Создать учетные данные</strong> → <strong>Идентификатор клиента OAuth</strong> (тип: Веб-приложение).</li>
+                  <li>В «Разрешенные источники JavaScript» добавьте: <code className="text-white bg-black px-1 rounded">http://localhost:3000</code></li>
+                  <li>Скопируйте <strong>Идентификатор клиента</strong> (Client ID) и вставьте ниже:</li>
+                </ol>
               </div>
 
               <div>
-                <label className="block text-gray-400 text-[10px] mb-1">Google Email</label>
-                <div className="relative">
-                  <Mail className="w-3.5 h-3.5 text-gray-500 absolute left-2.5 top-2.5" />
-                  <input
-                    type="email"
-                    required
-                    placeholder="yourname@gmail.com"
-                    value={customEmail}
-                    onChange={(e) => setCustomEmail(e.target.value)}
-                    className="w-full bg-gray-900 border border-gray-800 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
-                  />
-                </div>
+                <label className="block text-[10px] text-gray-400 font-bold mb-1 uppercase">
+                  Ваш Google Client ID:
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="xxxx-xxxxxxxx.apps.googleusercontent.com"
+                  value={clientId}
+                  onChange={(e) => setClientId(e.target.value)}
+                  className="w-full bg-black/80 border border-gray-700 rounded-xl px-3 py-2 text-xs font-mono text-white focus:outline-none focus:border-cyan-400"
+                />
               </div>
 
-              <div className="flex gap-2 pt-1">
+              <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={() => setIsCustomOpen(false)}
-                  className="flex-1 py-2 bg-gray-900 hover:bg-gray-800 rounded-xl text-gray-400 text-[11px] transition"
+                  onClick={() => setShowConfig(false)}
+                  className="py-2 px-3 rounded-xl bg-gray-800 text-gray-400 text-xs hover:text-white transition"
                 >
-                  Отмена
+                  Скрыть
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2 bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-[11px] rounded-xl transition"
+                  className="flex-1 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-black text-xs transition"
                 >
-                  Войти
+                  Сохранить и войти через Google
                 </button>
               </div>
             </form>
           )}
         </div>
 
+        {/* Quick Demo Login Option if user wants to test before opening cloud console */}
+        <div className="pt-2 border-t border-gray-800 text-center">
+          <button
+            type="button"
+            onClick={() => handleDemoSignIn('farmonovabdurahmon7@gmail.com', 'Abdurahmon')}
+            className="text-[11px] text-gray-500 hover:text-gray-300 transition"
+          >
+            ⚡ Быстрый тест в 1 клик без Client ID (Abdurahmon)
+          </button>
+        </div>
+
         {/* Security badge */}
-        <div className="flex items-center justify-center gap-1.5 text-[10px] text-gray-500 pt-1">
+        <div className="flex items-center justify-center gap-1.5 text-[10px] text-gray-500">
           <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
-          <span>Безопасная аутентификация Google OAuth 2.0</span>
+          <span>Прямой запрос к https://accounts.google.com</span>
         </div>
       </div>
     </div>
