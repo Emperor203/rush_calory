@@ -32,12 +32,15 @@ export function saveGoogleUser(user: GoogleUser | null): void {
   }
 }
 
+export const DEFAULT_GOOGLE_CLIENT_ID =
+  '551041011149-b1u7ujpt1ni7psmvda2jup81vsd4qi29.apps.googleusercontent.com';
+
 export function getStoredGoogleClientId(): string {
-  if (typeof window === 'undefined') return '';
+  if (typeof window === 'undefined') return DEFAULT_GOOGLE_CLIENT_ID;
   return (
     process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ||
     localStorage.getItem(CLIENT_ID_KEY) ||
-    ''
+    DEFAULT_GOOGLE_CLIENT_ID
   );
 }
 

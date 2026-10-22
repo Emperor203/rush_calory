@@ -457,6 +457,7 @@ export default function RunnerApp() {
           <UserProfileButton
             user={googleUser}
             onOpenAuth={() => setIsAuthModalOpen(true)}
+            onUserLogin={handleUserLogin}
             onLogout={handleLogout}
           />
         </div>

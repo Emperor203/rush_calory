@@ -1,32 +1,66 @@
 'use client';
 
 import React, { useState } from 'react';
-import { GoogleUser, saveGoogleUser } from '@/lib/auth';
+import {
+  GoogleUser,
+  saveGoogleUser,
+  getStoredGoogleClientId,
+  triggerRealGoogleOAuth,
+} from '@/lib/auth';
 import { GoogleIcon } from './GoogleAuthModal';
 import { LogOut, Flame, TrendingUp, Award, UserCheck, ChevronDown } from 'lucide-react';
 
 interface UserProfileButtonProps {
   user: GoogleUser | null;
   onOpenAuth: () => void;
+  onUserLogin?: (u: GoogleUser) => void;
   onLogout: () => void;
 }
 
 export default function UserProfileButton({
   user,
   onOpenAuth,
+  onUserLogin,
   onLogout,
 }: UserProfileButtonProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isSigningIn, setIsSigningIn] = useState(false);
+
+  const handleSignInClick = () => {
+    const clientId = getStoredGoogleClientId();
+    if (clientId && onUserLogin) {
+      setIsSigningIn(true);
+      triggerRealGoogleOAuth(
+        clientId,
+        (newUser) => {
+          setIsSigningIn(false);
+          onUserLogin(newUser);
+        },
+        (err) => {
+          setIsSigningIn(false);
+          console.warn('Direct OAuth trigger error, showing modal:', err);
+          onOpenAuth();
+        },
+      );
+    } else {
+      onOpenAuth();
+    }
+  };
 
   if (!user) {
     return (
       <button
         type="button"
-        onClick={onOpenAuth}
-        className="pointer-events-auto flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-white hover:bg-gray-100 text-black text-xs font-bold shadow-lg transition active:scale-95"
+        disabled={isSigningIn}
+        onClick={handleSignInClick}
+        className="pointer-events-auto flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-white hover:bg-gray-100 text-black text-xs font-bold shadow-lg transition active:scale-95 disabled:opacity-60"
       >
-        <GoogleIcon className="w-4 h-4" />
-        <span className="hidden xs:inline">Войти</span>
+        {isSigningIn ? (
+          <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
+        ) : (
+          <GoogleIcon className="w-4 h-4" />
+        )}
+        <span className="hidden xs:inline">{isSigningIn ? 'Вход...' : 'Войти'}</span>
       </button>
     );
   }
