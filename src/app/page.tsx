@@ -742,9 +742,9 @@ export default function RunnerApp() {
 
       {/* --- TOP HEADER (Adaptive Mobile & Desktop) --- */}
       <header className="absolute top-2 sm:top-4 left-3 right-3 sm:left-4 sm:right-4 z-20 flex items-center justify-between pointer-events-none">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           {/* Brand Chip */}
-          <div className="pointer-events-auto flex items-center gap-2 bg-[#000000] border-2 border-[#222222] px-3 py-1.5 sm:px-4 sm:py-2 rounded-2xl shadow-2xl">
+          <div className="pointer-events-auto flex items-center gap-1.5 sm:gap-2 bg-[#000000] border-2 border-[#222222] px-2 sm:px-4 py-1.5 sm:py-2 rounded-2xl shadow-2xl">
             <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl overflow-hidden border border-[#7D39EB] bg-[#000000] flex items-center justify-center shadow-lg shrink-0">
               <img src="/avatar.jpg" alt="Calorie Runner" className="w-full h-full object-cover" />
             </div>
@@ -760,7 +760,7 @@ export default function RunnerApp() {
 
           {/* Supabase Live Online Badge (Pure Lime & Black) */}
           <div
-            className="pointer-events-auto flex items-center gap-1.5 bg-[#000000] border-2 border-[#C6FF33] px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-2xl shadow-xl text-[#C6FF33]"
+            className="pointer-events-auto flex items-center gap-1 bg-[#000000] border-2 border-[#C6FF33] px-2 py-1.5 sm:px-3 sm:py-2 rounded-2xl shadow-xl text-[#C6FF33]"
             title={`${onlineRunners.length + 1} бегунов онлайн сейчас (Supabase Realtime)`}
           >
             <span className="relative flex h-2 w-2">
@@ -775,7 +775,7 @@ export default function RunnerApp() {
           <button
             type="button"
             onClick={() => setIsPvpLobbyOpen(true)}
-            className="pointer-events-auto flex items-center gap-1.5 bg-[#7D39EB] hover:bg-[#6c28d9] text-white px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-2xl shadow-xl font-black text-xs transition active:scale-95 animate-pulse"
+            className="pointer-events-auto flex items-center gap-1 bg-[#7D39EB] hover:bg-[#6c28d9] text-white p-1.5 sm:px-3 sm:py-2 rounded-2xl shadow-xl font-black text-xs transition active:scale-95 animate-pulse"
             title="Открыть арену PVP забегов и вызвать соперника"
           >
             <Swords className="w-3.5 h-3.5" />
@@ -785,40 +785,41 @@ export default function RunnerApp() {
 
         {/* Map Styles & GPS Target + Google User */}
         <div className="pointer-events-auto flex items-center gap-1.5 sm:gap-2">
-          <div className="flex items-center gap-1 sm:gap-1.5 bg-[#000000] border-2 border-[#222222] p-1 sm:p-1.5 rounded-2xl shadow-2xl">
+          {/* Desktop Only Map Styles Bar */}
+          <div className="hidden md:flex items-center gap-1.5 bg-[#000000] border-2 border-[#222222] p-1.5 rounded-2xl shadow-2xl">
             <button
               onClick={() => setMapStyle('dark')}
-              className={`px-2 sm:px-2.5 py-1 rounded-xl text-[11px] font-bold transition flex items-center gap-1 ${
+              className={`px-2.5 py-1 rounded-xl text-[11px] font-bold transition flex items-center gap-1 ${
                 mapStyle === 'dark' ? 'bg-[#C6FF33] text-black shadow' : 'text-gray-400 hover:text-white'
               }`}
               title="Тёмная карта"
             >
               <span>🌙</span>
-              <span className="hidden md:inline">Тёмная</span>
+              <span>Тёмная</span>
             </button>
             <button
               onClick={() => setMapStyle('satellite')}
-              className={`px-2 sm:px-2.5 py-1 rounded-xl text-[11px] font-bold transition flex items-center gap-1 ${
+              className={`px-2.5 py-1 rounded-xl text-[11px] font-bold transition flex items-center gap-1 ${
                 mapStyle === 'satellite' ? 'bg-[#C6FF33] text-black shadow' : 'text-gray-400 hover:text-white'
               }`}
               title="Спутник"
             >
               <span>🛰</span>
-              <span className="hidden md:inline">Спутник</span>
+              <span>Спутник</span>
             </button>
             <button
               onClick={() => setMapStyle('streets')}
-              className={`px-2 sm:px-2.5 py-1 rounded-xl text-[11px] font-bold transition flex items-center gap-1 ${
+              className={`px-2.5 py-1 rounded-xl text-[11px] font-bold transition flex items-center gap-1 ${
                 mapStyle === 'streets' ? 'bg-[#C6FF33] text-black shadow' : 'text-gray-400 hover:text-white'
               }`}
               title="Улицы"
             >
               <span>🗺</span>
-              <span className="hidden md:inline">Улицы</span>
+              <span>Улицы</span>
             </button>
             <button
               onClick={runStrictGpsVerification}
-              className="p-1 sm:p-1.5 rounded-xl text-gray-300 hover:text-[#C6FF33] hover:bg-[#151515] transition flex items-center justify-center"
+              className="p-1.5 rounded-xl text-gray-300 hover:text-[#C6FF33] hover:bg-[#151515] transition flex items-center justify-center"
               title="Определить точный GPS"
             >
               <Crosshair className={`w-4 h-4 text-[#C6FF33] ${isCheckingGps ? 'animate-spin' : ''}`} />
@@ -834,6 +835,49 @@ export default function RunnerApp() {
           />
         </div>
       </header>
+
+      {/* --- MOBILE FLOATING MAP CONTROLS (Styles & GPS) --- */}
+      <div className="md:hidden absolute top-14 right-3 z-20 flex flex-col items-end gap-2 pointer-events-none">
+        {/* Floating Map Layers switcher */}
+        <div className="pointer-events-auto bg-[#000000]/95 backdrop-blur-md border border-[#242424] p-1 rounded-2xl shadow-2xl flex flex-col gap-1">
+          <button
+            onClick={() => setMapStyle('dark')}
+            className={`w-8 h-8 rounded-xl text-xs transition flex items-center justify-center ${
+              mapStyle === 'dark' ? 'bg-[#C6FF33] text-black shadow' : 'text-gray-400 hover:text-white'
+            }`}
+            title="Тёмная карта"
+          >
+            🌙
+          </button>
+          <button
+            onClick={() => setMapStyle('satellite')}
+            className={`w-8 h-8 rounded-xl text-xs transition flex items-center justify-center ${
+              mapStyle === 'satellite' ? 'bg-[#C6FF33] text-black shadow' : 'text-gray-400 hover:text-white'
+            }`}
+            title="Спутник"
+          >
+            🛰
+          </button>
+          <button
+            onClick={() => setMapStyle('streets')}
+            className={`w-8 h-8 rounded-xl text-xs transition flex items-center justify-center ${
+              mapStyle === 'streets' ? 'bg-[#C6FF33] text-black shadow' : 'text-gray-400 hover:text-white'
+            }`}
+            title="Улицы"
+          >
+            🗺
+          </button>
+        </div>
+
+        {/* Floating GPS Target button */}
+        <button
+          onClick={runStrictGpsVerification}
+          className="pointer-events-auto w-9 h-9 rounded-2xl bg-[#000000]/95 backdrop-blur-md border border-[#242424] flex items-center justify-center text-[#C6FF33] hover:border-[#C6FF33] shadow-2xl active:scale-95 transition"
+          title="Мой точный GPS"
+        >
+          <Crosshair className={`w-4 h-4 text-[#C6FF33] ${isCheckingGps ? 'animate-spin' : ''}`} />
+        </button>
+      </div>
 
       {/* --- ACTIVE RUNNING HUD (Live Mode) --- */}
       {isTrackingActive ? (
