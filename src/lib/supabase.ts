@@ -25,4 +25,5 @@ export interface LiveOnlineRunner {
   caloriesBurned?: number;
   isTracking?: boolean;
   onlineAt: string;
+  lastSeen?: number;
 }

@@ -170,6 +170,7 @@ export default function RunnerApp() {
   const simIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const touchStartYRef = useRef<number | null>(null);
   const hasMovedRef = useRef<boolean>(false);
+  const realtimeChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   // Strict GPS Verification
   const runStrictGpsVerification = async () => {
@@ -261,6 +262,14 @@ export default function RunnerApp() {
   }, []);
 
   const handleUserLogin = (user: GoogleUser) => {
+    // If switching accounts or logging in anew, tear down previous channel and clear runners
+    if (realtimeChannelRef.current) {
+      const ch = realtimeChannelRef.current;
+      realtimeChannelRef.current = null;
+      ch.untrack().catch(() => {});
+      supabase.removeChannel(ch).catch(() => {});
+    }
+    setOnlineRunners([]);
     setGoogleUser(user);
     if (user.weightKg) {
       setWeightKg(user.weightKg);
@@ -284,7 +293,28 @@ export default function RunnerApp() {
       .catch(() => {});
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    // 1. Untrack and remove from Supabase Realtime immediately
+    if (realtimeChannelRef.current) {
+      const channel = realtimeChannelRef.current;
+      realtimeChannelRef.current = null;
+      try {
+        await channel.send({
+          type: 'broadcast',
+          event: 'runner_leave',
+          payload: { id: googleUser?.id, email: googleUser?.email },
+        });
+      } catch (e) {}
+      try {
+        await channel.untrack();
+      } catch (e) {}
+      try {
+        await supabase.removeChannel(channel);
+      } catch (e) {}
+    }
+
+    // 2. Clear state and local credentials
+    setOnlineRunners([]);
     setGoogleUser(null);
     saveGoogleUser(null);
     setIsAuthModalOpen(true);
@@ -301,7 +331,16 @@ export default function RunnerApp() {
 
   // Supabase Realtime Online Presence & Live Coordinates
   useEffect(() => {
-    if (!googleUser) return;
+    if (!googleUser) {
+      if (realtimeChannelRef.current) {
+        const ch = realtimeChannelRef.current;
+        realtimeChannelRef.current = null;
+        ch.untrack().catch(() => {});
+        supabase.removeChannel(ch).catch(() => {});
+      }
+      setOnlineRunners([]);
+      return;
+    }
 
     const channel = supabase.channel('rush-live-runners', {
       config: {
@@ -311,19 +350,71 @@ export default function RunnerApp() {
       },
     });
 
+    realtimeChannelRef.current = channel;
+
+    // Helper to safely extract, filter current user & deduplicate runners
+    const syncRunners = () => {
+      const state = channel.presenceState();
+      const runnerMap = new Map<string, LiveOnlineRunner>();
+      const now = Date.now();
+
+      Object.keys(state).forEach((key) => {
+        const presences = state[key] as any[];
+        if (!Array.isArray(presences)) return;
+        presences.forEach((p) => {
+          if (!p || !p.id || typeof p.lat !== 'number' || typeof p.lng !== 'number') return;
+
+          // STRICT: NEVER show current logged-in user in peer online runners!
+          if (
+            p.id === googleUser.id ||
+            (p.email && googleUser.email && p.email.toLowerCase() === googleUser.email.toLowerCase())
+          ) {
+            return;
+          }
+
+          // Filter out stale ghost runner presence older than 40 seconds
+          const lastSeenTime = p.lastSeen || (p.onlineAt ? new Date(p.onlineAt).getTime() : 0);
+          if (lastSeenTime && now - lastSeenTime > 40000) {
+            return;
+          }
+
+          // Deduplicate by normalized email or id
+          const dedupKey = (p.email ? p.email.toLowerCase() : p.id).trim();
+          const existing = runnerMap.get(dedupKey);
+          if (!existing) {
+            runnerMap.set(dedupKey, p);
+          } else {
+            const existingTime = existing.lastSeen || (existing.onlineAt ? new Date(existing.onlineAt).getTime() : 0);
+            if (lastSeenTime >= existingTime) {
+              runnerMap.set(dedupKey, p);
+            }
+          }
+        });
+      });
+
+      setOnlineRunners(Array.from(runnerMap.values()));
+    };
+
     channel
       .on('presence', { event: 'sync' }, () => {
-        const state = channel.presenceState();
-        const runners: LiveOnlineRunner[] = [];
-        Object.keys(state).forEach((key) => {
-          const presences = state[key] as any[];
-          presences.forEach((p) => {
-            if (p.id !== googleUser.id) {
-              runners.push(p);
-            }
-          });
-        });
-        setOnlineRunners(runners);
+        syncRunners();
+      })
+      .on('presence', { event: 'join' }, () => {
+        syncRunners();
+      })
+      .on('presence', { event: 'leave' }, () => {
+        syncRunners();
+      })
+      .on('broadcast', { event: 'runner_leave' }, ({ payload }) => {
+        if (payload?.id || payload?.email) {
+          setOnlineRunners((prev) =>
+            prev.filter(
+              (r) =>
+                r.id !== payload.id &&
+                (!payload.email || !r.email || r.email.toLowerCase() !== payload.email.toLowerCase())
+            )
+          );
+        }
       })
       .on('broadcast', { event: 'pvp_invite' }, ({ payload }) => {
         if (payload?.toUserId === googleUser.id) {
@@ -386,20 +477,40 @@ export default function RunnerApp() {
             caloriesBurned: activeCaloriesBurned,
             isTracking: isTrackingActive,
             onlineAt: new Date().toISOString(),
+            lastSeen: Date.now(),
           });
         }
       });
 
-    return () => {
-      channel.unsubscribe();
+    const handleBeforeUnload = () => {
+      try {
+        channel.send({
+          type: 'broadcast',
+          event: 'runner_leave',
+          payload: { id: googleUser.id, email: googleUser.email },
+        });
+        channel.untrack();
+      } catch (e) {}
     };
-  }, [googleUser]);
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('pagehide', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('pagehide', handleBeforeUnload);
+      channel.untrack().catch(() => {});
+      supabase.removeChannel(channel).catch(() => {});
+      if (realtimeChannelRef.current === channel) {
+        realtimeChannelRef.current = null;
+      }
+    };
+  }, [googleUser?.id, googleUser?.email]);
 
   // Push updated live coordinates to Supabase Realtime
   useEffect(() => {
-    if (!googleUser) return;
-    const channel = supabase.channel('rush-live-runners');
-    channel
+    if (!googleUser || !realtimeChannelRef.current) return;
+    realtimeChannelRef.current
       .track({
         id: googleUser.id,
         name: googleUser.name,
@@ -411,15 +522,73 @@ export default function RunnerApp() {
         caloriesBurned: activeCaloriesBurned,
         isTracking: isTrackingActive,
         onlineAt: new Date().toISOString(),
+        lastSeen: Date.now(),
       })
       .catch(() => {});
   }, [liveRunnerPos, startPos, isTrackingActive, currentSpeedKmh, activeCaloriesBurned]);
+
+  // Realtime heartbeat (every 15s) to prevent false ghost timeout
+  useEffect(() => {
+    if (!googleUser) return;
+    const interval = setInterval(() => {
+      if (realtimeChannelRef.current) {
+        realtimeChannelRef.current
+          .track({
+            id: googleUser.id,
+            name: googleUser.name,
+            email: googleUser.email,
+            avatar: googleUser.avatar,
+            lat: liveRunnerPos ? liveRunnerPos[0] : startPos[0],
+            lng: liveRunnerPos ? liveRunnerPos[1] : startPos[1],
+            speedKmh: currentSpeedKmh,
+            caloriesBurned: activeCaloriesBurned,
+            isTracking: isTrackingActive,
+            onlineAt: new Date().toISOString(),
+            lastSeen: Date.now(),
+          })
+          .catch(() => {});
+      }
+    }, 15000);
+
+    return () => clearInterval(interval);
+  }, [googleUser, liveRunnerPos, startPos, isTrackingActive, currentSpeedKmh, activeCaloriesBurned]);
+
+  // Periodic pruning of stale ghost markers (older than 40s)
+  useEffect(() => {
+    const pruneInterval = setInterval(() => {
+      const now = Date.now();
+      setOnlineRunners((prev) => {
+        let changed = false;
+        const filtered = prev.filter((r) => {
+          if (!r) return false;
+          // Never keep current user in peer runners
+          if (
+            googleUser &&
+            (r.id === googleUser.id ||
+              (r.email && googleUser.email && r.email.toLowerCase() === googleUser.email.toLowerCase()))
+          ) {
+            changed = true;
+            return false;
+          }
+          const lastSeenTime = r.lastSeen || (r.onlineAt ? new Date(r.onlineAt).getTime() : 0);
+          if (lastSeenTime && now - lastSeenTime > 40000) {
+            changed = true;
+            return false; // Stale ghost runner prune
+          }
+          return true;
+        });
+        return changed ? filtered : prev;
+      });
+    }, 10000);
+
+    return () => clearInterval(pruneInterval);
+  }, [googleUser]);
 
   // PVP Battle Live Progress Sync
   useEffect(() => {
     if (!activeBattle || activeBattle.status !== 'active' || !googleUser) return;
 
-    const channel = supabase.channel('rush-live-runners');
+    const channel = realtimeChannelRef.current || supabase.channel('rush-live-runners');
     channel
       .send({
         type: 'broadcast',
@@ -457,7 +626,7 @@ export default function RunnerApp() {
       targetKm,
     };
 
-    const channel = supabase.channel('rush-live-runners');
+    const channel = realtimeChannelRef.current || supabase.channel('rush-live-runners');
     await channel.send({
       type: 'broadcast',
       event: 'pvp_invite',
@@ -498,7 +667,7 @@ export default function RunnerApp() {
     setActiveBattle(newBattle);
     setIncomingInvite(null);
 
-    const channel = supabase.channel('rush-live-runners');
+    const channel = realtimeChannelRef.current || supabase.channel('rush-live-runners');
     await channel.send({
       type: 'broadcast',
       event: 'pvp_accept',
@@ -509,7 +678,7 @@ export default function RunnerApp() {
   const handleDeclinePvpInvite = async (invite: PvpInvitePayload) => {
     if (!googleUser) return;
     setIncomingInvite(null);
-    const channel = supabase.channel('rush-live-runners');
+    const channel = realtimeChannelRef.current || supabase.channel('rush-live-runners');
     await channel.send({
       type: 'broadcast',
       event: 'pvp_decline',
@@ -525,7 +694,7 @@ export default function RunnerApp() {
     const isChallenger = activeBattle.challenger.id === googleUser.id;
     const winnerId = isChallenger ? activeBattle.opponent.id : activeBattle.challenger.id;
 
-    const channel = supabase.channel('rush-live-runners');
+    const channel = realtimeChannelRef.current || supabase.channel('rush-live-runners');
     await channel.send({
       type: 'broadcast',
       event: 'pvp_surrender',
@@ -849,13 +1018,13 @@ export default function RunnerApp() {
           {/* Supabase Live Online Badge (Pure Lime & Black) */}
           <div
             className="pointer-events-auto flex items-center gap-1 bg-[#000000] border-2 border-[#C6FF33] px-2 py-1.5 sm:px-3 sm:py-2 rounded-2xl shadow-xl text-[#C6FF33]"
-            title={`${onlineRunners.length + 1} бегунов онлайн сейчас (Supabase Realtime)`}
+            title={`${onlineRunners.length + (googleUser ? 1 : 0)} бегунов онлайн сейчас (Supabase Realtime)`}
           >
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#C6FF33] opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-[#C6FF33]"></span>
             </span>
-            <span className="font-mono font-black text-xs">{onlineRunners.length + 1}</span>
+            <span className="font-mono font-black text-xs">{onlineRunners.length + (googleUser ? 1 : 0)}</span>
             <span className="text-[10px] text-white font-bold hidden sm:inline">онлайн</span>
           </div>
 

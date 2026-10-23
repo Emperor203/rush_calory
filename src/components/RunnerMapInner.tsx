@@ -281,8 +281,21 @@ export default function RunnerMapInner({
         )}
 
         {/* Real-time Online Runners (Solid Violet & White) */}
-        {onlineRunners.map((runner) => {
-          if (!runner.lat || !runner.lng) return null;
+        {onlineRunners
+          .filter((runner) => {
+            if (!runner || !runner.lat || !runner.lng) return false;
+            // Never render current user as an online peer runner
+            if (
+              currentUser &&
+              (runner.id === currentUser.id ||
+                (runner.email && currentUser.email && runner.email.toLowerCase() === currentUser.email.toLowerCase()))
+            ) {
+              return false;
+            }
+            return true;
+          })
+          .map((runner) => {
+          const peerKey = runner.id || runner.email || `${runner.lat}-${runner.lng}`;
           const peerIcon = L.divIcon({
             className: 'custom-online-runner-marker',
             html: `
@@ -309,7 +322,7 @@ export default function RunnerMapInner({
           });
 
           return (
-            <Marker key={runner.id} position={[runner.lat, runner.lng]} icon={peerIcon}>
+            <Marker key={peerKey} position={[runner.lat, runner.lng]} icon={peerIcon}>
               <Popup>
                 <div className="p-2 text-xs text-gray-900 space-y-1 min-w-[140px]">
                   <div className="font-bold flex items-center gap-1.5 text-sm">
