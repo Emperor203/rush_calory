@@ -18,7 +18,7 @@ import {
 } from '@/lib/gps';
 import { GoogleUser, getSavedGoogleUser, saveGoogleUser } from '@/lib/auth';
 import { supabase, LiveOnlineRunner } from '@/lib/supabase';
-import { PvpBattle, PvpInvitePayload } from '@/lib/pvp';
+import { PvpBattle, PvpInvitePayload, PvpRoom, PvpRoomRunner } from '@/lib/pvp';
 import { CompletedWorkout, saveCompletedWorkout } from '@/lib/history';
 import GoogleAuthModal from '@/components/auth/GoogleAuthModal';
 import UserProfileButton from '@/components/auth/UserProfileButton';
@@ -77,9 +77,11 @@ export default function RunnerApp() {
   const [isUserBanned, setIsUserBanned] = useState<boolean>(false);
   const [onlineRunners, setOnlineRunners] = useState<LiveOnlineRunner[]>([]);
 
-  // PVP Battle State
+  // PVP Battle & Room State
   const [isPvpLobbyOpen, setIsPvpLobbyOpen] = useState<boolean>(false);
   const [activeBattle, setActiveBattle] = useState<PvpBattle | null>(null);
+  const [activeRoom, setActiveRoom] = useState<PvpRoom | null>(null);
+  const [openRooms, setOpenRooms] = useState<PvpRoom[]>([]);
   const [incomingInvite, setIncomingInvite] = useState<PvpInvitePayload | null>(null);
 
   const playBanSound = () => {
@@ -322,6 +324,10 @@ export default function RunnerApp() {
 
     // 2. Clear state and local credentials
     setOnlineRunners([]);
+    setActiveBattle(null);
+    setActiveRoom(null);
+    setIncomingInvite(null);
+    setOpenRooms([]);
     setGoogleUser(null);
     saveGoogleUser(null);
     setIsAuthModalOpen(true);
@@ -335,6 +341,24 @@ export default function RunnerApp() {
   const activeCaloriesBurned = Math.round(distanceTraversedKm * weightKg * 1.036);
   const remainingCalories = Math.max(0, calories - activeCaloriesBurned);
   const caloriePercent = Math.min(100, Math.round((activeCaloriesBurned / calories) * 100));
+
+  // Ref to hold live state for background presence heartbeat without interval thrashing
+  const latestTrackingStateRef = useRef({
+    liveRunnerPos,
+    startPos,
+    currentSpeedKmh,
+    activeCaloriesBurned,
+    isTrackingActive,
+  });
+  useEffect(() => {
+    latestTrackingStateRef.current = {
+      liveRunnerPos,
+      startPos,
+      currentSpeedKmh,
+      activeCaloriesBurned,
+      isTrackingActive,
+    };
+  }, [liveRunnerPos, startPos, currentSpeedKmh, activeCaloriesBurned, isTrackingActive]);
 
   // Supabase Realtime Online Presence & Live Coordinates
   useEffect(() => {
@@ -379,9 +403,9 @@ export default function RunnerApp() {
             return;
           }
 
-          // Filter out stale ghost runner presence older than 40 seconds
+          // Filter out stale ghost runner presence older than 2 minutes (120s)
           const lastSeenTime = p.lastSeen || (p.onlineAt ? new Date(p.onlineAt).getTime() : 0);
-          if (lastSeenTime && now - lastSeenTime > 40000) {
+          if (lastSeenTime && now - lastSeenTime > 120000) {
             return;
           }
 
@@ -423,29 +447,117 @@ export default function RunnerApp() {
           );
         }
       })
+      // PVP Room Announce (A user created an open room)
+      .on('broadcast', { event: 'pvp_room_announce' }, ({ payload }) => {
+        if (!payload?.room) return;
+        setOpenRooms((prev) => {
+          const filtered = prev.filter((r) => r.roomCode !== payload.room.roomCode);
+          return [...filtered, payload.room];
+        });
+      })
+      // PVP Room Cancel
+      .on('broadcast', { event: 'pvp_room_cancel' }, ({ payload }) => {
+        if (!payload?.roomCode) return;
+        setOpenRooms((prev) => prev.filter((r) => r.roomCode !== payload.roomCode));
+        setActiveRoom((prev) => (prev?.roomCode === payload.roomCode ? null : prev));
+      })
+      // PVP Room Join (Guest entered room code)
+      .on('broadcast', { event: 'pvp_room_join' }, ({ payload }) => {
+        const { roomCode, guest } = payload || {};
+        if (!roomCode || !guest) return;
+        setActiveRoom((prev) => {
+          if (!prev || prev.roomCode.toUpperCase() !== roomCode.toUpperCase()) return prev;
+          const updated: PvpRoom = {
+            ...prev,
+            guest,
+            status: 'ready',
+          };
+          channel
+            .send({
+              type: 'broadcast',
+              event: 'pvp_room_ready',
+              payload: { room: updated },
+            })
+            .catch(() => {});
+          return updated;
+        });
+      })
+      // PVP Room Ready (Both players see each other)
+      .on('broadcast', { event: 'pvp_room_ready' }, ({ payload }) => {
+        const room = payload?.room as PvpRoom | undefined;
+        if (!room) return;
+        const myId = googleUser.id;
+        const myEmail = googleUser.email?.toLowerCase();
+        const isGuest =
+          room.guest?.id === myId || (myEmail && room.guest?.email?.toLowerCase() === myEmail);
+        const isHost =
+          room.host.id === myId || (myEmail && room.host.email?.toLowerCase() === myEmail);
+        if (isGuest || isHost) {
+          setActiveRoom(room);
+          setIsPvpLobbyOpen(false);
+        }
+      })
+      // PVP Battle Start (Host started the duel countdown/race)
+      .on('broadcast', { event: 'pvp_battle_start' }, ({ payload }) => {
+        const b = payload?.battle as PvpBattle | undefined;
+        if (!b) return;
+        const myId = googleUser.id;
+        const myEmail = googleUser.email?.toLowerCase();
+        const isChallenger =
+          b.challenger.id === myId || (myEmail && b.challenger.email?.toLowerCase() === myEmail);
+        const isOpponent =
+          b.opponent.id === myId || (myEmail && b.opponent.email?.toLowerCase() === myEmail);
+        if (isChallenger || isOpponent) {
+          setActiveBattle(b);
+          setActiveRoom(null);
+          setIncomingInvite(null);
+          setIsPvpLobbyOpen(false);
+        }
+      })
+      // PVP Direct Invite
       .on('broadcast', { event: 'pvp_invite' }, ({ payload }) => {
-        if (payload?.toUserId === googleUser.id) {
+        const myId = googleUser.id;
+        const myEmail = googleUser.email?.toLowerCase();
+        const isForMe =
+          payload?.toUserId === myId ||
+          (payload?.toUserEmail && myEmail && payload.toUserEmail.toLowerCase() === myEmail);
+        if (isForMe) {
           setIncomingInvite(payload);
         }
       })
+      // PVP Direct Accept
       .on('broadcast', { event: 'pvp_accept' }, ({ payload }) => {
-        const b = payload?.battle;
-        if (b && (b.challenger.id === googleUser.id || b.opponent.id === googleUser.id)) {
+        const b = payload?.battle as PvpBattle | undefined;
+        if (!b) return;
+        const myId = googleUser.id;
+        const myEmail = googleUser.email?.toLowerCase();
+        const isChallenger =
+          b.challenger.id === myId || (myEmail && b.challenger.email?.toLowerCase() === myEmail);
+        const isOpponent =
+          b.opponent.id === myId || (myEmail && b.opponent.email?.toLowerCase() === myEmail);
+        if (isChallenger || isOpponent) {
           setActiveBattle(b);
+          setActiveRoom(null);
           setIncomingInvite(null);
           setIsPvpLobbyOpen(false);
         }
       })
       .on('broadcast', { event: 'pvp_decline' }, ({ payload }) => {
-        if (payload?.challengerId === googleUser.id) {
-          alert(`${payload.declinedByName || 'Соперник'} отклонил вызов на дуэль.`);
+        const myId = googleUser.id;
+        const myEmail = googleUser.email?.toLowerCase();
+        if (
+          payload?.challengerId === myId ||
+          (myEmail && payload?.challengerEmail?.toLowerCase() === myEmail)
+        ) {
+          setActiveRoom(null);
         }
       })
+      // PVP Live Progress
       .on('broadcast', { event: 'pvp_progress' }, ({ payload }) => {
         setActiveBattle((prev) => {
           if (!prev || prev.id !== payload?.battleId) return prev;
           const isOppChallenger = prev.challenger.id === payload.userId;
-          const updated = {
+          const updated: PvpBattle = {
             ...prev,
             challenger: isOppChallenger
               ? { ...prev.challenger, currentKm: payload.currentKm, currentKcal: payload.currentKcal }
@@ -457,19 +569,64 @@ export default function RunnerApp() {
           if (payload.currentKm >= prev.targetKm && prev.status === 'active') {
             updated.status = 'finished';
             updated.winnerId = payload.userId;
+            updated.winReason = 'target_reached';
+            if (payload.userId === googleUser.id && googleUser.mvpAnthemUrl) {
+              try {
+                const anthemAudio = new Audio(googleUser.mvpAnthemUrl);
+                anthemAudio.volume = 0.9;
+                anthemAudio.play().catch(() => {});
+              } catch {}
+            }
           }
           return updated;
         });
+
+        // Keep sender marked active in online runners list so they never vanish after duel
+        setOnlineRunners((prev) => {
+          return prev.map((r) =>
+            r.id === payload.userId ? { ...r, lastSeen: Date.now() } : r
+          );
+        });
       })
-      .on('broadcast', { event: 'pvp_surrender' }, ({ payload }) => {
+      // PVP Finish
+      .on('broadcast', { event: 'pvp_finish' }, ({ payload }) => {
         setActiveBattle((prev) => {
           if (!prev || prev.id !== payload?.battleId) return prev;
+          if (payload.winnerId === googleUser.id && googleUser.mvpAnthemUrl) {
+            try {
+              const anthemAudio = new Audio(googleUser.mvpAnthemUrl);
+              anthemAudio.volume = 0.9;
+              anthemAudio.play().catch(() => {});
+            } catch {}
+          }
           return {
             ...prev,
             status: 'finished',
             winnerId: payload.winnerId,
+            winReason: payload.winReason || 'target_reached',
           };
         });
+        syncRunners();
+      })
+      // PVP Surrender
+      .on('broadcast', { event: 'pvp_surrender' }, ({ payload }) => {
+        setActiveBattle((prev) => {
+          if (!prev || prev.id !== payload?.battleId) return prev;
+          if (payload.winnerId === googleUser.id && googleUser.mvpAnthemUrl) {
+            try {
+              const anthemAudio = new Audio(googleUser.mvpAnthemUrl);
+              anthemAudio.volume = 0.9;
+              anthemAudio.play().catch(() => {});
+            } catch {}
+          }
+          return {
+            ...prev,
+            status: 'finished',
+            winnerId: payload.winnerId,
+            winReason: 'surrender',
+          };
+        });
+        syncRunners();
       })
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
@@ -489,6 +646,33 @@ export default function RunnerApp() {
         }
       });
 
+    // Re-track & sync presence when returning to tab/app (prevents disappearing on mobile)
+    const handleVisibilityOrFocus = () => {
+      if (document.visibilityState === 'visible' && realtimeChannelRef.current) {
+        const s = latestTrackingStateRef.current;
+        realtimeChannelRef.current
+          .track({
+            id: googleUser.id,
+            name: googleUser.name,
+            email: googleUser.email,
+            avatar: googleUser.avatar,
+            lat: s.liveRunnerPos ? s.liveRunnerPos[0] : s.startPos[0],
+            lng: s.liveRunnerPos ? s.liveRunnerPos[1] : s.startPos[1],
+            speedKmh: s.currentSpeedKmh,
+            caloriesBurned: s.activeCaloriesBurned,
+            isTracking: s.isTrackingActive,
+            onlineAt: new Date().toISOString(),
+            lastSeen: Date.now(),
+          })
+          .catch(() => {});
+        syncRunners();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityOrFocus);
+    window.addEventListener('pageshow', handleVisibilityOrFocus);
+    window.addEventListener('focus', handleVisibilityOrFocus);
+
     const handleBeforeUnload = () => {
       try {
         channel.send({
@@ -501,11 +685,12 @@ export default function RunnerApp() {
     };
 
     window.addEventListener('beforeunload', handleBeforeUnload);
-    window.addEventListener('pagehide', handleBeforeUnload);
 
     return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityOrFocus);
+      window.removeEventListener('pageshow', handleVisibilityOrFocus);
+      window.removeEventListener('focus', handleVisibilityOrFocus);
       window.removeEventListener('beforeunload', handleBeforeUnload);
-      window.removeEventListener('pagehide', handleBeforeUnload);
       channel.untrack().catch(() => {});
       supabase.removeChannel(channel).catch(() => {});
       if (realtimeChannelRef.current === channel) {
@@ -534,33 +719,34 @@ export default function RunnerApp() {
       .catch(() => {});
   }, [liveRunnerPos, startPos, isTrackingActive, currentSpeedKmh, activeCaloriesBurned]);
 
-  // Realtime heartbeat (every 15s) to prevent false ghost timeout
+  // Realtime heartbeat (every 12s) to prevent false ghost timeout
   useEffect(() => {
     if (!googleUser) return;
     const interval = setInterval(() => {
       if (realtimeChannelRef.current) {
+        const s = latestTrackingStateRef.current;
         realtimeChannelRef.current
           .track({
             id: googleUser.id,
             name: googleUser.name,
             email: googleUser.email,
             avatar: googleUser.avatar,
-            lat: liveRunnerPos ? liveRunnerPos[0] : startPos[0],
-            lng: liveRunnerPos ? liveRunnerPos[1] : startPos[1],
-            speedKmh: currentSpeedKmh,
-            caloriesBurned: activeCaloriesBurned,
-            isTracking: isTrackingActive,
+            lat: s.liveRunnerPos ? s.liveRunnerPos[0] : s.startPos[0],
+            lng: s.liveRunnerPos ? s.liveRunnerPos[1] : s.startPos[1],
+            speedKmh: s.currentSpeedKmh,
+            caloriesBurned: s.activeCaloriesBurned,
+            isTracking: s.isTrackingActive,
             onlineAt: new Date().toISOString(),
             lastSeen: Date.now(),
           })
           .catch(() => {});
       }
-    }, 15000);
+    }, 12000);
 
     return () => clearInterval(interval);
-  }, [googleUser, liveRunnerPos, startPos, isTrackingActive, currentSpeedKmh, activeCaloriesBurned]);
+  }, [googleUser?.id]);
 
-  // Periodic pruning of stale ghost markers (older than 40s)
+  // Periodic pruning of stale ghost markers (older than 2 minutes)
   useEffect(() => {
     const pruneInterval = setInterval(() => {
       const now = Date.now();
@@ -578,7 +764,7 @@ export default function RunnerApp() {
             return false;
           }
           const lastSeenTime = r.lastSeen || (r.onlineAt ? new Date(r.onlineAt).getTime() : 0);
-          if (lastSeenTime && now - lastSeenTime > 40000) {
+          if (lastSeenTime && now - lastSeenTime > 120000) {
             changed = true;
             return false; // Stale ghost runner prune
           }
@@ -586,10 +772,10 @@ export default function RunnerApp() {
         });
         return changed ? filtered : prev;
       });
-    }, 10000);
+    }, 15000);
 
     return () => clearInterval(pruneInterval);
-  }, [googleUser]);
+  }, [googleUser?.id, googleUser?.email]);
 
   // PVP Battle Live Progress Sync
   useEffect(() => {
@@ -611,7 +797,29 @@ export default function RunnerApp() {
 
     // Win check
     if (distanceTraversedKm >= activeBattle.targetKm) {
-      setActiveBattle((prev) => (prev ? { ...prev, status: 'finished', winnerId: googleUser.id } : null));
+      channel
+        .send({
+          type: 'broadcast',
+          event: 'pvp_finish',
+          payload: {
+            battleId: activeBattle.id,
+            winnerId: googleUser.id,
+            winReason: 'target_reached',
+          },
+        })
+        .catch(() => {});
+
+      setActiveBattle((prev) =>
+        prev
+          ? {
+              ...prev,
+              status: 'finished',
+              winnerId: googleUser.id,
+              winReason: 'target_reached',
+            }
+          : null
+      );
+
       if (googleUser?.mvpAnthemUrl) {
         try {
           const anthemAudio = new Audio(googleUser.mvpAnthemUrl);
@@ -622,6 +830,112 @@ export default function RunnerApp() {
     }
   }, [distanceTraversedKm, activeCaloriesBurned, activeBattle?.status]);
 
+  // PVP Action Handlers
+  const handleCreateRoom = async (targetKm: number) => {
+    if (!googleUser) return;
+    if (!isStreetPassActive(googleUser)) {
+      setIsPvpPassBlockedOpen(true);
+      return;
+    }
+    const roomCode = Math.floor(1000 + Math.random() * 9000).toString();
+    const newRoom: PvpRoom = {
+      roomCode,
+      host: {
+        id: googleUser.id,
+        name: googleUser.name,
+        avatar: googleUser.avatar,
+        email: googleUser.email,
+        currentKm: 0,
+        currentKcal: 0,
+      },
+      targetKm,
+      status: 'waiting',
+      createdAt: Date.now(),
+    };
+
+    setActiveRoom(newRoom);
+    setIsPvpLobbyOpen(false);
+
+    const channel = realtimeChannelRef.current || supabase.channel('rush-live-runners');
+    await channel.send({
+      type: 'broadcast',
+      event: 'pvp_room_announce',
+      payload: { room: newRoom },
+    });
+  };
+
+  const handleJoinRoom = async (roomCode: string) => {
+    if (!googleUser) return;
+    if (!isStreetPassActive(googleUser)) {
+      setIsPvpPassBlockedOpen(true);
+      return;
+    }
+    const cleanCode = roomCode.trim().toUpperCase();
+    const guestData: PvpRoomRunner = {
+      id: googleUser.id,
+      name: googleUser.name,
+      avatar: googleUser.avatar,
+      email: googleUser.email,
+      currentKm: 0,
+      currentKcal: 0,
+    };
+
+    const existing = openRooms.find((r) => r.roomCode.toUpperCase() === cleanCode);
+    if (existing) {
+      setActiveRoom({
+        ...existing,
+        guest: guestData,
+        status: 'ready',
+      });
+    }
+
+    setIsPvpLobbyOpen(false);
+
+    const channel = realtimeChannelRef.current || supabase.channel('rush-live-runners');
+    await channel.send({
+      type: 'broadcast',
+      event: 'pvp_room_join',
+      payload: {
+        roomCode: cleanCode,
+        guest: guestData,
+      },
+    });
+  };
+
+  const handleCancelRoom = async () => {
+    if (!activeRoom) return;
+    const channel = realtimeChannelRef.current || supabase.channel('rush-live-runners');
+    await channel.send({
+      type: 'broadcast',
+      event: 'pvp_room_cancel',
+      payload: { roomCode: activeRoom.roomCode },
+    });
+    setActiveRoom(null);
+  };
+
+  const handleStartRoomRace = async () => {
+    if (!activeRoom || !activeRoom.guest) return;
+    const newBattle: PvpBattle = {
+      id: `battle-${activeRoom.roomCode}-${Date.now()}`,
+      roomCode: activeRoom.roomCode,
+      challenger: activeRoom.host,
+      opponent: activeRoom.guest,
+      targetKm: activeRoom.targetKm,
+      status: 'active',
+      startedAt: new Date().toISOString(),
+    };
+
+    setActiveBattle(newBattle);
+    setActiveRoom(null);
+
+    const channel = realtimeChannelRef.current || supabase.channel('rush-live-runners');
+    await channel.send({
+      type: 'broadcast',
+      event: 'pvp_battle_start',
+      payload: { battle: newBattle },
+    });
+  };
+
   const handleSendPvpInvite = async (targetRunner: LiveOnlineRunner, targetKm: number) => {
     if (!googleUser) return;
     if (!isStreetPassActive(googleUser)) {
@@ -629,14 +943,18 @@ export default function RunnerApp() {
       return;
     }
     const battleId = `pvp-${Date.now()}`;
+    const roomCode = Math.floor(1000 + Math.random() * 9000).toString();
     const payload: PvpInvitePayload = {
       battleId,
+      roomCode,
       fromUser: {
         id: googleUser.id,
         name: googleUser.name,
         avatar: googleUser.avatar,
+        email: googleUser.email,
       },
       toUserId: targetRunner.id,
+      toUserEmail: targetRunner.email,
       targetKm,
     };
 
@@ -647,8 +965,22 @@ export default function RunnerApp() {
       payload,
     });
 
+    const directRoom: PvpRoom = {
+      roomCode,
+      host: {
+        id: googleUser.id,
+        name: googleUser.name,
+        avatar: googleUser.avatar,
+        email: googleUser.email,
+        currentKm: 0,
+        currentKcal: 0,
+      },
+      targetKm,
+      status: 'waiting',
+      createdAt: Date.now(),
+    };
+    setActiveRoom(directRoom);
     setIsPvpLobbyOpen(false);
-    alert(`⚔️ Вызов на ${targetKm} км отправлен атлету ${targetRunner.name}! Ожидаем ответа...`);
   };
 
   const handleAcceptPvpInvite = async (invite: PvpInvitePayload) => {
@@ -659,10 +991,12 @@ export default function RunnerApp() {
     }
     const newBattle: PvpBattle = {
       id: invite.battleId,
+      roomCode: invite.roomCode,
       challenger: {
         id: invite.fromUser.id,
         name: invite.fromUser.name,
         avatar: invite.fromUser.avatar,
+        email: invite.fromUser.email,
         currentKm: 0,
         currentKcal: 0,
       },
@@ -670,6 +1004,7 @@ export default function RunnerApp() {
         id: googleUser.id,
         name: googleUser.name,
         avatar: googleUser.avatar,
+        email: googleUser.email,
         currentKm: 0,
         currentKcal: 0,
       },
@@ -679,6 +1014,7 @@ export default function RunnerApp() {
     };
 
     setActiveBattle(newBattle);
+    setActiveRoom(null);
     setIncomingInvite(null);
 
     const channel = realtimeChannelRef.current || supabase.channel('rush-live-runners');
@@ -698,6 +1034,7 @@ export default function RunnerApp() {
       event: 'pvp_decline',
       payload: {
         challengerId: invite.fromUser.id,
+        challengerEmail: invite.fromUser.email,
         declinedByName: googleUser.name,
       },
     });
@@ -705,7 +1042,16 @@ export default function RunnerApp() {
 
   const handleSurrenderBattle = async () => {
     if (!activeBattle || !googleUser) return;
-    const isChallenger = activeBattle.challenger.id === googleUser.id;
+    if (activeBattle.status === 'finished') {
+      setActiveBattle(null);
+      return;
+    }
+
+    const myId = googleUser.id;
+    const myEmail = googleUser.email?.toLowerCase();
+    const isChallenger =
+      activeBattle.challenger.id === myId ||
+      (myEmail && activeBattle.challenger.email?.toLowerCase() === myEmail);
     const winnerId = isChallenger ? activeBattle.opponent.id : activeBattle.challenger.id;
 
     const channel = realtimeChannelRef.current || supabase.channel('rush-live-runners');
@@ -718,7 +1064,92 @@ export default function RunnerApp() {
       },
     });
 
+    setActiveBattle({
+      ...activeBattle,
+      status: 'finished',
+      winnerId,
+      winReason: 'surrender',
+    });
+  };
+
+  const handleCloseBattle = () => {
     setActiveBattle(null);
+    if (realtimeChannelRef.current && googleUser) {
+      const s = latestTrackingStateRef.current;
+      realtimeChannelRef.current
+        .track({
+          id: googleUser.id,
+          name: googleUser.name,
+          email: googleUser.email,
+          avatar: googleUser.avatar,
+          lat: s.liveRunnerPos ? s.liveRunnerPos[0] : s.startPos[0],
+          lng: s.liveRunnerPos ? s.liveRunnerPos[1] : s.startPos[1],
+          speedKmh: s.currentSpeedKmh,
+          caloriesBurned: s.activeCaloriesBurned,
+          isTracking: s.isTrackingActive,
+          onlineAt: new Date().toISOString(),
+          lastSeen: Date.now(),
+        })
+        .catch(() => {});
+    }
+  };
+
+  const handleAddTestDistance = (km: number) => {
+    setDistanceTraversedKm((prev) => {
+      const next = parseFloat((prev + km).toFixed(2));
+      const kcalBurned = Math.round(next * (weightKg || 70) * 1.036);
+
+      if (activeBattle && activeBattle.status === 'active' && googleUser) {
+        const channel = realtimeChannelRef.current || supabase.channel('rush-live-runners');
+        channel
+          .send({
+            type: 'broadcast',
+            event: 'pvp_progress',
+            payload: {
+              battleId: activeBattle.id,
+              userId: googleUser.id,
+              currentKm: next,
+              currentKcal: kcalBurned,
+            },
+          })
+          .catch(() => {});
+
+        if (next >= activeBattle.targetKm) {
+          channel
+            .send({
+              type: 'broadcast',
+              event: 'pvp_finish',
+              payload: {
+                battleId: activeBattle.id,
+                winnerId: googleUser.id,
+                winReason: 'target_reached',
+              },
+            })
+            .catch(() => {});
+
+          setActiveBattle((prevB) =>
+            prevB
+              ? {
+                  ...prevB,
+                  status: 'finished',
+                  winnerId: googleUser.id,
+                  winReason: 'target_reached',
+                }
+              : null
+          );
+
+          if (googleUser.mvpAnthemUrl) {
+            try {
+              const anthemAudio = new Audio(googleUser.mvpAnthemUrl);
+              anthemAudio.volume = 0.9;
+              anthemAudio.play().catch(() => {});
+            } catch {}
+          }
+        }
+      }
+
+      return next;
+    });
   };
 
   // Fetch Weather on position change
@@ -1024,15 +1455,15 @@ export default function RunnerApp() {
       <header className="absolute top-2 sm:top-4 left-3 right-3 sm:left-4 sm:right-4 z-40 flex items-center justify-between pointer-events-none">
         <div className="flex items-center gap-1.5 sm:gap-2">
           {/* Brand Chip */}
-          <div className="pointer-events-auto flex items-center gap-1.5 sm:gap-2 bg-[#000000] border-2 border-[#222222] px-2 sm:px-4 py-1.5 sm:py-2 rounded-2xl shadow-2xl">
+          <div className="pointer-events-auto flex items-center gap-1.5 sm:gap-2 bg-[#000000] border-2 border-[#222222] p-1.5 sm:px-4 sm:py-2 rounded-2xl shadow-2xl">
             <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl overflow-hidden border border-[#7D39EB] bg-[#000000] flex items-center justify-center shadow-lg shrink-0">
               <img src="/avatar.jpg" alt="Calorie Runner" className="w-full h-full object-cover" />
             </div>
-            <div>
+            <div className="hidden sm:block">
               <h1 className="text-xs sm:text-sm font-black tracking-wider text-white uppercase flex items-center gap-1">
                 CALORIE <span className="text-[#C6FF33]">RUNNER</span>
               </h1>
-              <p className="hidden sm:block text-[9px] text-gray-400 font-mono -mt-0.5">
+              <p className="text-[9px] text-gray-400 font-mono -mt-0.5">
                 {preferParks ? '🌲 Парковый режим' : 'Кольцевые маршруты'}
               </p>
             </div>
@@ -1048,7 +1479,7 @@ export default function RunnerApp() {
               <span className="relative inline-flex rounded-full h-2 w-2 bg-[#C6FF33]"></span>
             </span>
             <span className="font-mono font-black text-xs">{onlineRunners.length + (googleUser ? 1 : 0)}</span>
-            <span className="text-[10px] text-white font-bold hidden sm:inline">онлайн</span>
+            <span className="text-[10px] text-white font-bold hidden md:inline">онлайн</span>
           </div>
 
           {/* PVP Duel Arena Button (Solid Violet & White) */}
@@ -1069,7 +1500,7 @@ export default function RunnerApp() {
             title="Открыть арену PVP забегов и вызвать соперника"
           >
             <Swords className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">PVP Дуэль</span>
+            <span className="hidden md:inline">PVP Дуэль</span>
           </button>
 
           {/* History Button on Initial Screen (Header) */}
@@ -1080,7 +1511,7 @@ export default function RunnerApp() {
             title="История моих пробежек"
           >
             <History className="w-3.5 h-3.5 text-[#C6FF33]" />
-            <span className="hidden sm:inline">История</span>
+            <span className="hidden md:inline">История</span>
           </button>
         </div>
 
@@ -1157,50 +1588,52 @@ export default function RunnerApp() {
       </header>
 
       {/* --- MOBILE FLOATING MAP CONTROLS (Styles & GPS, Left-aligned on mobile to avoid profile overlap) --- */}
-      <div className="md:hidden absolute top-16 left-3 z-10 flex flex-col items-start gap-2 pointer-events-none">
-        {/* Floating Map Layers switcher */}
-        <div className="pointer-events-auto bg-[#000000]/95 backdrop-blur-md border border-[#242424] p-1 rounded-2xl shadow-2xl flex flex-col gap-1">
+      {!activeBattle && !activeRoom && (
+        <div className="md:hidden absolute top-16 left-3 z-10 flex flex-col items-start gap-2 pointer-events-none">
+          {/* Floating Map Layers switcher */}
+          <div className="pointer-events-auto bg-[#000000]/95 backdrop-blur-md border border-[#242424] p-1 rounded-2xl shadow-2xl flex flex-col gap-1">
+            <button
+              onClick={() => setMapStyle('dark')}
+              className={`w-8 h-8 rounded-xl text-xs transition flex items-center justify-center ${
+                mapStyle === 'dark' ? 'bg-[#C6FF33] text-black shadow' : 'text-gray-400 hover:text-white'
+              }`}
+              title="Тёмная карта"
+            >
+              🌙
+            </button>
+            <button
+              onClick={() => setMapStyle('satellite')}
+              className={`w-8 h-8 rounded-xl text-xs transition flex items-center justify-center ${
+                mapStyle === 'satellite' ? 'bg-[#C6FF33] text-black shadow' : 'text-gray-400 hover:text-white'
+              }`}
+              title="Спутник"
+            >
+              🛰
+            </button>
+            <button
+              onClick={() => setMapStyle('streets')}
+              className={`w-8 h-8 rounded-xl text-xs transition flex items-center justify-center ${
+                mapStyle === 'streets' ? 'bg-[#C6FF33] text-black shadow' : 'text-gray-400 hover:text-white'
+              }`}
+              title="Улицы"
+            >
+              🗺
+            </button>
+          </div>
+
+          {/* Floating GPS Target button */}
           <button
-            onClick={() => setMapStyle('dark')}
-            className={`w-8 h-8 rounded-xl text-xs transition flex items-center justify-center ${
-              mapStyle === 'dark' ? 'bg-[#C6FF33] text-black shadow' : 'text-gray-400 hover:text-white'
-            }`}
-            title="Тёмная карта"
+            onClick={runStrictGpsVerification}
+            className="pointer-events-auto w-9 h-9 rounded-2xl bg-[#000000]/95 backdrop-blur-md border border-[#242424] flex items-center justify-center text-[#C6FF33] hover:border-[#C6FF33] shadow-2xl active:scale-95 transition"
+            title="Мой точный GPS"
           >
-            🌙
-          </button>
-          <button
-            onClick={() => setMapStyle('satellite')}
-            className={`w-8 h-8 rounded-xl text-xs transition flex items-center justify-center ${
-              mapStyle === 'satellite' ? 'bg-[#C6FF33] text-black shadow' : 'text-gray-400 hover:text-white'
-            }`}
-            title="Спутник"
-          >
-            🛰
-          </button>
-          <button
-            onClick={() => setMapStyle('streets')}
-            className={`w-8 h-8 rounded-xl text-xs transition flex items-center justify-center ${
-              mapStyle === 'streets' ? 'bg-[#C6FF33] text-black shadow' : 'text-gray-400 hover:text-white'
-            }`}
-            title="Улицы"
-          >
-            🗺
+            <Crosshair className={`w-4 h-4 text-[#C6FF33] ${isCheckingGps ? 'animate-spin' : ''}`} />
           </button>
         </div>
+      )}
 
-        {/* Floating GPS Target button */}
-        <button
-          onClick={runStrictGpsVerification}
-          className="pointer-events-auto w-9 h-9 rounded-2xl bg-[#000000]/95 backdrop-blur-md border border-[#242424] flex items-center justify-center text-[#C6FF33] hover:border-[#C6FF33] shadow-2xl active:scale-95 transition"
-          title="Мой точный GPS"
-        >
-          <Crosshair className={`w-4 h-4 text-[#C6FF33] ${isCheckingGps ? 'animate-spin' : ''}`} />
-        </button>
-      </div>
-
-      {/* --- ACTIVE RUNNING HUD (Live Mode) --- */}
-      {isTrackingActive ? (
+      {/* --- ACTIVE RUNNING HUD (Live Mode, Solo Run) --- */}
+      {isTrackingActive && !activeBattle ? (
         <div className="absolute bottom-3 left-3 right-3 sm:bottom-6 sm:left-auto sm:right-6 sm:w-96 z-30 bg-[#000000] border-2 border-[#C6FF33] rounded-3xl p-4 sm:p-5 shadow-[0_0_50px_rgba(198,255,51,0.25)] space-y-3.5 safe-bottom animate-slide-up">
           <div className="flex items-center justify-between border-b border-[#222222] pb-2.5">
             <div className="flex items-center gap-2">
@@ -1278,7 +1711,7 @@ export default function RunnerApp() {
             </button>
           </div>
         </div>
-      ) : (
+      ) : !activeBattle && !activeRoom ? (
         /* --- MOBILE BOTTOM SHEET & DESKTOP SIDEBAR PANEL --- */
         <div
           onTouchStart={(e) => e.stopPropagation()}
@@ -1640,23 +2073,33 @@ export default function RunnerApp() {
             <div className="h-16 md:hidden" />
           </div>
         </div>
-      )}
+      ) : null}
 
-      {/* PVP Duel System (HUD, Lobby, Invites, Victory) */}
+      {/* PVP Duel System (HUD, Room Lobby, Invites, Victory) */}
       {googleUser && (
         <PvpDuelSystem
           currentUser={googleUser}
           onlineRunners={onlineRunners}
+          activeRoom={activeRoom}
           activeBattle={activeBattle}
           incomingInvite={incomingInvite}
           isLobbyOpen={isPvpLobbyOpen}
+          openRooms={openRooms}
+          isTrackingActive={isTrackingActive}
+          myLiveKm={distanceTraversedKm}
+          myLiveKcal={activeCaloriesBurned}
           onCloseLobby={() => setIsPvpLobbyOpen(false)}
+          onCreateRoom={handleCreateRoom}
+          onJoinRoom={handleJoinRoom}
+          onCancelRoom={handleCancelRoom}
+          onStartRoomRace={handleStartRoomRace}
           onSendInvite={handleSendPvpInvite}
           onAcceptInvite={handleAcceptPvpInvite}
           onDeclineInvite={handleDeclinePvpInvite}
           onSurrenderBattle={handleSurrenderBattle}
-          myLiveKm={distanceTraversedKm}
-          myLiveKcal={activeCaloriesBurned}
+          onCloseBattle={handleCloseBattle}
+          onToggleTracking={() => (isTrackingActive ? stopTracking() : startTracking())}
+          onAddTestDistance={handleAddTestDistance}
         />
       )}
 
