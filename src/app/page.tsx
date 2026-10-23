@@ -63,6 +63,50 @@ export default function RunnerApp() {
   const [googleUser, setGoogleUser] = useState<GoogleUser | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
   const [isAuthChecked, setIsAuthChecked] = useState<boolean>(false);
+  const [isUserBanned, setIsUserBanned] = useState<boolean>(false);
+
+  const playBanSound = () => {
+    try {
+      const audio = new Audio('/sounds/user-banned.mp3');
+      audio.volume = 1.0;
+      audio.currentTime = 0;
+      const promise = audio.play();
+      if (promise !== undefined) {
+        promise.catch(() => {});
+      }
+    } catch {}
+  };
+
+  const checkBan = async (email: string) => {
+    if (!email) return false;
+    const emailLower = email.toLowerCase();
+
+    // 1. Check client-side ban list in localStorage
+    try {
+      const raw = localStorage.getItem('rush_banned_emails') || '[]';
+      const bannedList: string[] = JSON.parse(raw);
+      if (bannedList.includes(emailLower)) {
+        setIsUserBanned(true);
+        playBanSound();
+        return true;
+      }
+    } catch {}
+
+    // 2. Check server ban list
+    try {
+      const res = await fetch(`/api/admin/athletes?email=${encodeURIComponent(emailLower)}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.isBanned) {
+          setIsUserBanned(true);
+          playBanSound();
+          return true;
+        }
+      }
+    } catch {}
+
+    return false;
+  };
 
   // GPS & Location State
   const [startPos, setStartPos] = useState<[number, number]>([41.311081, 69.279737]);
@@ -119,12 +163,21 @@ export default function RunnerApp() {
       if (savedUser.weightKg) {
         setWeightKg(savedUser.weightKg);
       }
+      checkBan(savedUser.email);
       // Sync with admin roster
       fetch('/api/admin/athletes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(savedUser),
-      }).catch(() => {});
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data?.isBanned) {
+            setIsUserBanned(true);
+            playBanSound();
+          }
+        })
+        .catch(() => {});
     } else {
       setIsAuthModalOpen(true);
     }
@@ -147,12 +200,22 @@ export default function RunnerApp() {
       setWeightKg(user.weightKg);
     }
     setIsAuthModalOpen(false);
+    checkBan(user.email);
+
     // Sync with Admin panel registered athletes roster
     fetch('/api/admin/athletes', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(user),
-    }).catch(() => {});
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.isBanned) {
+          setIsUserBanned(true);
+          playBanSound();
+        }
+      })
+      .catch(() => {});
   };
 
   const handleLogout = () => {
@@ -930,6 +993,61 @@ export default function RunnerApp() {
         onUserLogin={handleUserLogin}
         currentUserWeight={weightKg}
       />
+
+      {/* Full-Screen Lockout Screen for Banned Users */}
+      {isUserBanned && (
+        <div
+          onClick={playBanSound}
+          className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-xl flex items-center justify-center p-4 text-center animate-fade-in safe-bottom"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="max-w-md w-full bg-[#160a0d] border-2 border-rose-500 rounded-3xl p-6 sm:p-8 shadow-[0_0_80px_rgba(244,63,94,0.45)] space-y-5"
+          >
+            <div
+              onClick={playBanSound}
+              className="w-20 h-20 mx-auto rounded-3xl bg-rose-950/80 border-2 border-rose-500 flex items-center justify-center text-4xl shadow-inner animate-pulse cursor-pointer hover:scale-105 transition"
+              title="Нажмите, чтобы включить звук"
+            >
+              🚫
+            </div>
+            <div className="space-y-2">
+              <span className="inline-block px-3 py-1 rounded-full text-[11px] font-bold bg-rose-950 text-rose-400 border border-rose-500/50 uppercase tracking-widest font-mono">
+                Блокировка доступа
+              </span>
+              <h2 className="text-2xl font-black text-white uppercase tracking-wider font-mono">
+                АККАУНТ ЗАБЛОКИРОВАН
+              </h2>
+              <p className="text-xs text-rose-200/80 leading-relaxed pt-1">
+                Пользователь <span className="font-mono font-bold text-white bg-rose-950 px-2 py-0.5 rounded border border-rose-500/40">{googleUser?.email || 'атлет'}</span> заблокирован решением шефа за нарушение правил платформы.
+              </p>
+            </div>
+            <div className="p-3.5 bg-black/70 rounded-2xl border border-rose-950 text-[11px] text-gray-400 font-mono leading-relaxed">
+              📢 Доступ к генерации маршрутов, GPS-трекингу калорий и всем функциям Rush Calory полностью закрыт.
+            </div>
+            <div className="flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={playBanSound}
+                className="w-full py-2.5 px-4 rounded-xl bg-purple-950/60 hover:bg-purple-900 border border-purple-500/40 text-purple-300 font-bold text-xs transition flex items-center justify-center gap-2"
+              >
+                <span>🔊</span>
+                <span>Включить звук бана</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  handleLogout();
+                  setIsUserBanned(false);
+                }}
+                className="w-full py-3.5 px-4 rounded-2xl bg-rose-950 hover:bg-rose-900 border border-rose-500/50 text-rose-200 font-black text-xs transition active:scale-98"
+              >
+                Выйти из заблокированного аккаунта
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

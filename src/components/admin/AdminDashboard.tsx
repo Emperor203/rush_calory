@@ -64,9 +64,13 @@ export default function AdminDashboard() {
     try {
       const audio = new Audio('/sounds/ban.mp3');
       audio.volume = 1.0;
-      audio.play().catch((err) => {
-        console.warn('Audio play error:', err);
-      });
+      audio.currentTime = 0;
+      const promise = audio.play();
+      if (promise !== undefined) {
+        promise.catch((err) => {
+          console.warn('Audio play error:', err);
+        });
+      }
     } catch (e) {
       console.warn('Audio playback error:', e);
     }
@@ -88,7 +92,18 @@ export default function AdminDashboard() {
       const res = await fetch('/api/admin/athletes');
       if (res.ok) {
         const data = await res.json();
-        setAthletes(data.athletes || []);
+        const rawBanned = typeof window !== 'undefined' ? localStorage.getItem('rush_banned_emails') || '[]' : '[]';
+        let localBannedEmails: string[] = [];
+        try {
+          localBannedEmails = JSON.parse(rawBanned);
+        } catch {}
+
+        const mergedAthletes = (data.athletes || []).map((a: RegisteredAthlete) => ({
+          ...a,
+          isBanned: a.isBanned || localBannedEmails.includes((a.email || '').toLowerCase()),
+        }));
+
+        setAthletes(mergedAthletes);
         setStats(
           data.stats || {
             totalAthletes: 0,
@@ -136,26 +151,43 @@ export default function AdminDashboard() {
 
   const handleToggleBan = async (athleteId: string, currentBanned: boolean) => {
     try {
+      const target = athletes.find((a) => a.id === athleteId);
+      const newBannedState = !currentBanned;
+
       // If we are banning an athlete (not unbanning), play the custom boss sound!
-      if (!currentBanned) {
+      if (newBannedState) {
         playBanSound();
+      }
+
+      // Optimistic state update in UI
+      setAthletes((prev) =>
+        prev.map((a) => (a.id === athleteId ? { ...a, isBanned: newBannedState } : a)),
+      );
+
+      // Persist in localStorage so it stays banned across sessions and tabs
+      if (typeof window !== 'undefined' && target?.email) {
+        try {
+          const rawBanned = localStorage.getItem('rush_banned_emails') || '[]';
+          let list: string[] = JSON.parse(rawBanned);
+          const emailLower = target.email.toLowerCase();
+          if (newBannedState) {
+            if (!list.includes(emailLower)) list.push(emailLower);
+          } else {
+            list = list.filter((e) => e !== emailLower);
+          }
+          localStorage.setItem('rush_banned_emails', JSON.stringify(list));
+        } catch {}
       }
 
       const res = await fetch('/api/admin/athletes', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: athleteId, isBanned: !currentBanned }),
+        body: JSON.stringify({ id: athleteId, isBanned: newBannedState }),
       });
-      if (res.ok) {
-        setAthletes((prev) =>
-          prev.map((a) => (a.id === athleteId ? { ...a, isBanned: !currentBanned } : a)),
-        );
 
-        if (!currentBanned) {
-          const target = athletes.find((a) => a.id === athleteId);
-          setBanNotification(`🔨 БАН ВЫДАН: ${target?.name || 'Пользователь'} заблокирован шефом!`);
-          setTimeout(() => setBanNotification(null), 4000);
-        }
+      if (newBannedState) {
+        setBanNotification(`🔨 БАН ВЫДАН: ${target?.name || 'Пользователь'} заблокирован шефом!`);
+        setTimeout(() => setBanNotification(null), 4000);
       }
     } catch (e: any) {
       alert(`Ошибка: ${e.message}`);

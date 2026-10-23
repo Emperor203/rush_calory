@@ -67,8 +67,27 @@ class AthletesStore {
   }
 }
 
-export async function GET() {
+// Global in-memory set of banned emails to survive during server runtime
+const globalBannedEmails = new Set<string>();
+
+export async function GET(req: Request) {
   const store = AthletesStore.getInstance();
+  const url = new URL(req.url);
+  const emailQuery = url.searchParams.get('email');
+
+  // Sync banned state from global set
+  store.athletes.forEach((a) => {
+    if (globalBannedEmails.has(a.email.toLowerCase())) {
+      a.isBanned = true;
+    }
+  });
+
+  if (emailQuery) {
+    const isBanned =
+      globalBannedEmails.has(emailQuery.toLowerCase()) ||
+      Boolean(store.athletes.find((a) => a.email.toLowerCase() === emailQuery.toLowerCase())?.isBanned);
+    return NextResponse.json({ email: emailQuery, isBanned });
+  }
 
   const totalCalories = store.athletes.reduce((sum, a) => sum + (a.totalCaloriesBurned || 0), 0);
   const totalKm = store.athletes.reduce((sum, a) => sum + (a.totalKmRun || 0), 0);
@@ -89,14 +108,19 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     const store = AthletesStore.getInstance();
+    const email = (body.email || '').toLowerCase();
+
+    const isBanned = globalBannedEmails.has(email);
 
     const existingIndex = store.athletes.findIndex(
-      (a) => a.email.toLowerCase() === (body.email || '').toLowerCase(),
+      (a) => a.email.toLowerCase() === email,
     );
 
     if (existingIndex !== -1) {
       // Update existing athlete
       const current = store.athletes[existingIndex];
+      const finalBanned = isBanned || current.isBanned;
+
       store.athletes[existingIndex] = {
         ...current,
         name: body.name || current.name,
@@ -105,9 +129,14 @@ export async function POST(req: Request) {
         totalCaloriesBurned: Math.max(current.totalCaloriesBurned, body.totalCaloriesBurned || 0),
         totalKmRun: Math.max(current.totalKmRun, body.totalKmRun || 0),
         completedRunsCount: Math.max(current.completedRunsCount, body.completedRunsCount || 0),
+        isBanned: finalBanned,
         lastActiveAt: new Date().toISOString(),
       };
-      return NextResponse.json({ message: 'Athlete updated', athlete: store.athletes[existingIndex] });
+      return NextResponse.json({
+        message: 'Athlete updated',
+        athlete: store.athletes[existingIndex],
+        isBanned: finalBanned,
+      });
     }
 
     // Register new athlete
@@ -122,13 +151,17 @@ export async function POST(req: Request) {
       totalCaloriesBurned: body.totalCaloriesBurned || 0,
       totalKmRun: body.totalKmRun || 0,
       completedRunsCount: body.completedRunsCount || 0,
-      isBanned: false,
+      isBanned: isBanned,
       registeredAt: new Date().toISOString(),
       lastActiveAt: new Date().toISOString(),
     };
 
     store.athletes.unshift(newAthlete);
-    return NextResponse.json({ message: 'Athlete registered', athlete: newAthlete });
+    return NextResponse.json({
+      message: 'Athlete registered',
+      athlete: newAthlete,
+      isBanned: isBanned,
+    });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 400 });
   }
@@ -145,7 +178,15 @@ export async function PATCH(req: Request) {
     }
 
     athlete.isBanned = isBanned;
-    return NextResponse.json({ message: `Status updated`, athlete });
+    const email = athlete.email.toLowerCase();
+
+    if (isBanned) {
+      globalBannedEmails.add(email);
+    } else {
+      globalBannedEmails.delete(email);
+    }
+
+    return NextResponse.json({ message: `Status updated`, athlete, isBanned });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 400 });
   }
