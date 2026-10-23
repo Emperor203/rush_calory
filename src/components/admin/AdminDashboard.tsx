@@ -23,6 +23,7 @@ import {
   Calendar,
   Volume2,
 } from 'lucide-react';
+import { supabase, LiveOnlineRunner } from '@/lib/supabase';
 
 interface RegisteredAthlete {
   id: string;
@@ -50,6 +51,7 @@ export default function AdminDashboard() {
 
   // Athletes Directory & Stats State
   const [athletes, setAthletes] = useState<RegisteredAthlete[]>([]);
+  const [onlineRunners, setOnlineRunners] = useState<LiveOnlineRunner[]>([]);
   const [stats, setStats] = useState({
     totalAthletes: 0,
     totalCaloriesBurned: 0,
@@ -123,6 +125,23 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (isAuthenticated) {
       fetchAthletes();
+
+      const channel = supabase.channel('rush-live-runners');
+      channel
+        .on('presence', { event: 'sync' }, () => {
+          const state = channel.presenceState();
+          const runners: LiveOnlineRunner[] = [];
+          Object.keys(state).forEach((key) => {
+            const presences = state[key] as any[];
+            presences.forEach((p) => runners.push(p));
+          });
+          setOnlineRunners(runners);
+        })
+        .subscribe();
+
+      return () => {
+        channel.unsubscribe();
+      };
     }
   }, [isAuthenticated]);
 
@@ -372,16 +391,30 @@ export default function AdminDashboard() {
           </div>
         )}
         {/* KPI Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
+          <div className="bg-[#0E1420] border border-emerald-500/50 p-4 rounded-2xl col-span-2 lg:col-span-1 shadow-lg shadow-emerald-950/40">
+            <div className="flex items-center justify-between text-gray-400 text-xs font-semibold">
+              <span className="text-emerald-300">В сети (Realtime)</span>
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+              </span>
+            </div>
+            <div className="text-2xl font-black text-emerald-400 mt-2 font-mono">
+              {onlineRunners.length}
+            </div>
+            <div className="text-[10px] text-gray-400 mt-1">Supabase WebSockets</div>
+          </div>
+
           <div className="bg-[#0E1420] border border-gray-800 p-4 rounded-2xl">
             <div className="flex items-center justify-between text-gray-400 text-xs font-semibold">
-              <span>Зарегистрировано атлетов</span>
+              <span>Зарегистрировано</span>
               <Users className="w-4 h-4 text-cyan-400" />
             </div>
             <div className="text-2xl font-black text-white mt-2 font-mono">
               {stats.totalAthletes}
             </div>
-            <div className="text-[10px] text-emerald-400 mt-1">В базе пользователей</div>
+            <div className="text-[10px] text-gray-400 mt-1">Всего в базе</div>
           </div>
 
           <div className="bg-[#0E1420] border border-gray-800 p-4 rounded-2xl">
@@ -491,9 +524,17 @@ export default function AdminDashboard() {
                             )}
                           </div>
                           <div>
-                            <div className="font-bold text-white flex items-center gap-1">
+                            <div className="font-bold text-white flex items-center gap-1.5 flex-wrap">
                               <span>{a.name}</span>
                               <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                              {onlineRunners.some(
+                                (o) => (o.email || '').toLowerCase() === (a.email || '').toLowerCase(),
+                              ) && (
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-emerald-950 text-emerald-400 border border-emerald-500/50">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                                  В сети
+                                </span>
+                              )}
                             </div>
                             <span className="text-[10px] text-gray-500">ID: {a.id.slice(0, 12)}</span>
                           </div>

@@ -17,6 +17,7 @@ import {
   GpsStatus,
 } from '@/lib/gps';
 import { GoogleUser, getSavedGoogleUser, saveGoogleUser } from '@/lib/auth';
+import { supabase, LiveOnlineRunner } from '@/lib/supabase';
 import GoogleAuthModal from '@/components/auth/GoogleAuthModal';
 import UserProfileButton from '@/components/auth/UserProfileButton';
 import {
@@ -64,6 +65,7 @@ export default function RunnerApp() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
   const [isAuthChecked, setIsAuthChecked] = useState<boolean>(false);
   const [isUserBanned, setIsUserBanned] = useState<boolean>(false);
+  const [onlineRunners, setOnlineRunners] = useState<LiveOnlineRunner[]>([]);
 
   const playBanSound = () => {
     try {
@@ -224,13 +226,6 @@ export default function RunnerApp() {
     setIsAuthModalOpen(true);
   };
 
-  // Fetch Weather on position change
-  useEffect(() => {
-    fetchLiveWeather(startPos[0], startPos[1])
-      .then((data) => setWeather(data))
-      .catch((e) => console.error('Weather error:', e));
-  }, [startPos]);
-
   // Target Calculations
   const targetKm = calculateTargetDistanceKm(calories, weightKg);
   const estimatedMinutes = Math.round(targetKm * pace);
@@ -239,6 +234,81 @@ export default function RunnerApp() {
   const activeCaloriesBurned = Math.round(distanceTraversedKm * weightKg * 1.036);
   const remainingCalories = Math.max(0, calories - activeCaloriesBurned);
   const caloriePercent = Math.min(100, Math.round((activeCaloriesBurned / calories) * 100));
+
+  // Supabase Realtime Online Presence & Live Coordinates
+  useEffect(() => {
+    if (!googleUser) return;
+
+    const channel = supabase.channel('rush-live-runners', {
+      config: {
+        presence: {
+          key: googleUser.id,
+        },
+      },
+    });
+
+    channel
+      .on('presence', { event: 'sync' }, () => {
+        const state = channel.presenceState();
+        const runners: LiveOnlineRunner[] = [];
+        Object.keys(state).forEach((key) => {
+          const presences = state[key] as any[];
+          presences.forEach((p) => {
+            if (p.id !== googleUser.id) {
+              runners.push(p);
+            }
+          });
+        });
+        setOnlineRunners(runners);
+      })
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          await channel.track({
+            id: googleUser.id,
+            name: googleUser.name,
+            email: googleUser.email,
+            avatar: googleUser.avatar,
+            lat: liveRunnerPos ? liveRunnerPos[0] : startPos[0],
+            lng: liveRunnerPos ? liveRunnerPos[1] : startPos[1],
+            speedKmh: currentSpeedKmh,
+            caloriesBurned: activeCaloriesBurned,
+            isTracking: isTrackingActive,
+            onlineAt: new Date().toISOString(),
+          });
+        }
+      });
+
+    return () => {
+      channel.unsubscribe();
+    };
+  }, [googleUser]);
+
+  // Push updated live coordinates to Supabase Realtime
+  useEffect(() => {
+    if (!googleUser) return;
+    const channel = supabase.channel('rush-live-runners');
+    channel
+      .track({
+        id: googleUser.id,
+        name: googleUser.name,
+        email: googleUser.email,
+        avatar: googleUser.avatar,
+        lat: liveRunnerPos ? liveRunnerPos[0] : startPos[0],
+        lng: liveRunnerPos ? liveRunnerPos[1] : startPos[1],
+        speedKmh: currentSpeedKmh,
+        caloriesBurned: activeCaloriesBurned,
+        isTracking: isTrackingActive,
+        onlineAt: new Date().toISOString(),
+      })
+      .catch(() => {});
+  }, [liveRunnerPos, startPos, isTrackingActive, currentSpeedKmh, activeCaloriesBurned]);
+
+  // Fetch Weather on position change
+  useEffect(() => {
+    fetchLiveWeather(startPos[0], startPos[1])
+      .then((data) => setWeather(data))
+      .catch((e) => console.error('Weather error:', e));
+  }, [startPos]);
 
   const handleWeightChange = (val: number) => {
     setWeightKg(val);
@@ -423,6 +493,7 @@ export default function RunnerApp() {
           liveRunnerPos={liveRunnerPos}
           traversedCoords={traversedCoords}
           isTrackingActive={isTrackingActive}
+          onlineRunners={onlineRunners}
         />
       </div>
 
@@ -495,18 +566,33 @@ export default function RunnerApp() {
 
       {/* --- TOP HEADER (Adaptive Mobile & Desktop) --- */}
       <header className="absolute top-2 sm:top-4 left-3 right-3 sm:left-4 sm:right-4 z-20 flex items-center justify-between pointer-events-none">
-        {/* Brand Chip */}
-        <div className="pointer-events-auto flex items-center gap-2 bg-black/85 backdrop-blur-md border border-gray-800 px-3 py-1.5 sm:px-4 sm:py-2 rounded-2xl shadow-2xl">
-          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-gradient-to-tr from-emerald-500 to-cyan-500 flex items-center justify-center text-white shadow-lg">
-            <Flame className="w-4 h-4" />
+        <div className="flex items-center gap-2">
+          {/* Brand Chip */}
+          <div className="pointer-events-auto flex items-center gap-2 bg-black/85 backdrop-blur-md border border-gray-800 px-3 py-1.5 sm:px-4 sm:py-2 rounded-2xl shadow-2xl">
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-gradient-to-tr from-emerald-500 to-cyan-500 flex items-center justify-center text-white shadow-lg">
+              <Flame className="w-4 h-4" />
+            </div>
+            <div>
+              <h1 className="text-xs sm:text-sm font-black tracking-wider text-white uppercase flex items-center gap-1">
+                CALORIE <span className="text-emerald-400">RUNNER</span>
+              </h1>
+              <p className="hidden sm:block text-[9px] text-gray-400 font-mono -mt-0.5">
+                {preferParks ? '🌲 Парковый режим' : 'Кольцевые маршруты'}
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-xs sm:text-sm font-black tracking-wider text-white uppercase flex items-center gap-1">
-              CALORIE <span className="text-emerald-400">RUNNER</span>
-            </h1>
-            <p className="hidden sm:block text-[9px] text-gray-400 font-mono -mt-0.5">
-              {preferParks ? '🌲 Парковый режим' : 'Кольцевые маршруты'}
-            </p>
+
+          {/* Supabase Live Online Badge */}
+          <div
+            className="pointer-events-auto flex items-center gap-1.5 bg-black/85 backdrop-blur-md border border-emerald-500/40 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-2xl shadow-xl text-emerald-400"
+            title={`${onlineRunners.length + 1} бегунов онлайн сейчас (Supabase Realtime)`}
+          >
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
+            <span className="font-mono font-bold text-xs">{onlineRunners.length + 1}</span>
+            <span className="text-[10px] text-gray-300 font-semibold hidden sm:inline">онлайн</span>
           </div>
         </div>
 

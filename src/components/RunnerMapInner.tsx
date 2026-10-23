@@ -12,6 +12,7 @@ import {
 } from 'react-leaflet';
 import L from 'leaflet';
 import { RouteResult } from '@/lib/routing';
+import { LiveOnlineRunner } from '@/lib/supabase';
 
 // Fix standard Leaflet icon paths
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -29,6 +30,7 @@ interface RunnerMapProps {
   liveRunnerPos?: [number, number] | null;
   traversedCoords?: [number, number][];
   isTrackingActive?: boolean;
+  onlineRunners?: LiveOnlineRunner[];
 }
 
 function MapViewController({
@@ -75,6 +77,7 @@ export default function RunnerMapInner({
   liveRunnerPos,
   traversedCoords = [],
   isTrackingActive = false,
+  onlineRunners = [],
 }: RunnerMapProps) {
   // Custom Runner Start/Finish Pin Icon
   const startIcon = useMemo(
@@ -251,6 +254,61 @@ export default function RunnerMapInner({
             })}
           </>
         )}
+
+        {/* Real-time Online Runners (via Supabase WebSockets) */}
+        {onlineRunners.map((runner) => {
+          if (!runner.lat || !runner.lng) return null;
+          const peerIcon = L.divIcon({
+            className: 'custom-online-runner-marker',
+            html: `
+              <div class="relative flex flex-col items-center cursor-pointer">
+                <div class="absolute -top-7 px-2 py-0.5 rounded-full bg-black/90 border border-cyan-400 text-cyan-300 text-[10px] font-bold font-mono whitespace-nowrap shadow-xl flex items-center gap-1 z-20">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                  <span>${runner.name || 'Атлет'}</span>
+                  ${runner.speedKmh ? `<span class="text-gray-400">• ${runner.speedKmh}км/ч</span>` : ''}
+                </div>
+                <div class="relative">
+                  <div class="absolute -inset-1.5 rounded-full bg-cyan-400 opacity-60 animate-ping"></div>
+                  <div class="w-9 h-9 rounded-full overflow-hidden border-2 border-cyan-400 bg-gray-950 shadow-2xl flex items-center justify-center">
+                    ${
+                      runner.avatar
+                        ? `<img src="${runner.avatar}" class="w-full h-full object-cover" />`
+                        : `<span class="text-xs font-black text-cyan-300">${(runner.name || 'A')[0]}</span>`
+                    }
+                  </div>
+                </div>
+              </div>
+            `,
+            iconSize: [36, 36],
+            iconAnchor: [18, 18],
+          });
+
+          return (
+            <Marker key={runner.id} position={[runner.lat, runner.lng]} icon={peerIcon}>
+              <Popup>
+                <div className="p-2 text-xs text-gray-900 space-y-1 min-w-[140px]">
+                  <div className="font-bold flex items-center gap-1.5 text-sm">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span>{runner.name}</span>
+                  </div>
+                  <div className="text-[11px] text-gray-500">
+                    🟢 В сети прямо сейчас
+                  </div>
+                  {runner.speedKmh ? (
+                    <div className="text-[11px] font-mono text-cyan-700 font-bold">
+                      🏃 Скорость: {runner.speedKmh} км/ч
+                    </div>
+                  ) : null}
+                  {runner.caloriesBurned ? (
+                    <div className="text-[11px] font-mono text-amber-600 font-bold">
+                      🔥 Сожжено: {runner.caloriesBurned} ккал
+                    </div>
+                  ) : null}
+                </div>
+              </Popup>
+            </Marker>
+          );
+        })}
       </MapContainer>
     </div>
   );
