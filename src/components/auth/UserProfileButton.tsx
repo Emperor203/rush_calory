@@ -134,17 +134,6 @@ export default function UserProfileButton({
               </div>
             </div>
 
-            {/* Sync Genuine Google Photo Button */}
-            <button
-              type="button"
-              disabled={isSigningIn}
-              onClick={handleSignInClick}
-              className="w-full py-2 px-3 rounded-xl bg-[#121212] hover:bg-[#1a1a1a] border border-[#242424] hover:border-[#7D39EB] text-gray-300 hover:text-white text-xs font-bold transition flex items-center justify-center gap-1.5"
-            >
-              <GoogleIcon className="w-3.5 h-3.5" />
-              <span>{isSigningIn ? 'Загрузка...' : 'Вернуть фото из Google'}</span>
-            </button>
-
             {/* Logout Button */}
             <button
               type="button"
