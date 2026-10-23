@@ -1020,7 +1020,7 @@ export default function RunnerApp() {
       )}
 
       {/* --- TOP HEADER (Adaptive Mobile & Desktop) --- */}
-      <header className="absolute top-2 sm:top-4 left-3 right-3 sm:left-4 sm:right-4 z-20 flex items-center justify-between pointer-events-none">
+      <header className="absolute top-2 sm:top-4 left-3 right-3 sm:left-4 sm:right-4 z-40 flex items-center justify-between pointer-events-none">
         <div className="flex items-center gap-1.5 sm:gap-2">
           {/* Brand Chip */}
           <div className="pointer-events-auto flex items-center gap-1.5 sm:gap-2 bg-[#000000] border-2 border-[#222222] px-2 sm:px-4 py-1.5 sm:py-2 rounded-2xl shadow-2xl">
@@ -1155,8 +1155,8 @@ export default function RunnerApp() {
         </div>
       </header>
 
-      {/* --- MOBILE FLOATING MAP CONTROLS (Styles & GPS) --- */}
-      <div className="md:hidden absolute top-14 right-3 z-20 flex flex-col items-end gap-2 pointer-events-none">
+      {/* --- MOBILE FLOATING MAP CONTROLS (Styles & GPS, Left-aligned on mobile to avoid profile overlap) --- */}
+      <div className="md:hidden absolute top-16 left-3 z-10 flex flex-col items-start gap-2 pointer-events-none">
         {/* Floating Map Layers switcher */}
         <div className="pointer-events-auto bg-[#000000]/95 backdrop-blur-md border border-[#242424] p-1 rounded-2xl shadow-2xl flex flex-col gap-1">
           <button
