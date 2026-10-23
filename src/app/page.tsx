@@ -169,6 +169,10 @@ export default function RunnerApp() {
     // Load saved athlete profile & Google user
     const savedUser = getSavedGoogleUser();
     if (savedUser) {
+      if (savedUser.avatar === '/avatar.jpg') {
+        savedUser.avatar = '';
+        saveGoogleUser(savedUser);
+      }
       setGoogleUser(savedUser);
       if (savedUser.weightKg) {
         setWeightKg(savedUser.weightKg);

@@ -19,10 +19,6 @@ export function getSavedGoogleUser(): GoogleUser | null {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     const user: GoogleUser = JSON.parse(raw);
-    if (!user.avatar || user.avatar.includes('dicebear') || user.avatar.includes('googleusercontent')) {
-      user.avatar = '/avatar.jpg';
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
-    }
     return user;
   } catch {
     return null;
@@ -123,7 +119,9 @@ export async function triggerRealGoogleOAuth(
             id: info.sub || `google-${Date.now()}`,
             name: info.name || info.given_name || 'Google Athlete',
             email: info.email,
-            avatar: '/avatar.jpg',
+            avatar:
+              info.picture ||
+              `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(info.name || 'User')}`,
             weightKg: userWeight,
             totalCaloriesBurned: 0,
             totalKmRun: 0,

@@ -75,7 +75,11 @@ export default function UserProfileButton({
         className="flex items-center gap-2 p-1 pl-1.5 sm:px-2.5 sm:py-1 rounded-2xl bg-[#000000] border border-[#242424] hover:border-[#7D39EB] transition shadow-2xl active:scale-95 text-xs"
       >
         <div className="w-7 h-7 rounded-full overflow-hidden bg-[#7D39EB] flex items-center justify-center border-2 border-[#C6FF33] shadow shrink-0">
-          <img src={user.avatar || '/avatar.jpg'} alt={user.name} className="w-full h-full object-cover" />
+          {user.avatar && user.avatar !== '/avatar.jpg' ? (
+            <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
+          ) : (
+            <span className="font-bold text-xs text-white">{firstName[0]}</span>
+          )}
         </div>
         <span className="hidden sm:inline font-bold text-white text-xs max-w-[80px] truncate">
           {firstName}
@@ -94,7 +98,11 @@ export default function UserProfileButton({
             {/* User Bio */}
             <div className="flex items-center gap-3 pb-3 border-b border-[#242424]">
               <div className="w-11 h-11 rounded-full overflow-hidden bg-[#7D39EB] flex items-center justify-center border-2 border-[#C6FF33] shrink-0">
-                <img src={user.avatar || '/avatar.jpg'} alt={user.name} className="w-full h-full object-cover" />
+                {user.avatar && user.avatar !== '/avatar.jpg' ? (
+                  <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="font-bold text-base text-white">{firstName[0]}</span>
+                )}
               </div>
               <div className="truncate">
                 <div className="font-black text-sm text-white truncate flex items-center gap-1.5">
@@ -125,6 +133,17 @@ export default function UserProfileButton({
                 </div>
               </div>
             </div>
+
+            {/* Sync Genuine Google Photo Button */}
+            <button
+              type="button"
+              disabled={isSigningIn}
+              onClick={handleSignInClick}
+              className="w-full py-2 px-3 rounded-xl bg-[#121212] hover:bg-[#1a1a1a] border border-[#242424] hover:border-[#7D39EB] text-gray-300 hover:text-white text-xs font-bold transition flex items-center justify-center gap-1.5"
+            >
+              <GoogleIcon className="w-3.5 h-3.5" />
+              <span>{isSigningIn ? 'Загрузка...' : 'Вернуть фото из Google'}</span>
+            </button>
 
             {/* Logout Button */}
             <button

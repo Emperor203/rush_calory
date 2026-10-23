@@ -97,8 +97,8 @@ export default function RunnerMapInner({
               <div class="absolute -inset-1.5 rounded-full bg-[#C6FF33] opacity-60 animate-ping"></div>
               <div class="w-10 h-10 rounded-full overflow-hidden border-2 border-[#C6FF33] bg-[#000000] shadow-2xl flex items-center justify-center ring-2 ring-[#C6FF33]/50">
                 ${
-                  currentUser?.avatar || '/avatar.jpg'
-                    ? `<img src="${currentUser?.avatar || '/avatar.jpg'}" class="w-full h-full object-cover" />`
+                  currentUser?.avatar
+                    ? `<img src="${currentUser.avatar}" class="w-full h-full object-cover" />`
                     : `<span class="text-xs font-black text-[#C6FF33]">🏁</span>`
                 }
               </div>
@@ -125,8 +125,8 @@ export default function RunnerMapInner({
               <div class="absolute -inset-2 rounded-full bg-[#C6FF33] opacity-70 animate-ping"></div>
               <div class="w-11 h-11 rounded-full overflow-hidden border-2 border-[#FFFFFF] bg-[#000000] shadow-2xl flex items-center justify-center ring-2 ring-[#C6FF33]">
                 ${
-                  currentUser?.avatar || '/avatar.jpg'
-                    ? `<img src="${currentUser?.avatar || '/avatar.jpg'}" class="w-full h-full object-cover" />`
+                  currentUser?.avatar
+                    ? `<img src="${currentUser.avatar}" class="w-full h-full object-cover" />`
                     : `<span class="text-xs font-black text-[#C6FF33]">🏃‍♂️</span>`
                 }
               </div>
