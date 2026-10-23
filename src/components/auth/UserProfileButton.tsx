@@ -8,8 +8,9 @@ import {
   triggerRealGoogleOAuth,
 } from '@/lib/auth';
 import { GoogleIcon } from './GoogleAuthModal';
-import { LogOut, Flame, TrendingUp, Award, UserCheck, ChevronDown, Zap } from 'lucide-react';
+import { LogOut, Flame, TrendingUp, Award, UserCheck, ChevronDown, Zap, Shield } from 'lucide-react';
 import { isStreetPassActive, getStreetPassDaysRemaining } from '@/lib/streetpass';
+import { calculateUserRank } from '@/lib/ranks';
 
 interface UserProfileButtonProps {
   user: GoogleUser | null;
@@ -35,6 +36,7 @@ export default function UserProfileButton({
   const daysRemaining = getStreetPassDaysRemaining(user);
   const totalDays = user?.streetPassPlan === 'season' ? 90 : 30;
   const passPercent = Math.min(100, Math.round((daysRemaining / totalDays) * 100));
+  const rankProgress = calculateUserRank(user?.totalKmRun || 0);
 
   const handleSignInClick = () => {
     const clientId = getStoredGoogleClientId();
@@ -91,8 +93,9 @@ export default function UserProfileButton({
             <span className="font-bold text-xs text-white">{firstName[0]}</span>
           )}
         </div>
-        <span className="hidden sm:inline font-bold text-white text-xs max-w-[80px] truncate flex items-center gap-1">
+        <span className="hidden sm:inline font-bold text-white text-xs max-w-[90px] truncate flex items-center gap-1">
           <span>{firstName}</span>
+          <span className="text-[10px]">{rankProgress.currentTier.icon}</span>
           {hasPass && <Zap className="w-3 h-3 fill-[#C6FF33] text-[#C6FF33] shrink-0" />}
         </span>
         <ChevronDown className="hidden sm:block w-3.5 h-3.5 text-gray-400" />
@@ -105,7 +108,7 @@ export default function UserProfileButton({
             className="fixed inset-0 z-40"
             onClick={() => setIsDropdownOpen(false)}
           />
-          <div className="absolute right-0 top-11 z-50 w-72 bg-[#000000] border border-[#242424] rounded-3xl p-4 shadow-2xl text-white space-y-3.5 animate-fade-in safe-bottom">
+          <div className="absolute right-0 top-11 z-50 w-72 bg-[#000000] border border-[#242424] rounded-3xl p-4 shadow-2xl text-white space-y-3 animate-fade-in safe-bottom">
             {/* User Bio */}
             <div className="flex items-center gap-3 pb-3 border-b border-[#242424]">
               <div className="w-11 h-11 rounded-full overflow-hidden bg-[#7D39EB] flex items-center justify-center border-2 border-[#C6FF33] shrink-0">
@@ -173,6 +176,74 @@ export default function UserProfileButton({
                 </button>
               )
             )}
+
+            {/* Athlete Rank & Progress Line (Линия ранга) */}
+            <div className="bg-[#121212] border border-[#242424] hover:border-[#7D39EB] p-2.5 rounded-2xl transition space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-[#000000] border-2 border-[#7D39EB] flex items-center justify-center text-base shadow shrink-0">
+                    {rankProgress.currentTier.icon}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[9px] uppercase font-bold text-gray-400 font-mono">РАНГ:</span>
+                      <span
+                        className="font-mono font-black text-xs tracking-wider"
+                        style={{ color: rankProgress.currentTier.textColor }}
+                      >
+                        {rankProgress.currentTier.name}
+                      </span>
+                    </div>
+                    <span className="text-[9px] text-gray-400 font-mono block -mt-0.5">
+                      {rankProgress.currentTier.subtitle}
+                    </span>
+                  </div>
+                </div>
+
+                {rankProgress.nextTier ? (
+                  <div className="text-right">
+                    <span className="text-[8px] text-gray-500 font-mono uppercase block">Далее:</span>
+                    <span className="text-[10px] font-mono font-bold text-gray-300 flex items-center justify-end gap-1">
+                      <span>{rankProgress.nextTier.name}</span>
+                      <span>{rankProgress.nextTier.icon}</span>
+                    </span>
+                  </div>
+                ) : (
+                  <span className="px-1.5 py-0.5 rounded text-[8px] font-black bg-[#C6FF33] text-black font-mono">
+                    MAX LIGA
+                  </span>
+                )}
+              </div>
+
+              {/* Progress Line */}
+              <div className="space-y-1">
+                <div className="w-full bg-[#000000] rounded-full h-2 overflow-hidden border border-[#242424] p-[1px]">
+                  <div
+                    className="h-full rounded-full transition-all duration-500 bg-[#C6FF33]"
+                    style={{ width: `${Math.max(4, rankProgress.progressPercent)}%` }}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between text-[9px] font-mono text-gray-400">
+                  <span>
+                    {(user.totalKmRun || 0).toFixed(1)} км / {rankProgress.nextTier ? `${rankProgress.nextTier.minKm} км` : 'MAX'}
+                  </span>
+                  <span className="text-[#C6FF33] font-bold">
+                    {rankProgress.progressPercent}%
+                  </span>
+                </div>
+              </div>
+
+              {/* Сколько осталось до следующего ранга */}
+              {rankProgress.nextTier && (
+                <div className="text-[9px] text-gray-400 font-mono flex items-center justify-between pt-1 border-t border-[#1e1e1e]">
+                  <span>До ранга {rankProgress.nextTier.name}:</span>
+                  <span className="text-[#C6FF33] font-bold font-mono">
+                    {rankProgress.remainingKm.toFixed(1)} км
+                  </span>
+                </div>
+              )}
+            </div>
 
             {/* Career Stats */}
             <div className="grid grid-cols-2 gap-2 text-center">

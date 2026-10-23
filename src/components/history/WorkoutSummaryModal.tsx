@@ -8,6 +8,7 @@ import {
   formatWorkoutDate,
 } from '@/lib/history';
 import { GoogleUser } from '@/lib/auth';
+import { calculateUserRank } from '@/lib/ranks';
 import {
   Trophy,
   Flame,
@@ -49,6 +50,8 @@ export default function WorkoutSummaryModal({
 
   const totalCaloriesAll = historyList.reduce((acc, cur) => acc + (cur.caloriesBurned || 0), 0);
   const totalKmAll = historyList.reduce((acc, cur) => acc + (cur.distanceKm || 0), 0);
+  const userTotalKm = (currentUser?.totalKmRun || 0) > 0 ? (currentUser?.totalKmRun || 0) : totalKmAll;
+  const rankProgress = calculateUserRank(userTotalKm);
 
   return (
     <div
@@ -178,6 +181,47 @@ export default function WorkoutSummaryModal({
                       </div>
                     </div>
                   </div>
+
+                  {/* Rank Progression Bar */}
+                  <div className="bg-[#121212] border border-[#242424] p-3 rounded-2xl space-y-1.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-base">{rankProgress.currentTier.icon}</span>
+                        <span className="text-[10px] text-gray-400 font-mono font-bold">РАНГ:</span>
+                        <span
+                          className="font-mono font-black text-xs tracking-wider"
+                          style={{ color: rankProgress.currentTier.textColor }}
+                        >
+                          {rankProgress.currentTier.name}
+                        </span>
+                      </div>
+                      {rankProgress.nextTier ? (
+                        <span className="text-[10px] text-gray-400 font-mono">
+                          До {rankProgress.nextTier.name}:{' '}
+                          <strong className="text-[#C6FF33] font-mono">
+                            {rankProgress.remainingKm.toFixed(1)} км
+                          </strong>
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-[#C6FF33] font-mono font-bold">MAX РАНГ</span>
+                      )}
+                    </div>
+
+                    <div className="w-full bg-[#000000] rounded-full h-2 overflow-hidden border border-[#242424] p-[1px]">
+                      <div
+                        className="h-full rounded-full transition-all duration-500 bg-[#C6FF33]"
+                        style={{ width: `${Math.max(4, rankProgress.progressPercent)}%` }}
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between text-[9px] text-gray-400 font-mono">
+                      <span>
+                        {userTotalKm.toFixed(1)} км /{' '}
+                        {rankProgress.nextTier ? `${rankProgress.nextTier.minKm} км` : 'MAX'}
+                      </span>
+                      <span className="text-[#C6FF33] font-bold">{rankProgress.progressPercent}%</span>
+                    </div>
+                  </div>
                 </>
               ) : (
                 <div className="p-6 text-center text-gray-400 text-xs bg-[#121212] rounded-2xl border border-[#242424]">
@@ -188,6 +232,44 @@ export default function WorkoutSummaryModal({
           ) : (
             /* Tab 2: Full History List */
             <div className="space-y-2.5">
+              {/* Career Totals & Rank */}
+              <div className="bg-[#121212] border border-[#242424] p-3 rounded-2xl space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-base">{rankProgress.currentTier.icon}</span>
+                    <span className="text-[10px] text-gray-400 font-mono font-bold">РАНГ:</span>
+                    <span
+                      className="font-mono font-black text-xs tracking-wider"
+                      style={{ color: rankProgress.currentTier.textColor }}
+                    >
+                      {rankProgress.currentTier.name}
+                    </span>
+                    <span className="text-[9px] text-gray-500 font-mono">
+                      ({rankProgress.currentTier.subtitle})
+                    </span>
+                  </div>
+                  <span className="text-[#C6FF33] font-mono font-bold text-[10px]">
+                    {rankProgress.progressPercent}%
+                  </span>
+                </div>
+
+                <div className="w-full bg-[#000000] rounded-full h-2 overflow-hidden border border-[#242424] p-[1px]">
+                  <div
+                    className="h-full rounded-full transition-all duration-500 bg-[#C6FF33]"
+                    style={{ width: `${Math.max(4, rankProgress.progressPercent)}%` }}
+                  />
+                </div>
+
+                {rankProgress.nextTier && (
+                  <div className="text-[9px] text-gray-400 font-mono flex items-center justify-between pt-0.5">
+                    <span>Следующий: {rankProgress.nextTier.name} {rankProgress.nextTier.icon}</span>
+                    <span className="text-[#C6FF33] font-bold">
+                      Осталось: {rankProgress.remainingKm.toFixed(1)} км
+                    </span>
+                  </div>
+                )}
+              </div>
+
               {/* Career Totals */}
               <div className="grid grid-cols-2 gap-2 pb-1">
                 <div className="bg-[#121212] border border-[#242424] p-2.5 rounded-2xl text-center">
