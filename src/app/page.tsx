@@ -26,6 +26,7 @@ import PvpDuelSystem from '@/components/pvp/PvpDuelSystem';
 import WorkoutSummaryModal from '@/components/history/WorkoutSummaryModal';
 import { isStreetPassActive } from '@/lib/streetpass';
 import StreetPassModal from '@/components/streetpass/StreetPassModal';
+import PvpPassBlockedModal from '@/components/streetpass/PvpPassBlockedModal';
 import {
   Flame,
   CloudRain,
@@ -157,6 +158,7 @@ export default function RunnerApp() {
   const [isWorkoutSummaryOpen, setIsWorkoutSummaryOpen] = useState<boolean>(false);
   const [historyModalTab, setHistoryModalTab] = useState<'summary' | 'history'>('summary');
   const [isStreetPassModalOpen, setIsStreetPassModalOpen] = useState<boolean>(false);
+  const [isPvpPassBlockedOpen, setIsPvpPassBlockedOpen] = useState<boolean>(false);
 
   const openWorkoutHistory = () => {
     setHistoryModalTab('history');
@@ -439,6 +441,10 @@ export default function RunnerApp() {
 
   const handleSendPvpInvite = async (targetRunner: LiveOnlineRunner, targetKm: number) => {
     if (!googleUser) return;
+    if (!isStreetPassActive(googleUser)) {
+      setIsPvpPassBlockedOpen(true);
+      return;
+    }
     const battleId = `pvp-${Date.now()}`;
     const payload: PvpInvitePayload = {
       battleId,
@@ -464,6 +470,10 @@ export default function RunnerApp() {
 
   const handleAcceptPvpInvite = async (invite: PvpInvitePayload) => {
     if (!googleUser) return;
+    if (!isStreetPassActive(googleUser)) {
+      setIsPvpPassBlockedOpen(true);
+      return;
+    }
     const newBattle: PvpBattle = {
       id: invite.battleId,
       challenger: {
@@ -852,7 +862,17 @@ export default function RunnerApp() {
           {/* PVP Duel Arena Button (Solid Violet & White) */}
           <button
             type="button"
-            onClick={() => setIsPvpLobbyOpen(true)}
+            onClick={() => {
+              if (!googleUser) {
+                setIsAuthModalOpen(true);
+                return;
+              }
+              if (!isStreetPassActive(googleUser)) {
+                setIsPvpPassBlockedOpen(true);
+                return;
+              }
+              setIsPvpLobbyOpen(true);
+            }}
             className="pointer-events-auto flex items-center gap-1 bg-[#7D39EB] hover:bg-[#6c28d9] text-white p-1.5 sm:px-3 sm:py-2 rounded-2xl shadow-xl font-black text-xs transition active:scale-95 animate-pulse"
             title="Открыть арену PVP забегов и вызвать соперника"
           >
@@ -1532,6 +1552,13 @@ export default function RunnerApp() {
         onUserUpdate={(updated) => {
           setGoogleUser(updated);
         }}
+      />
+
+      {/* PVP Access Blocked Notice Modal (Voice Alert) */}
+      <PvpPassBlockedModal
+        isOpen={isPvpPassBlockedOpen}
+        onClose={() => setIsPvpPassBlockedOpen(false)}
+        onOpenStreetPass={() => setIsStreetPassModalOpen(true)}
       />
     </div>
   );
