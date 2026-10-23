@@ -741,8 +741,8 @@ export default function RunnerApp() {
         <div className="flex items-center gap-2">
           {/* Brand Chip */}
           <div className="pointer-events-auto flex items-center gap-2 bg-[#000000] border-2 border-[#222222] px-3 py-1.5 sm:px-4 sm:py-2 rounded-2xl shadow-2xl">
-            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-[#7D39EB] flex items-center justify-center text-white shadow-lg">
-              <Flame className="w-4 h-4" />
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl overflow-hidden border border-[#7D39EB] bg-[#000000] flex items-center justify-center shadow-lg shrink-0">
+              <img src="/avatar.jpg" alt="Calorie Runner" className="w-full h-full object-cover" />
             </div>
             <div>
               <h1 className="text-xs sm:text-sm font-black tracking-wider text-white uppercase flex items-center gap-1">

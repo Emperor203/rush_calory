@@ -5,6 +5,10 @@ export const metadata: Metadata = {
   title: 'Calorie-to-Route Runner — Умный генератор беговых маршрутов',
   description:
     'Генерация замкнутых кольцевых беговых маршрутов по калориям, весу атлета и текущей погоде через OSRM и Open-Meteo.',
+  icons: {
+    icon: '/avatar.jpg',
+    apple: '/avatar.jpg',
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
@@ -27,7 +31,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ru">
-      <body className="bg-[#0A0E17] text-gray-100 min-h-screen overflow-hidden select-none touch-manipulation">
+      <body className="bg-[#000000] text-white min-h-screen overflow-hidden select-none touch-manipulation">
         {children}
       </body>
     </html>

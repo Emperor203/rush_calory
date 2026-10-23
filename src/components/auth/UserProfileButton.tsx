@@ -74,12 +74,8 @@ export default function UserProfileButton({
         onClick={() => setIsDropdownOpen(!isDropdownOpen)}
         className="flex items-center gap-2 p-1 pl-1.5 sm:px-2.5 sm:py-1 rounded-2xl bg-[#000000] border border-[#242424] hover:border-[#7D39EB] transition shadow-2xl active:scale-95 text-xs"
       >
-        <div className="w-7 h-7 rounded-full overflow-hidden bg-[#7D39EB] flex items-center justify-center border-2 border-[#C6FF33] shadow">
-          {user.avatar ? (
-            <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
-          ) : (
-            <span className="font-bold text-xs text-white">{firstName[0]}</span>
-          )}
+        <div className="w-7 h-7 rounded-full overflow-hidden bg-[#7D39EB] flex items-center justify-center border-2 border-[#C6FF33] shadow shrink-0">
+          <img src={user.avatar || '/avatar.jpg'} alt={user.name} className="w-full h-full object-cover" />
         </div>
         <span className="hidden sm:inline font-bold text-white text-xs max-w-[80px] truncate">
           {firstName}
@@ -98,11 +94,7 @@ export default function UserProfileButton({
             {/* User Bio */}
             <div className="flex items-center gap-3 pb-3 border-b border-[#242424]">
               <div className="w-11 h-11 rounded-full overflow-hidden bg-[#7D39EB] flex items-center justify-center border-2 border-[#C6FF33] shrink-0">
-                {user.avatar ? (
-                  <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
-                ) : (
-                  <span className="font-bold text-sm text-white">{firstName[0]}</span>
-                )}
+                <img src={user.avatar || '/avatar.jpg'} alt={user.name} className="w-full h-full object-cover" />
               </div>
               <div className="truncate">
                 <div className="font-black text-sm text-white truncate flex items-center gap-1.5">
