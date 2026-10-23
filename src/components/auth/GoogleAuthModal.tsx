@@ -104,10 +104,10 @@ export default function GoogleAuthModal({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-md bg-[#0E1420] border border-gray-800 rounded-3xl p-6 text-white shadow-2xl space-y-5"
+        className="relative w-full max-w-md bg-[#000000] border border-[#242424] rounded-3xl p-6 text-white shadow-2xl space-y-5"
       >
         {/* Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-gray-800">
+        <div className="flex items-center justify-between pb-3 border-b border-[#242424]">
           <div className="flex items-center gap-2.5">
             <div className="w-10 h-10 rounded-2xl bg-white flex items-center justify-center shadow-md">
               <GoogleIcon className="w-5 h-5" />
@@ -120,13 +120,13 @@ export default function GoogleAuthModal({
             </div>
           </div>
           {isRequired ? (
-            <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-cyan-950 text-cyan-400 border border-cyan-500/40">
+            <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-[#7D39EB] text-white">
               Вход обязателен
             </span>
           ) : (
             <button
               onClick={onClose}
-              className="p-1 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition"
+              className="p-1 rounded-lg text-gray-400 hover:text-white hover:bg-[#121212] transition"
             >
               <X className="w-4 h-4" />
             </button>
@@ -135,13 +135,13 @@ export default function GoogleAuthModal({
 
         {/* Motivational requirement prompt */}
         {isRequired && (
-          <div className="p-3.5 rounded-2xl bg-gradient-to-r from-cyan-950/60 to-emerald-950/60 border border-cyan-500/30 text-xs text-gray-300 leading-relaxed">
+          <div className="p-3.5 rounded-2xl bg-[#121212] border border-[#242424] text-xs text-gray-300 leading-relaxed">
             👋 Для расчёта маршрута под калории, трекинга GPS и сохранения тренировок необходимо войти в аккаунт.
           </div>
         )}
 
         {error && (
-          <div className="p-3 rounded-2xl bg-rose-950/80 border border-rose-500/50 text-rose-300 text-xs flex items-start gap-2">
+          <div className="p-3 rounded-2xl bg-[#121212] border border-rose-500/50 text-rose-300 text-xs flex items-start gap-2">
             <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
             <div className="space-y-0.5">{error}</div>
           </div>
@@ -167,13 +167,13 @@ export default function GoogleAuthModal({
 
           <p className="text-[11px] text-gray-400 text-center leading-relaxed">
             Откроется защищённое окно{' '}
-            <span className="font-mono text-cyan-300">accounts.google.com</span> для выбора аккаунта.
+            <span className="font-mono text-[#C6FF33]">accounts.google.com</span> для выбора аккаунта.
           </p>
         </div>
 
         {/* Security badge */}
         <div className="flex items-center justify-center gap-1.5 text-[10px] text-gray-500 pt-1">
-          <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
+          <ShieldCheck className="w-3.5 h-3.5 text-[#C6FF33]" />
           <span>Защищённая авторизация Google OAuth 2.0</span>
         </div>
       </div>

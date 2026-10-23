@@ -9,6 +9,15 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        rush: {
+          black: '#000000',
+          violet: '#7D39EB',
+          lime: '#C6FF33',
+          white: '#FFFFFF',
+          dark: '#0A0A0A',
+          card: '#121212',
+          border: '#242424',
+        },
         turf: {
           dark: '#0B0F17',
           surface: '#111827',

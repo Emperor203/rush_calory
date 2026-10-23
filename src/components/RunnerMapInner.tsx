@@ -82,24 +82,24 @@ export default function RunnerMapInner({
   onlineRunners = [],
   currentUser = null,
 }: RunnerMapProps) {
-  // Custom Runner Start/Finish Pin Icon with Current User Avatar
+  // Custom Runner Start/Finish Pin Icon with Current User Avatar (Pure Lime & Black)
   const startIcon = useMemo(
     () =>
       L.divIcon({
         className: 'custom-start-marker',
         html: `
           <div class="relative flex flex-col items-center">
-            <div class="absolute -top-7 px-2.5 py-0.5 rounded-full bg-emerald-950/95 border border-emerald-400 text-emerald-300 text-[10px] font-black tracking-wide whitespace-nowrap shadow-xl flex items-center gap-1 z-20">
+            <div class="absolute -top-7 px-2.5 py-0.5 rounded-full bg-[#000000] border-2 border-[#C6FF33] text-[#C6FF33] text-[10px] font-black tracking-wide whitespace-nowrap shadow-xl flex items-center gap-1 z-20">
               <span>🏁</span>
               <span>${currentUser?.name ? `ВЫ (${currentUser.name})` : 'Старт'}</span>
             </div>
             <div class="relative">
-              <div class="absolute -inset-1.5 rounded-full bg-emerald-400 opacity-60 animate-ping"></div>
-              <div class="w-10 h-10 rounded-full overflow-hidden border-2 border-emerald-400 bg-gray-950 shadow-2xl flex items-center justify-center ring-2 ring-emerald-500/50">
+              <div class="absolute -inset-1.5 rounded-full bg-[#C6FF33] opacity-60 animate-ping"></div>
+              <div class="w-10 h-10 rounded-full overflow-hidden border-2 border-[#C6FF33] bg-[#000000] shadow-2xl flex items-center justify-center ring-2 ring-[#C6FF33]/50">
                 ${
                   currentUser?.avatar
                     ? `<img src="${currentUser.avatar}" class="w-full h-full object-cover" />`
-                    : `<span class="text-xs font-black text-emerald-300">🏁</span>`
+                    : `<span class="text-xs font-black text-[#C6FF33]">🏁</span>`
                 }
               </div>
             </div>
@@ -111,23 +111,23 @@ export default function RunnerMapInner({
     [currentUser],
   );
 
-  // Active Live Runner Location Beacon Icon with Current User Avatar
+  // Active Live Runner Location Beacon Icon with Current User Avatar (Pure Lime with Black text)
   const liveRunnerIcon = useMemo(
     () =>
       L.divIcon({
         className: 'custom-live-runner-marker',
         html: `
           <div class="relative flex flex-col items-center">
-            <div class="absolute -top-7 px-2.5 py-0.5 rounded-full bg-gradient-to-r from-emerald-500 to-cyan-500 text-black text-[10px] font-black tracking-wider uppercase shadow-xl whitespace-nowrap z-20">
+            <div class="absolute -top-7 px-2.5 py-0.5 rounded-full bg-[#C6FF33] text-[#000000] text-[10px] font-black tracking-wider uppercase shadow-xl whitespace-nowrap z-20">
               ВЫ (${currentUser?.name || 'Бег'})
             </div>
             <div class="relative">
-              <div class="absolute -inset-2 rounded-full bg-cyan-400 opacity-70 animate-ping"></div>
-              <div class="w-11 h-11 rounded-full overflow-hidden border-2 border-white bg-gray-950 shadow-2xl flex items-center justify-center ring-2 ring-cyan-400">
+              <div class="absolute -inset-2 rounded-full bg-[#C6FF33] opacity-70 animate-ping"></div>
+              <div class="w-11 h-11 rounded-full overflow-hidden border-2 border-[#FFFFFF] bg-[#000000] shadow-2xl flex items-center justify-center ring-2 ring-[#C6FF33]">
                 ${
                   currentUser?.avatar
                     ? `<img src="${currentUser.avatar}" class="w-full h-full object-cover" />`
-                    : `<span class="text-xs font-black text-white">🏃‍♂️</span>`
+                    : `<span class="text-xs font-black text-[#C6FF33]">🏃‍♂️</span>`
                 }
               </div>
             </div>
@@ -209,59 +209,56 @@ export default function RunnerMapInner({
           </Marker>
         )}
 
-        {/* Traversed Breadcrumb Path (Orange/Amber) */}
+        {/* Traversed Breadcrumb Path (Solid Lime with Black Cap) */}
         {traversedCoords.length > 1 && (
           <Polyline
             positions={traversedCoords}
             pathOptions={{
-              color: '#F59E0B',
-              weight: 5,
-              opacity: 0.9,
+              color: '#C6FF33',
+              weight: 6,
+              opacity: 0.95,
               lineCap: 'round',
             }}
           />
         )}
 
-        {/* Planned Route Polyline (Glow Effect) */}
+        {/* Planned Route Polyline (Violet & Lime) */}
         {route && (
           <>
-            {/* Outer Glow */}
+            {/* Outer Violet Contrast Border */}
             <Polyline
               positions={route.coordinates}
               pathOptions={{
-                color: route.isParkRoute ? '#10B981' : '#06B6D4',
+                color: '#7D39EB',
                 weight: 8,
-                opacity: 0.35,
+                opacity: 0.7,
                 lineCap: 'round',
                 lineJoin: 'round',
               }}
             />
-            {/* Inner Neon Core */}
+            {/* Inner Lime Core */}
             <Polyline
               positions={route.coordinates}
               pathOptions={{
-                color: route.isParkRoute ? '#34D399' : '#38BDF8',
+                color: '#C6FF33',
                 weight: 4,
-                opacity: 0.95,
+                opacity: 1.0,
                 lineCap: 'round',
                 lineJoin: 'round',
-                dashArray: route.isParkRoute ? '8, 8' : undefined,
               }}
             />
 
-            {/* Kilometer Split Markers */}
+            {/* Kilometer Split Markers (Solid Violet with White Text) */}
             {route.kilometersMarkers.map((marker) => {
               const kmIcon = L.divIcon({
                 className: 'custom-km-marker',
                 html: `
-                  <div class="px-1.5 py-0.5 rounded-full ${
-                    route.isParkRoute ? 'bg-emerald-600' : 'bg-cyan-600'
-                  } border border-white text-white font-black text-[10px] shadow-lg flex items-center justify-center">
+                  <div class="px-2 py-0.5 rounded-full bg-[#7D39EB] border-2 border-[#FFFFFF] text-[#FFFFFF] font-black text-[10px] font-mono shadow-xl flex items-center justify-center">
                     ${marker.km}k
                   </div>
                 `,
-                iconSize: [26, 18],
-                iconAnchor: [13, 9],
+                iconSize: [28, 20],
+                iconAnchor: [14, 10],
               });
 
               return (
@@ -277,32 +274,32 @@ export default function RunnerMapInner({
           </>
         )}
 
-        {/* Real-time Online Runners (via Supabase WebSockets) */}
+        {/* Real-time Online Runners (Solid Violet & White) */}
         {onlineRunners.map((runner) => {
           if (!runner.lat || !runner.lng) return null;
           const peerIcon = L.divIcon({
             className: 'custom-online-runner-marker',
             html: `
               <div class="relative flex flex-col items-center cursor-pointer">
-                <div class="absolute -top-7 px-2 py-0.5 rounded-full bg-black/90 border border-cyan-400 text-cyan-300 text-[10px] font-bold font-mono whitespace-nowrap shadow-xl flex items-center gap-1 z-20">
-                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                <div class="absolute -top-7 px-2.5 py-0.5 rounded-full bg-[#000000] border-2 border-[#7D39EB] text-[#FFFFFF] text-[10px] font-bold font-mono whitespace-nowrap shadow-2xl flex items-center gap-1 z-20">
+                  <span class="w-1.5 h-1.5 rounded-full bg-[#C6FF33] animate-pulse"></span>
                   <span>${runner.name || 'Атлет'}</span>
-                  ${runner.speedKmh ? `<span class="text-gray-400">• ${runner.speedKmh}км/ч</span>` : ''}
+                  ${runner.speedKmh ? `<span class="text-[#C6FF33] font-bold">• ${runner.speedKmh}км/ч</span>` : ''}
                 </div>
                 <div class="relative">
-                  <div class="absolute -inset-1.5 rounded-full bg-cyan-400 opacity-60 animate-ping"></div>
-                  <div class="w-9 h-9 rounded-full overflow-hidden border-2 border-cyan-400 bg-gray-950 shadow-2xl flex items-center justify-center">
+                  <div class="absolute -inset-1.5 rounded-full bg-[#7D39EB] opacity-60 animate-ping"></div>
+                  <div class="w-10 h-10 rounded-full overflow-hidden border-2 border-[#7D39EB] bg-[#000000] shadow-2xl flex items-center justify-center ring-2 ring-[#7D39EB]/40">
                     ${
                       runner.avatar
                         ? `<img src="${runner.avatar}" class="w-full h-full object-cover" />`
-                        : `<span class="text-xs font-black text-cyan-300">${(runner.name || 'A')[0]}</span>`
+                        : `<span class="text-xs font-black text-[#FFFFFF]">${(runner.name || 'A')[0]}</span>`
                     }
                   </div>
                 </div>
               </div>
             `,
-            iconSize: [36, 36],
-            iconAnchor: [18, 18],
+            iconSize: [40, 40],
+            iconAnchor: [20, 20],
           });
 
           return (
@@ -310,14 +307,14 @@ export default function RunnerMapInner({
               <Popup>
                 <div className="p-2 text-xs text-gray-900 space-y-1 min-w-[140px]">
                   <div className="font-bold flex items-center gap-1.5 text-sm">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span className="w-2 h-2 rounded-full bg-[#C6FF33] animate-pulse"></span>
                     <span>{runner.name}</span>
                   </div>
                   <div className="text-[11px] text-gray-500">
                     🟢 В сети прямо сейчас
                   </div>
                   {runner.speedKmh ? (
-                    <div className="text-[11px] font-mono text-cyan-700 font-bold">
+                    <div className="text-[11px] font-mono text-[#7D39EB] font-bold">
                       🏃 Скорость: {runner.speedKmh} км/ч
                     </div>
                   ) : null}

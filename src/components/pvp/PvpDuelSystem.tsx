@@ -64,25 +64,25 @@ export default function PvpDuelSystem({
 
     return (
       <div className="absolute top-16 sm:top-20 left-3 right-3 sm:left-auto sm:right-auto sm:w-[500px] sm:left-1/2 sm:-translate-x-1/2 z-30 animate-slide-down">
-        <div className="bg-[#0B101B]/95 backdrop-blur-2xl border-2 border-amber-500/60 rounded-3xl p-4 sm:p-5 shadow-[0_0_50px_rgba(245,158,11,0.35)] space-y-3 text-white">
+        <div className="bg-[#000000]/95 backdrop-blur-2xl border-2 border-[#7D39EB] rounded-3xl p-4 sm:p-5 shadow-[0_0_40px_rgba(125,57,235,0.4)] space-y-3 text-white">
           {/* Header Title */}
-          <div className="flex items-center justify-between border-b border-gray-800 pb-2">
+          <div className="flex items-center justify-between border-b border-[#242424] pb-2">
             <div className="flex items-center gap-2">
-              <span className="p-1 rounded-lg bg-amber-500/20 text-amber-400">
-                <Swords className="w-4 h-4 animate-bounce" />
+              <span className="p-1.5 rounded-lg bg-[#7D39EB] text-white">
+                <Swords className="w-4 h-4" />
               </span>
               <div>
-                <span className="text-xs font-black tracking-wider text-amber-400 uppercase font-mono">
+                <span className="text-xs font-black tracking-wider text-[#C6FF33] uppercase font-mono">
                   PVP ЗАБЕГ: ЦЕЛЬ {activeBattle.targetKm} КМ
                 </span>
-                <span className="block text-[10px] text-gray-400">
-                  {amILeading ? '🔥 Вы лидируете в гонке!' : '⚡ Соперник впереди, прибавьте темп!'}
+                <span className="block text-[10px] text-gray-300">
+                  {amILeading ? '⚡ Вы лидируете в гонке!' : '🏃 Соперник впереди, прибавьте темп!'}
                 </span>
               </div>
             </div>
             <button
               onClick={onSurrenderBattle}
-              className="px-2.5 py-1 rounded-xl bg-gray-900 hover:bg-rose-950 text-gray-400 hover:text-rose-400 border border-gray-800 text-[10px] font-bold transition"
+              className="px-2.5 py-1 rounded-xl bg-[#121212] hover:bg-rose-950 text-gray-400 hover:text-rose-400 border border-[#242424] text-[10px] font-bold transition"
               title="Сдаться / Завершить дуэль"
             >
               Сдаться
@@ -92,50 +92,50 @@ export default function PvpDuelSystem({
           {/* Versus Visual Bars */}
           <div className="grid grid-cols-2 gap-3 sm:gap-4 items-center">
             {/* Me */}
-            <div className="bg-emerald-950/40 border border-emerald-500/40 p-2.5 rounded-2xl space-y-1.5">
+            <div className="bg-[#121212] border border-[#C6FF33] p-2.5 rounded-2xl space-y-1.5">
               <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-full overflow-hidden border border-emerald-400 shrink-0">
+                <div className="w-7 h-7 rounded-full overflow-hidden border-2 border-[#C6FF33] shrink-0">
                   <img src={currentUser.avatar} alt={currentUser.name} className="w-full h-full object-cover" />
                 </div>
                 <div className="overflow-hidden">
-                  <span className="font-bold text-xs truncate block text-emerald-300">Вы</span>
-                  <span className="font-mono text-[10px] text-gray-400">
+                  <span className="font-bold text-xs truncate block text-[#C6FF33]">Вы</span>
+                  <span className="font-mono text-[10px] text-gray-300">
                     {myCurrentDist.toFixed(2)} / {activeBattle.targetKm} км
                   </span>
                 </div>
               </div>
-              <div className="w-full bg-black/60 rounded-full h-2.5 overflow-hidden border border-emerald-500/30">
+              <div className="w-full bg-[#000000] rounded-full h-2.5 overflow-hidden border border-[#242424]">
                 <div
-                  className="bg-gradient-to-r from-emerald-500 to-cyan-400 h-full transition-all duration-300"
+                  className="bg-[#C6FF33] h-full transition-all duration-300"
                   style={{ width: `${myPercent}%` }}
                 />
               </div>
-              <div className="flex items-center justify-between text-[10px] font-mono text-emerald-400">
+              <div className="flex items-center justify-between text-[10px] font-mono text-[#C6FF33]">
                 <span>{myPercent}%</span>
                 <span>🔥 {Math.round(myLiveKcal)} ккал</span>
               </div>
             </div>
 
             {/* Opponent */}
-            <div className="bg-purple-950/40 border border-purple-500/40 p-2.5 rounded-2xl space-y-1.5">
+            <div className="bg-[#121212] border border-[#7D39EB] p-2.5 rounded-2xl space-y-1.5">
               <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-full overflow-hidden border border-purple-400 shrink-0">
+                <div className="w-7 h-7 rounded-full overflow-hidden border-2 border-[#7D39EB] shrink-0">
                   <img src={oppStats.avatar} alt={oppStats.name} className="w-full h-full object-cover" />
                 </div>
                 <div className="overflow-hidden">
-                  <span className="font-bold text-xs truncate block text-purple-300">{oppStats.name}</span>
-                  <span className="font-mono text-[10px] text-gray-400">
+                  <span className="font-bold text-xs truncate block text-[#FFFFFF]">{oppStats.name}</span>
+                  <span className="font-mono text-[10px] text-gray-300">
                     {oppCurrentDist.toFixed(2)} / {activeBattle.targetKm} км
                   </span>
                 </div>
               </div>
-              <div className="w-full bg-black/60 rounded-full h-2.5 overflow-hidden border border-purple-500/30">
+              <div className="w-full bg-[#000000] rounded-full h-2.5 overflow-hidden border border-[#242424]">
                 <div
-                  className="bg-gradient-to-r from-purple-500 to-rose-400 h-full transition-all duration-300"
+                  className="bg-[#7D39EB] h-full transition-all duration-300"
                   style={{ width: `${oppPercent}%` }}
                 />
               </div>
-              <div className="flex items-center justify-between text-[10px] font-mono text-purple-400">
+              <div className="flex items-center justify-between text-[10px] font-mono text-gray-300">
                 <span>{oppPercent}%</span>
                 <span>🔥 {oppStats.currentKcal || 0} ккал</span>
               </div>
@@ -154,13 +154,13 @@ export default function PvpDuelSystem({
 
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-fade-in safe-bottom">
-        <div className="relative w-full max-w-sm bg-[#0E1420] border-2 border-amber-500 rounded-3xl p-6 text-white shadow-[0_0_60px_rgba(245,158,11,0.4)] text-center space-y-5 animate-scale-up">
-          <div className="w-20 h-20 mx-auto rounded-3xl bg-amber-500/20 border-2 border-amber-400 flex items-center justify-center text-5xl shadow-xl animate-bounce">
+        <div className="relative w-full max-w-sm bg-[#000000] border-2 border-[#7D39EB] rounded-3xl p-6 text-white shadow-[0_0_60px_rgba(125,57,235,0.5)] text-center space-y-5 animate-scale-up">
+          <div className="w-20 h-20 mx-auto rounded-3xl bg-[#121212] border-2 border-[#C6FF33] flex items-center justify-center text-5xl shadow-xl">
             {isWinner ? '🏆' : '🥈'}
           </div>
 
           <div className="space-y-1">
-            <span className="inline-block px-3 py-1 rounded-full text-[10px] font-black bg-amber-950 text-amber-400 border border-amber-500/50 uppercase tracking-widest font-mono">
+            <span className="inline-block px-3 py-1 rounded-full text-[10px] font-black bg-[#7D39EB] text-white uppercase tracking-widest font-mono">
               ДУЭЛЬ ЗАВЕРШЕНА
             </span>
             <h2 className="text-2xl font-black text-white uppercase font-mono">
@@ -175,7 +175,7 @@ export default function PvpDuelSystem({
 
           <button
             onClick={onSurrenderBattle}
-            className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-amber-500 to-emerald-500 text-black font-black text-xs uppercase tracking-wider transition active:scale-98 shadow-xl"
+            className="w-full py-3.5 px-4 rounded-2xl bg-[#C6FF33] hover:bg-[#b0f020] text-[#000000] font-black text-xs uppercase tracking-wider transition active:scale-98 shadow-xl"
           >
             Отлично, в меню
           </button>
@@ -187,30 +187,30 @@ export default function PvpDuelSystem({
   // 2. INCOMING PVP CHALLENGE MODAL (Somebody invited you)
   if (incomingInvite) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fade-in safe-bottom">
-        <div className="relative w-full max-w-sm bg-[#0E1420] border-2 border-amber-500 rounded-3xl p-6 text-white shadow-2xl space-y-5 text-center animate-bounce-short">
-          <div className="w-16 h-16 mx-auto rounded-3xl bg-amber-500/20 border border-amber-400/50 flex items-center justify-center text-3xl shadow-xl">
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-fade-in safe-bottom">
+        <div className="relative w-full max-w-sm bg-[#000000] border-2 border-[#7D39EB] rounded-3xl p-6 text-white shadow-2xl space-y-5 text-center">
+          <div className="w-16 h-16 mx-auto rounded-3xl bg-[#121212] border border-[#7D39EB] flex items-center justify-center text-3xl shadow-xl">
             ⚔️
           </div>
 
           <div className="space-y-1.5">
-            <span className="inline-block px-3 py-1 rounded-full text-[10px] font-black bg-amber-950 text-amber-400 border border-amber-500/40 uppercase tracking-widest font-mono">
+            <span className="inline-block px-3 py-1 rounded-full text-[10px] font-black bg-[#7D39EB] text-white uppercase tracking-widest font-mono">
               ВЫЗОВ НА ДУЭЛЬ
             </span>
             <h3 className="text-lg font-black text-white">
               {incomingInvite.fromUser.name} зовёт на забег!
             </h3>
-            <p className="text-xs text-gray-400">
-              Дистанция дуэли: <span className="font-bold text-amber-400 font-mono text-sm">{incomingInvite.targetKm} км</span>. Кто первый пробежит — забирает победу!
+            <p className="text-xs text-gray-300">
+              Дистанция дуэли: <span className="font-bold text-[#C6FF33] font-mono text-sm">{incomingInvite.targetKm} км</span>. Кто первый пробежит — забирает победу!
             </p>
           </div>
 
           <div className="flex items-center justify-center gap-3">
-            <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-amber-400 shadow">
+            <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-[#7D39EB] shadow">
               <img src={incomingInvite.fromUser.avatar} alt="Rival" className="w-full h-full object-cover" />
             </div>
-            <span className="font-mono font-bold text-sm text-gray-300">VS</span>
-            <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-cyan-400 shadow">
+            <span className="font-mono font-bold text-sm text-[#C6FF33]">VS</span>
+            <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-[#C6FF33] shadow">
               <img src={currentUser.avatar} alt="You" className="w-full h-full object-cover" />
             </div>
           </div>
@@ -218,13 +218,13 @@ export default function PvpDuelSystem({
           <div className="flex gap-2 pt-2">
             <button
               onClick={() => onDeclineInvite(incomingInvite)}
-              className="flex-1 py-3 rounded-2xl bg-gray-900 hover:bg-gray-800 border border-gray-800 text-gray-400 text-xs font-bold transition"
+              className="flex-1 py-3 rounded-2xl bg-[#121212] hover:bg-[#1a1a1a] border border-[#242424] text-gray-300 text-xs font-bold transition"
             >
               Отклонить
             </button>
             <button
               onClick={() => onAcceptInvite(incomingInvite)}
-              className="flex-1 py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-emerald-500 text-black text-xs font-black uppercase tracking-wider shadow-lg transition active:scale-98"
+              className="flex-1 py-3 rounded-2xl bg-[#C6FF33] hover:bg-[#b0f020] text-[#000000] text-xs font-black uppercase tracking-wider shadow-lg transition active:scale-98"
             >
               Принять бой ⚔️
             </button>
@@ -239,12 +239,12 @@ export default function PvpDuelSystem({
     const otherRunners = onlineRunners.filter((r) => r.id !== currentUser.id);
 
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fade-in safe-bottom">
-        <div className="relative w-full max-w-md bg-[#0E1420] border border-gray-800 rounded-3xl p-6 text-white shadow-2xl space-y-5">
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-fade-in safe-bottom">
+        <div className="relative w-full max-w-md bg-[#000000] border border-[#242424] rounded-3xl p-6 text-white shadow-2xl space-y-5">
           {/* Header */}
-          <div className="flex items-center justify-between pb-3 border-b border-gray-800">
+          <div className="flex items-center justify-between pb-3 border-b border-[#242424]">
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400">
+              <div className="w-9 h-9 rounded-2xl bg-[#7D39EB] flex items-center justify-center text-white">
                 <Swords className="w-5 h-5" />
               </div>
               <div>
@@ -256,7 +256,7 @@ export default function PvpDuelSystem({
             </div>
             <button
               onClick={onCloseLobby}
-              className="p-1 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition"
+              className="p-1 rounded-lg text-gray-400 hover:text-white hover:bg-[#121212] transition"
             >
               <X className="w-4 h-4" />
             </button>
@@ -264,7 +264,7 @@ export default function PvpDuelSystem({
 
           {/* Distance Selection */}
           <div className="space-y-2">
-            <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block">
+            <label className="text-[11px] font-bold text-gray-300 uppercase tracking-wider block">
               1. Выберите дистанцию гонки:
             </label>
             <div className="grid grid-cols-4 gap-2">
@@ -275,8 +275,8 @@ export default function PvpDuelSystem({
                   onClick={() => setSelectedTargetKm(km)}
                   className={`py-2 rounded-xl text-xs font-black font-mono transition border ${
                     selectedTargetKm === km
-                      ? 'bg-amber-500 text-black border-amber-400 shadow-lg'
-                      : 'bg-gray-900/80 text-gray-300 border-gray-800 hover:border-gray-700'
+                      ? 'bg-[#C6FF33] text-[#000000] border-[#C6FF33] shadow-lg'
+                      : 'bg-[#121212] text-gray-300 border-[#242424] hover:border-gray-600'
                   }`}
                 >
                   {km} км
@@ -287,17 +287,17 @@ export default function PvpDuelSystem({
 
           {/* Rival Selection */}
           <div className="space-y-2">
-            <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider flex items-center justify-between">
+            <label className="text-[11px] font-bold text-gray-300 uppercase tracking-wider flex items-center justify-between">
               <span>2. Выберите соперника онлайн:</span>
-              <span className="text-emerald-400 font-mono text-[10px]">
-                {otherRunners.length} доступно
+              <span className="text-[#C6FF33] font-mono text-[10px]">
+                {otherRunners.length} в сети
               </span>
             </label>
 
             {otherRunners.length === 0 ? (
-              <div className="p-5 rounded-2xl bg-gray-950/60 border border-gray-800 text-center space-y-2">
+              <div className="p-5 rounded-2xl bg-[#121212] border border-[#242424] text-center space-y-2">
                 <div className="text-2xl">🏃‍♂️</div>
-                <p className="text-xs text-gray-400 font-medium">
+                <p className="text-xs text-gray-300 font-medium">
                   Сейчас других бегунов нет в сети.
                 </p>
                 <p className="text-[10px] text-gray-500">
@@ -312,18 +312,18 @@ export default function PvpDuelSystem({
                     onClick={() => setSelectedRunnerId(runner.id)}
                     className={`p-3 rounded-2xl border transition flex items-center justify-between cursor-pointer ${
                       selectedRunnerId === runner.id
-                        ? 'bg-amber-950/40 border-amber-500 shadow-md'
-                        : 'bg-gray-900/60 border-gray-800 hover:border-gray-700'
+                        ? 'bg-[#121212] border-[#7D39EB] shadow-md'
+                        : 'bg-[#121212] border-[#242424] hover:border-gray-700'
                     }`}
                   >
                     <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-full overflow-hidden border border-cyan-400/50">
+                      <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-[#7D39EB]">
                         <img src={runner.avatar} alt={runner.name} className="w-full h-full object-cover" />
                       </div>
                       <div>
                         <span className="font-bold text-xs text-white block">{runner.name}</span>
-                        <span className="text-[10px] text-emerald-400 flex items-center gap-1 font-mono">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                        <span className="text-[10px] text-[#C6FF33] flex items-center gap-1 font-mono">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#C6FF33] animate-pulse"></span>
                           В сети
                         </span>
                       </div>
@@ -335,7 +335,7 @@ export default function PvpDuelSystem({
                         e.stopPropagation();
                         onSendInvite(runner, selectedTargetKm);
                       }}
-                      className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-emerald-500 text-black text-xs font-black transition active:scale-95 shadow"
+                      className="px-3 py-1.5 rounded-xl bg-[#7D39EB] hover:bg-[#6c28d9] text-[#FFFFFF] text-xs font-black transition active:scale-95 shadow"
                     >
                       Бросить вызов ⚔️
                     </button>
@@ -344,44 +344,6 @@ export default function PvpDuelSystem({
               </div>
             )}
           </div>
-        </div>
-      </div>
-    );
-  }
-
-  // 1.5. PVP VICTORY MODAL (Battle Finished)
-  if (activeBattle && activeBattle.status === 'finished') {
-    const isWinner = activeBattle.winnerId === currentUser.id;
-    const isChallenger = activeBattle.challenger.id === currentUser.id;
-    const oppStats = isChallenger ? activeBattle.opponent : activeBattle.challenger;
-
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-fade-in safe-bottom">
-        <div className="relative w-full max-w-sm bg-[#0E1420] border-2 border-amber-500 rounded-3xl p-6 text-white shadow-[0_0_60px_rgba(245,158,11,0.4)] text-center space-y-5 animate-scale-up">
-          <div className="w-20 h-20 mx-auto rounded-3xl bg-amber-500/20 border-2 border-amber-400 flex items-center justify-center text-5xl shadow-xl animate-bounce">
-            {isWinner ? '🏆' : '🥈'}
-          </div>
-
-          <div className="space-y-1">
-            <span className="inline-block px-3 py-1 rounded-full text-[10px] font-black bg-amber-950 text-amber-400 border border-amber-500/50 uppercase tracking-widest font-mono">
-              ДУЭЛЬ ЗАВЕРШЕНА
-            </span>
-            <h2 className="text-2xl font-black text-white uppercase font-mono">
-              {isWinner ? 'ВЫ ПОБЕДИЛИ!' : 'ВТОРОЕ МЕСТО!'}
-            </h2>
-            <p className="text-xs text-gray-300">
-              {isWinner
-                ? `Поздравляем! Вы первыми преодолели ${activeBattle.targetKm} км в дуэли против ${oppStats.name}!`
-                : `${oppStats.name} оказался быстрее на этой дистанции. В следующий раз победа за вами!`}
-            </p>
-          </div>
-
-          <button
-            onClick={onSurrenderBattle}
-            className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-amber-500 to-emerald-500 text-black font-black text-xs uppercase tracking-wider transition active:scale-98 shadow-xl"
-          >
-            Отлично, в меню
-          </button>
         </div>
       </div>
     );
