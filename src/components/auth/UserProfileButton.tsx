@@ -15,6 +15,7 @@ interface UserProfileButtonProps {
   onOpenAuth: () => void;
   onUserLogin?: (u: GoogleUser) => void;
   onLogout: () => void;
+  onOpenHistory?: () => void;
 }
 
 export default function UserProfileButton({
@@ -22,6 +23,7 @@ export default function UserProfileButton({
   onOpenAuth,
   onUserLogin,
   onLogout,
+  onOpenHistory,
 }: UserProfileButtonProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isSigningIn, setIsSigningIn] = useState(false);
@@ -133,6 +135,21 @@ export default function UserProfileButton({
                 </div>
               </div>
             </div>
+
+            {/* History of Workouts Button */}
+            {onOpenHistory && (
+              <button
+                type="button"
+                onClick={() => {
+                  setIsDropdownOpen(false);
+                  onOpenHistory();
+                }}
+                className="w-full py-2 px-3 rounded-xl bg-[#121212] hover:bg-[#1a1a1a] border border-[#242424] hover:border-[#C6FF33] text-[#C6FF33] text-xs font-bold transition flex items-center justify-center gap-1.5"
+              >
+                <span>📜</span>
+                <span>История пробежек</span>
+              </button>
+            )}
 
             {/* Logout Button */}
             <button

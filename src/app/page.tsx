@@ -19,9 +19,11 @@ import {
 import { GoogleUser, getSavedGoogleUser, saveGoogleUser } from '@/lib/auth';
 import { supabase, LiveOnlineRunner } from '@/lib/supabase';
 import { PvpBattle, PvpInvitePayload } from '@/lib/pvp';
+import { CompletedWorkout, saveCompletedWorkout } from '@/lib/history';
 import GoogleAuthModal from '@/components/auth/GoogleAuthModal';
 import UserProfileButton from '@/components/auth/UserProfileButton';
 import PvpDuelSystem from '@/components/pvp/PvpDuelSystem';
+import WorkoutSummaryModal from '@/components/history/WorkoutSummaryModal';
 import {
   Flame,
   CloudRain,
@@ -148,6 +150,8 @@ export default function RunnerApp() {
   const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
   const [currentSpeedKmh, setCurrentSpeedKmh] = useState<number>(0);
   const [distanceTraversedKm, setDistanceTraversedKm] = useState<number>(0);
+  const [completedWorkout, setCompletedWorkout] = useState<CompletedWorkout | null>(null);
+  const [isWorkoutSummaryOpen, setIsWorkoutSummaryOpen] = useState<boolean>(false);
 
   const watchIdRef = useRef<number | null>(null);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -570,16 +574,43 @@ export default function RunnerApp() {
   };
 
   const stopTracking = () => {
+    const finalDist = distanceTraversedKm;
+    const finalCalories = activeCaloriesBurned;
+    const finalSeconds = elapsedSeconds;
+    const avgPace = finalDist > 0.01 ? (finalSeconds / 60) / finalDist : pace;
+
+    // Save to workout history & show summary modal
+    if (finalDist >= 0.01 || finalSeconds >= 3) {
+      const workoutRecord: CompletedWorkout = {
+        id: `run-${Date.now()}`,
+        date: new Date().toISOString(),
+        distanceKm: Math.round(finalDist * 100) / 100,
+        caloriesBurned: Math.round(finalCalories),
+        durationSeconds: finalSeconds,
+        avgPaceMinPerKm: Math.round(avgPace * 10) / 10,
+      };
+      saveCompletedWorkout(workoutRecord);
+      setCompletedWorkout(workoutRecord);
+      setIsWorkoutSummaryOpen(true);
+    }
+
+    // Return to clean initial state
     setIsTrackingActive(false);
+    setRoute(null);
+    setDistanceTraversedKm(0);
+    setElapsedSeconds(0);
+    setTraversedCoords([]);
+    setLiveRunnerPos(null);
+    setCurrentSpeedKmh(0);
 
     // Save run stats to Google User profile if active
-    if (distanceTraversedKm > 0.05) {
+    if (finalDist > 0.01) {
       setGoogleUser((prev) => {
         if (!prev) return null;
         const updated: GoogleUser = {
           ...prev,
-          totalCaloriesBurned: (prev.totalCaloriesBurned || 0) + activeCaloriesBurned,
-          totalKmRun: (prev.totalKmRun || 0) + distanceTraversedKm,
+          totalCaloriesBurned: (prev.totalCaloriesBurned || 0) + Math.round(finalCalories),
+          totalKmRun: (prev.totalKmRun || 0) + Math.round(finalDist * 100) / 100,
           completedRunsCount: (prev.completedRunsCount || 0) + 1,
         };
         saveGoogleUser(updated);
@@ -832,6 +863,7 @@ export default function RunnerApp() {
             onOpenAuth={() => setIsAuthModalOpen(true)}
             onUserLogin={handleUserLogin}
             onLogout={handleLogout}
+            onOpenHistory={() => setIsWorkoutSummaryOpen(true)}
           />
         </div>
       </header>
@@ -1383,6 +1415,14 @@ export default function RunnerApp() {
           </div>
         </div>
       )}
+
+      {/* Workout Summary & History Modal */}
+      <WorkoutSummaryModal
+        isOpen={isWorkoutSummaryOpen}
+        onClose={() => setIsWorkoutSummaryOpen(false)}
+        workout={completedWorkout}
+        currentUser={googleUser}
+      />
     </div>
   );
 }
