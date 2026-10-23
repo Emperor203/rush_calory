@@ -62,6 +62,7 @@ export default function RunnerApp() {
   // Google User State
   const [googleUser, setGoogleUser] = useState<GoogleUser | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
+  const [isAuthChecked, setIsAuthChecked] = useState<boolean>(false);
 
   // GPS & Location State
   const [startPos, setStartPos] = useState<[number, number]>([41.311081, 69.279737]);
@@ -118,7 +119,16 @@ export default function RunnerApp() {
       if (savedUser.weightKg) {
         setWeightKg(savedUser.weightKg);
       }
+      // Sync with admin roster
+      fetch('/api/admin/athletes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(savedUser),
+      }).catch(() => {});
+    } else {
+      setIsAuthModalOpen(true);
     }
+    setIsAuthChecked(true);
 
     const savedWeight = localStorage.getItem('runner_weight');
     if (savedWeight && !savedUser?.weightKg) {
@@ -136,6 +146,7 @@ export default function RunnerApp() {
     if (user.weightKg) {
       setWeightKg(user.weightKg);
     }
+    setIsAuthModalOpen(false);
     // Sync with Admin panel registered athletes roster
     fetch('/api/admin/athletes', {
       method: 'POST',
@@ -147,6 +158,7 @@ export default function RunnerApp() {
   const handleLogout = () => {
     setGoogleUser(null);
     saveGoogleUser(null);
+    setIsAuthModalOpen(true);
   };
 
   // Fetch Weather on position change
@@ -171,6 +183,10 @@ export default function RunnerApp() {
   };
 
   const handleGenerateRoute = async (offset = bearingOffset, parks = preferParks) => {
+    if (!googleUser) {
+      setIsAuthModalOpen(true);
+      return;
+    }
     setIsGenerating(true);
     try {
       const generated = await generateLoopRoute(
@@ -200,6 +216,10 @@ export default function RunnerApp() {
 
   // --- Active Live Tracking ---
   const startTracking = () => {
+    if (!googleUser) {
+      setIsAuthModalOpen(true);
+      return;
+    }
     if (!route) return;
 
     setIsTrackingActive(true);
@@ -907,8 +927,13 @@ export default function RunnerApp() {
 
       {/* Google Authentication Modal */}
       <GoogleAuthModal
-        isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
+        isOpen={isAuthModalOpen || (isAuthChecked && !googleUser)}
+        isRequired={!googleUser}
+        onClose={() => {
+          if (googleUser) {
+            setIsAuthModalOpen(false);
+          }
+        }}
         onUserLogin={handleUserLogin}
         currentUserWeight={weightKg}
       />

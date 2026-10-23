@@ -23,6 +23,7 @@ interface GoogleAuthModalProps {
   onClose: () => void;
   onUserLogin: (user: GoogleUser) => void;
   currentUserWeight?: number;
+  isRequired?: boolean;
 }
 
 export function GoogleIcon({ className = 'w-5 h-5' }: { className?: string }) {
@@ -53,6 +54,7 @@ export default function GoogleAuthModal({
   onClose,
   onUserLogin,
   currentUserWeight = 70,
+  isRequired = false,
 }: GoogleAuthModalProps) {
   const [clientId, setClientId] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
@@ -67,6 +69,12 @@ export default function GoogleAuthModal({
   }, [isOpen]);
 
   if (!isOpen) return null;
+
+  const handleModalClose = () => {
+    if (!isRequired) {
+      onClose();
+    }
+  };
 
   const handleLaunchRealGoogle = (targetClientId: string) => {
     if (!targetClientId) {
@@ -122,28 +130,47 @@ export default function GoogleAuthModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fade-in safe-bottom">
-      <div className="relative w-full max-w-md bg-[#0E1420] border border-gray-800 rounded-3xl p-6 text-white shadow-2xl space-y-5">
+    <div
+      onClick={handleModalClose}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-fade-in safe-bottom"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="relative w-full max-w-md bg-[#0E1420] border border-gray-800 rounded-3xl p-6 text-white shadow-2xl space-y-5"
+      >
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-gray-800">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center shadow">
+            <div className="w-10 h-10 rounded-2xl bg-white flex items-center justify-center shadow-md">
               <GoogleIcon className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-black text-sm text-white">Вход через аккаунт Google</h3>
+              <h3 className="font-black text-sm text-white">Вход в Rush Calory</h3>
               <p className="text-[10px] text-gray-400 font-mono">
-                Официальный Google OAuth 2.0
+                {isRequired ? 'Обязательная авторизация' : 'Официальный Google OAuth 2.0'}
               </p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="p-1 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition"
-          >
-            <X className="w-4 h-4" />
-          </button>
+          {isRequired ? (
+            <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-cyan-950 text-cyan-400 border border-cyan-500/40">
+              Вход обязателен
+            </span>
+          ) : (
+            <button
+              onClick={onClose}
+              className="p-1 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
         </div>
+
+        {/* Motivational requirement prompt */}
+        {isRequired && (
+          <div className="p-3.5 rounded-2xl bg-gradient-to-r from-cyan-950/60 to-emerald-950/60 border border-cyan-500/30 text-xs text-gray-300 leading-relaxed">
+            👋 Для расчёта маршрута под калории, трекинга GPS и сохранения тренировок необходимо войти в аккаунт.
+          </div>
+        )}
 
         {error && (
           <div className="p-3 rounded-2xl bg-rose-950/80 border border-rose-500/50 text-rose-300 text-xs flex items-start gap-2">
@@ -165,14 +192,14 @@ export default function GoogleAuthModal({
             ) : (
               <>
                 <GoogleIcon className="w-5 h-5" />
-                <span>Открыть настоящее окно Google</span>
+                <span>Войти через Google</span>
               </>
             )}
           </button>
 
           <p className="text-[11px] text-gray-400 text-center leading-relaxed">
-            При нажатии откроется официальное защищённое всплывающее окно{' '}
-            <span className="font-mono text-cyan-300">accounts.google.com</span> для выбора вашего аккаунта.
+            Откроется защищённое окно{' '}
+            <span className="font-mono text-cyan-300">accounts.google.com</span> для выбора аккаунта.
           </p>
         </div>
 
@@ -261,10 +288,18 @@ export default function GoogleAuthModal({
           </button>
         </div>
 
-        {/* Security badge */}
-        <div className="flex items-center justify-center gap-1.5 text-[10px] text-gray-500">
-          <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
-          <span>Прямой запрос к https://accounts.google.com</span>
+        {/* Security badge & Boss quick access */}
+        <div className="flex flex-col items-center justify-center gap-2 pt-1 text-[11px] text-gray-500">
+          <div className="flex items-center gap-1.5">
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
+            <span>Прямой запрос к https://accounts.google.com</span>
+          </div>
+          <a
+            href="/admin"
+            className="text-[10px] text-gray-600 hover:text-cyan-400 transition"
+          >
+            🔒 Панель администратора (boss)
+          </a>
         </div>
       </div>
     </div>
