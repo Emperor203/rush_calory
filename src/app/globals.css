@@ -51,10 +51,12 @@ body {
   padding-top: max(0.75rem, env(safe-area-inset-top));
 }
 
-/* Mobile Bottom Sheet transitions */
+/* Mobile Bottom Sheet transitions & scrolling */
 .bottom-sheet {
-  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), max-height 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-  touch-action: pan-y;
+  transition: max-height 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  -webkit-overflow-scrolling: touch !important;
+  overscroll-behavior-y: contain;
+  touch-action: pan-y !important;
 }
 
 .dark-tiles .leaflet-tile,

@@ -31,7 +31,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ru">
-      <body className="bg-[#000000] text-white min-h-screen overflow-hidden select-none touch-manipulation">
+      <body className="bg-[#000000] text-white min-h-screen overflow-x-hidden">
         {children}
       </body>
     </html>

@@ -913,16 +913,17 @@ export default function RunnerApp() {
       ) : (
         /* --- MOBILE BOTTOM SHEET & DESKTOP SIDEBAR PANEL --- */
         <div
-          className={`absolute bottom-0 left-0 right-0 md:bottom-auto md:left-4 md:top-20 md:right-auto md:w-96 z-20 bg-[#000000] border-t md:border-2 border-[#242424] rounded-t-3xl md:rounded-3xl shadow-2xl safe-bottom bottom-sheet ${
+          onTouchStart={(e) => e.stopPropagation()}
+          className={`fixed bottom-0 left-0 right-0 md:absolute md:bottom-auto md:left-4 md:top-20 md:right-auto md:w-96 z-20 bg-[#000000] border-t md:border-2 border-[#242424] rounded-t-3xl md:rounded-3xl shadow-2xl bottom-sheet ${
             isMobileExpanded
-              ? 'max-h-[85vh] overflow-y-auto p-4 sm:p-5'
+              ? 'max-h-[85dvh] overflow-y-auto overscroll-contain p-4 sm:p-5 pb-32 md:pb-5'
               : 'max-h-[190px] sm:max-h-none overflow-hidden md:overflow-y-auto md:max-h-[82vh] p-4 sm:p-5'
           }`}
         >
           {/* Mobile Drag Handle & Toggle Header */}
           <div
             onClick={() => setIsMobileExpanded(!isMobileExpanded)}
-            className="md:hidden flex flex-col items-center pb-2 cursor-pointer touch-none"
+            className="md:hidden flex flex-col items-center pb-2 cursor-pointer select-none"
           >
             <div className="w-10 h-1 bg-gray-700 rounded-full mb-2"></div>
             <div className="w-full flex items-center justify-between text-xs">
@@ -1242,6 +1243,9 @@ export default function RunnerApp() {
                 )}
               </div>
             )}
+
+            {/* Bottom spacer for comfortable mobile scrolling */}
+            <div className="h-16 md:hidden" />
           </div>
         </div>
       )}
