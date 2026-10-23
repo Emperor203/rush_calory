@@ -30,6 +30,7 @@ import PvpPassBlockedModal from '@/components/streetpass/PvpPassBlockedModal';
 import {
   Flame,
   CloudRain,
+  Cloud,
   Crosshair,
   Download,
   RotateCw,
@@ -1386,8 +1387,9 @@ export default function RunnerApp() {
                 <div className="grid grid-cols-3 gap-1.5 pt-0.5 text-center">
                   <div className="bg-[#000000] p-1.5 rounded-xl border border-[#242424]">
                     <span className="text-[9px] text-gray-400 block">Темп.</span>
-                    <strong className="text-xs font-bold text-white">
-                      {weather.temperature > 0 ? `+${weather.temperature}` : weather.temperature}°C
+                    <strong className="text-xs font-bold text-white flex items-center justify-center gap-1 mt-0.5">
+                      <Cloud className="w-3.5 h-3.5 text-[#C6FF33] shrink-0" />
+                      <span>{weather.temperature > 0 ? `+${weather.temperature}` : weather.temperature}°C</span>
                     </strong>
                   </div>
                   <div className="bg-[#000000] p-1.5 rounded-xl border border-[#242424]">
