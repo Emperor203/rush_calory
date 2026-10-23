@@ -8,7 +8,7 @@ import {
   triggerRealGoogleOAuth,
 } from '@/lib/auth';
 import { GoogleIcon } from './GoogleAuthModal';
-import { LogOut, Flame, TrendingUp, Award, UserCheck, ChevronDown, Zap, Shield } from 'lucide-react';
+import { LogOut, Flame, TrendingUp, Award, UserCheck, ChevronDown, Zap, Shield, Sliders } from 'lucide-react';
 import { isStreetPassActive, getStreetPassDaysRemaining } from '@/lib/streetpass';
 import { calculateUserRank } from '@/lib/ranks';
 
@@ -18,7 +18,7 @@ interface UserProfileButtonProps {
   onUserLogin?: (u: GoogleUser) => void;
   onLogout: () => void;
   onOpenHistory?: () => void;
-  onOpenStreetPass?: () => void;
+  onOpenStreetPass?: (tab?: 'plans' | 'studio') => void;
 }
 
 export default function UserProfileButton({
@@ -135,46 +135,66 @@ export default function UserProfileButton({
 
             {/* Street Pass Subscription Banner / Purchase CTA */}
             {hasPass ? (
-              <div
-                onClick={() => {
-                  setIsDropdownOpen(false);
-                  onOpenStreetPass?.();
-                }}
-                className="bg-[#121212] border-2 border-[#C6FF33] p-2.5 rounded-2xl cursor-pointer hover:bg-[#181818] transition space-y-1.5 shadow-[0_0_15px_rgba(198,255,51,0.15)]"
-              >
-                <div className="flex items-center justify-between text-[11px]">
-                  <span className="font-mono font-black text-[#C6FF33] flex items-center gap-1">
-                    <Zap className="w-3.5 h-3.5 fill-[#C6FF33]" /> STREET PASS
-                  </span>
-                  <span className="font-mono font-bold text-white text-[10px]">
-                    {daysRemaining} дн.
-                  </span>
+              <div className="space-y-1.5">
+                <div
+                  onClick={() => {
+                    setIsDropdownOpen(false);
+                    onOpenStreetPass?.('plans');
+                  }}
+                  className="bg-[#121212] border-2 border-[#C6FF33] p-2.5 rounded-2xl cursor-pointer hover:bg-[#181818] transition space-y-1.5 shadow-[0_0_15px_rgba(198,255,51,0.15)]"
+                >
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="font-mono font-black text-[#C6FF33] flex items-center gap-1">
+                      <Zap className="w-3.5 h-3.5 fill-[#C6FF33]" /> STREET PASS
+                    </span>
+                    <span className="font-mono font-bold text-white text-[10px]">
+                      {daysRemaining} дн.
+                    </span>
+                  </div>
+                  <div className="w-full bg-[#000000] rounded-full h-1.5 overflow-hidden border border-[#242424]">
+                    <div
+                      className="bg-[#C6FF33] h-full transition-all"
+                      style={{ width: `${passPercent}%` }}
+                    />
+                  </div>
+                  <div className="text-[9px] text-gray-400 flex items-center justify-between font-mono">
+                    <span>Статус активен</span>
+                    <span className="text-[#C6FF33] hover:underline">Продлить &rarr;</span>
+                  </div>
                 </div>
-                <div className="w-full bg-[#000000] rounded-full h-1.5 overflow-hidden border border-[#242424]">
-                  <div
-                    className="bg-[#C6FF33] h-full transition-all"
-                    style={{ width: `${passPercent}%` }}
-                  />
-                </div>
-                <div className="text-[9px] text-gray-400 flex items-center justify-between font-mono">
-                  <span>Статус активен</span>
-                  <span className="text-[#C6FF33] hover:underline">Продлить &rarr;</span>
-                </div>
-              </div>
-            ) : (
-              onOpenStreetPass && (
+
+                {/* Studio Customizer Button (MVP Anthem & Neon Trail) */}
                 <button
                   type="button"
                   onClick={() => {
                     setIsDropdownOpen(false);
-                    onOpenStreetPass();
+                    onOpenStreetPass?.('studio');
                   }}
-                  className="w-full py-2.5 px-3 rounded-2xl bg-gradient-to-r from-[#7D39EB] to-[#631fe0] hover:brightness-110 text-white text-xs font-black transition flex items-center justify-center gap-1.5 shadow-lg active:scale-95 border border-[#7D39EB]"
+                  className="w-full py-2 px-3 rounded-xl bg-[#141414] hover:bg-[#1f1f1f] border border-[#2e2e2e] hover:border-[#C6FF33] text-white text-xs font-bold transition flex items-center justify-between font-mono group"
                 >
-                  <Zap className="w-3.5 h-3.5 fill-[#C6FF33] text-[#C6FF33]" />
-                  <span>Купить Street Pass</span>
+                  <span className="flex items-center gap-1.5 text-[11px]">
+                    <Sliders className="w-3.5 h-3.5 text-[#C6FF33] group-hover:rotate-45 transition-transform" />
+                    <span>Студия: Гимн & Неоновый след</span>
+                  </span>
+                  <span className="text-[10px] text-[#C6FF33] font-bold">Настроить &rarr;</span>
                 </button>
-              )
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                {onOpenStreetPass && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsDropdownOpen(false);
+                      onOpenStreetPass('plans');
+                    }}
+                    className="w-full py-2.5 px-3 rounded-2xl bg-gradient-to-r from-[#7D39EB] to-[#631fe0] hover:brightness-110 text-white text-xs font-black transition flex items-center justify-center gap-1.5 shadow-lg active:scale-95 border border-[#7D39EB]"
+                  >
+                    <Zap className="w-3.5 h-3.5 fill-[#C6FF33] text-[#C6FF33]" />
+                    <span>Активировать Street Pass</span>
+                  </button>
+                )}
+              </div>
             )}
 
             {/* Athlete Rank & Progress Line (Линия ранга) */}

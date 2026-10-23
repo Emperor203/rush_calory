@@ -64,6 +64,77 @@ export const PAYMENT_METHODS: PaymentMethod[] = [
   },
 ];
 
+export interface AnthemTrack {
+  id: string;
+  name: string;
+  url: string;
+  genre: string;
+  author: string;
+}
+
+export const PRESET_ANTHEMS: AnthemTrack[] = [
+  {
+    id: 'cyberpunk-drift',
+    name: 'Cyberpunk Phonk (Neon Drift)',
+    url: '/sounds/anthem-drift.mp3',
+    genre: 'Drift Phonk / 130 BPM',
+    author: 'Street Pass Exclusive',
+  },
+  {
+    id: 'victory-surge',
+    name: 'Bass Monster (Victory Surge)',
+    url: '/sounds/anthem-victory.mp3',
+    genre: 'Electronic Hardstyle',
+    author: 'Arena Champion',
+  },
+];
+
+export interface TrailStyle {
+  id: string;
+  name: string;
+  color: string;
+  glow: string;
+  badge: string;
+}
+
+export const TRAIL_STYLES: TrailStyle[] = [
+  {
+    id: 'lime',
+    name: 'Неоновый Лайм',
+    color: '#C6FF33',
+    glow: 'rgba(198,255,51,0.6)',
+    badge: 'DEFAULT // ATHLETE',
+  },
+  {
+    id: 'violet',
+    name: 'Кибер-Фиолет',
+    color: '#7D39EB',
+    glow: 'rgba(125,57,235,0.6)',
+    badge: 'PVP ELITE',
+  },
+  {
+    id: 'fire',
+    name: 'Неоновый Огонь',
+    color: '#FF0055',
+    glow: 'rgba(255,0,85,0.6)',
+    badge: 'BURNING PACE',
+  },
+  {
+    id: 'cyan',
+    name: 'Электро-Бирюза',
+    color: '#00F5FF',
+    glow: 'rgba(0,245,255,0.6)',
+    badge: 'CARBON MATRIX',
+  },
+  {
+    id: 'carbon',
+    name: 'Карбон Монохром',
+    color: '#FFFFFF',
+    glow: 'rgba(255,255,255,0.6)',
+    badge: 'STEALTH RUNNER',
+  },
+];
+
 export function isStreetPassActive(user: GoogleUser | null): boolean {
   if (!user || !user.hasStreetPass || !user.streetPassExpiresAt) return false;
   return user.streetPassExpiresAt > Date.now();
@@ -77,15 +148,19 @@ export function getStreetPassDaysRemaining(user: GoogleUser | null): number {
 
 export function activateStreetPass(
   user: GoogleUser,
-  planId: 'monthly' | 'season',
+  planId: 'monthly' | 'season' | 'trial',
 ): GoogleUser {
-  const plan = STREET_PASS_PLANS.find((p) => p.id === planId) || STREET_PASS_PLANS[0];
-  const now = Date.now();
-  const currentExpiry = user.streetPassExpiresAt && user.streetPassExpiresAt > now
-    ? user.streetPassExpiresAt
-    : now;
+  let durationDays = 30;
+  if (planId === 'season') durationDays = 90;
+  if (planId === 'trial') durationDays = 3;
 
-  const addedMs = plan.durationDays * 24 * 60 * 60 * 1000;
+  const now = Date.now();
+  const currentExpiry =
+    user.streetPassExpiresAt && user.streetPassExpiresAt > now
+      ? user.streetPassExpiresAt
+      : now;
+
+  const addedMs = durationDays * 24 * 60 * 60 * 1000;
   const newExpiry = currentExpiry + addedMs;
 
   const updated: GoogleUser = {
@@ -93,11 +168,40 @@ export function activateStreetPass(
     hasStreetPass: true,
     streetPassPlan: planId,
     streetPassExpiresAt: newExpiry,
+    neonTrailColor: user.neonTrailColor || '#C6FF33',
+    mvpAnthemName: user.mvpAnthemName || PRESET_ANTHEMS[0].name,
+    mvpAnthemUrl: user.mvpAnthemUrl || PRESET_ANTHEMS[0].url,
   };
 
   saveGoogleUser(updated);
 
   // Sync to backend athletes database
+  if (typeof fetch !== 'undefined') {
+    fetch('/api/admin/athletes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updated),
+    }).catch(() => {});
+  }
+
+  return updated;
+}
+
+export function updateUserCustomizations(
+  user: GoogleUser,
+  customizations: {
+    mvpAnthemUrl?: string | null;
+    mvpAnthemName?: string | null;
+    neonTrailColor?: string | null;
+  },
+): GoogleUser {
+  const updated: GoogleUser = {
+    ...user,
+    ...customizations,
+  };
+
+  saveGoogleUser(updated);
+
   if (typeof fetch !== 'undefined') {
     fetch('/api/admin/athletes', {
       method: 'POST',

@@ -1,12 +1,16 @@
 'use client';
 
 import React, { useEffect } from 'react';
-import { Lock, Zap, X, ShieldAlert, Volume2 } from 'lucide-react';
+import { Lock, Zap, X, ShieldAlert, Volume2, Sparkles } from 'lucide-react';
+import { GoogleUser } from '@/lib/auth';
+import { activateStreetPass } from '@/lib/streetpass';
 
 interface PvpPassBlockedModalProps {
   isOpen: boolean;
   onClose: () => void;
   onOpenStreetPass: () => void;
+  currentUser?: GoogleUser | null;
+  onUserUpdate?: (updatedUser: GoogleUser) => void;
 }
 
 export function speakPvpBlockedVoice() {
@@ -28,6 +32,8 @@ export default function PvpPassBlockedModal({
   isOpen,
   onClose,
   onOpenStreetPass,
+  currentUser,
+  onUserUpdate,
 }: PvpPassBlockedModalProps) {
   useEffect(() => {
     if (isOpen) {
@@ -89,13 +95,28 @@ export default function PvpPassBlockedModal({
 
         {/* Action Buttons */}
         <div className="space-y-2 pt-1">
+          {currentUser && onUserUpdate && (
+            <button
+              type="button"
+              onClick={() => {
+                const updated = activateStreetPass(currentUser, 'trial');
+                onUserUpdate(updated);
+                onClose();
+              }}
+              className="w-full py-3.5 px-4 bg-[#7D39EB] hover:bg-[#6823d6] text-white font-black text-xs uppercase tracking-wider rounded-2xl shadow-xl transition active:scale-98 flex items-center justify-center gap-2 border border-[#C6FF33]"
+            >
+              <Sparkles className="w-4 h-4 text-[#C6FF33]" />
+              <span>Включить 3 дня бесплатно (Trial Pass)</span>
+            </button>
+          )}
+
           <button
             type="button"
             onClick={() => {
               onClose();
               onOpenStreetPass();
             }}
-            className="w-full py-3.5 px-4 bg-[#C6FF33] hover:bg-[#b0f020] text-black font-black text-xs uppercase tracking-wider rounded-2xl shadow-xl transition active:scale-98 flex items-center justify-center gap-2"
+            className="w-full py-3 px-4 bg-[#C6FF33] hover:bg-[#b0f020] text-black font-black text-xs uppercase tracking-wider rounded-2xl shadow-xl transition active:scale-98 flex items-center justify-center gap-2"
           >
             <Zap className="w-4 h-4 fill-black text-black" />
             <span>Купить Street Pass (от 29,000 UZS)</span>

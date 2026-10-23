@@ -9,8 +9,11 @@ export interface GoogleUser {
   completedRunsCount?: number;
   joinedAt: string;
   hasStreetPass?: boolean;
-  streetPassPlan?: 'monthly' | 'season' | null;
+  streetPassPlan?: 'monthly' | 'season' | 'trial' | null;
   streetPassExpiresAt?: number | null;
+  mvpAnthemUrl?: string | null;
+  mvpAnthemName?: string | null;
+  neonTrailColor?: string | null;
 }
 
 const STORAGE_KEY = 'runner_google_user';
@@ -118,6 +121,7 @@ export async function triggerRealGoogleOAuth(
 
           const info = await res.json();
 
+          const welcomeExpiry = Date.now() + 3 * 24 * 60 * 60 * 1000; // 3 days Welcome Street Pass
           const googleUser: GoogleUser = {
             id: info.sub || `google-${Date.now()}`,
             name: info.name || info.given_name || 'Google Athlete',
@@ -130,6 +134,12 @@ export async function triggerRealGoogleOAuth(
             totalKmRun: 0,
             completedRunsCount: 0,
             joinedAt: new Date().toISOString(),
+            hasStreetPass: true,
+            streetPassPlan: 'trial',
+            streetPassExpiresAt: welcomeExpiry,
+            neonTrailColor: '#C6FF33',
+            mvpAnthemName: 'Cyberpunk Phonk (Neon Drift)',
+            mvpAnthemUrl: '/sounds/anthem-drift.mp3',
           };
 
           saveGoogleUser(googleUser);

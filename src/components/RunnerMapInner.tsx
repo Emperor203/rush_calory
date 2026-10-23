@@ -87,6 +87,7 @@ export default function RunnerMapInner({
     currentUser.streetPassExpiresAt &&
     currentUser.streetPassExpiresAt > Date.now()
   );
+  const trailColor = currentUser?.neonTrailColor || '#C6FF33';
 
   // Custom Runner Start/Finish Pin Icon with Current User Avatar (Pure Lime & Black)
   const startIcon = useMemo(
@@ -215,17 +216,32 @@ export default function RunnerMapInner({
           </Marker>
         )}
 
-        {/* Traversed Breadcrumb Path (Solid Lime with Black Cap) */}
+        {/* Traversed Breadcrumb Path (Custom Neon Trail from Street Pass) */}
         {traversedCoords.length > 1 && (
-          <Polyline
-            positions={traversedCoords}
-            pathOptions={{
-              color: '#C6FF33',
-              weight: 6,
-              opacity: 0.95,
-              lineCap: 'round',
-            }}
-          />
+          <>
+            {/* Outer Glowing Neon Halo */}
+            <Polyline
+              positions={traversedCoords}
+              pathOptions={{
+                color: trailColor,
+                weight: 12,
+                opacity: 0.35,
+                lineCap: 'round',
+                lineJoin: 'round',
+              }}
+            />
+            {/* Inner High-Intensity Neon Core */}
+            <Polyline
+              positions={traversedCoords}
+              pathOptions={{
+                color: trailColor,
+                weight: 5,
+                opacity: 0.98,
+                lineCap: 'round',
+                lineJoin: 'round',
+              }}
+            />
+          </>
         )}
 
         {/* Planned Route Polyline (Violet & Lime) */}

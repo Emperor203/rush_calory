@@ -158,7 +158,13 @@ export default function RunnerApp() {
   const [isWorkoutSummaryOpen, setIsWorkoutSummaryOpen] = useState<boolean>(false);
   const [historyModalTab, setHistoryModalTab] = useState<'summary' | 'history'>('summary');
   const [isStreetPassModalOpen, setIsStreetPassModalOpen] = useState<boolean>(false);
+  const [streetPassTab, setStreetPassTab] = useState<'plans' | 'studio'>('plans');
   const [isPvpPassBlockedOpen, setIsPvpPassBlockedOpen] = useState<boolean>(false);
+
+  const openStreetPass = (tab: 'plans' | 'studio' = 'plans') => {
+    setStreetPassTab(tab);
+    setIsStreetPassModalOpen(true);
+  };
 
   const openWorkoutHistory = () => {
     setHistoryModalTab('history');
@@ -605,6 +611,13 @@ export default function RunnerApp() {
     // Win check
     if (distanceTraversedKm >= activeBattle.targetKm) {
       setActiveBattle((prev) => (prev ? { ...prev, status: 'finished', winnerId: googleUser.id } : null));
+      if (googleUser?.mvpAnthemUrl) {
+        try {
+          const anthemAudio = new Audio(googleUser.mvpAnthemUrl);
+          anthemAudio.volume = 0.9;
+          anthemAudio.play().catch(() => {});
+        } catch (e) {}
+      }
     }
   }, [distanceTraversedKm, activeCaloriesBurned, activeBattle?.status]);
 
@@ -818,6 +831,15 @@ export default function RunnerApp() {
       setCompletedWorkout(workoutRecord);
       setHistoryModalTab('summary');
       setIsWorkoutSummaryOpen(true);
+
+      // Play MVP Victory Anthem for Street Pass athletes!
+      if (googleUser?.hasStreetPass && googleUser?.mvpAnthemUrl) {
+        try {
+          const anthemAudio = new Audio(googleUser.mvpAnthemUrl);
+          anthemAudio.volume = 0.85;
+          anthemAudio.play().catch(() => {});
+        } catch (e) {}
+      }
     }
 
     // Return to clean initial state
@@ -1107,7 +1129,7 @@ export default function RunnerApp() {
           {/* Street Pass VIP Button */}
           <button
             type="button"
-            onClick={() => setIsStreetPassModalOpen(true)}
+            onClick={() => openStreetPass('plans')}
             className={`pointer-events-auto flex items-center gap-1 p-1 sm:px-2.5 sm:py-1 rounded-2xl shadow-xl font-black text-xs transition active:scale-95 ${
               isStreetPassActive(googleUser)
                 ? 'bg-[#000000] border-2 border-[#C6FF33] text-[#C6FF33] shadow-[0_0_15px_rgba(198,255,51,0.25)]'
@@ -1128,7 +1150,7 @@ export default function RunnerApp() {
             onUserLogin={handleUserLogin}
             onLogout={handleLogout}
             onOpenHistory={openWorkoutHistory}
-            onOpenStreetPass={() => setIsStreetPassModalOpen(true)}
+            onOpenStreetPass={(tab) => openStreetPass(tab || 'plans')}
           />
         </div>
       </header>
@@ -1716,6 +1738,7 @@ export default function RunnerApp() {
       {/* Competitive Subscription: Street Pass Modal */}
       <StreetPassModal
         isOpen={isStreetPassModalOpen}
+        initialTab={streetPassTab}
         onClose={() => setIsStreetPassModalOpen(false)}
         currentUser={googleUser}
         onUserUpdate={(updated) => {
@@ -1728,6 +1751,10 @@ export default function RunnerApp() {
         isOpen={isPvpPassBlockedOpen}
         onClose={() => setIsPvpPassBlockedOpen(false)}
         onOpenStreetPass={() => setIsStreetPassModalOpen(true)}
+        currentUser={googleUser}
+        onUserUpdate={(updated) => {
+          setGoogleUser(updated);
+        }}
       />
     </div>
   );
