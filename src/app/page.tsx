@@ -156,6 +156,8 @@ export default function RunnerApp() {
   const watchIdRef = useRef<number | null>(null);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const simIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const touchStartYRef = useRef<number | null>(null);
+  const hasMovedRef = useRef<boolean>(false);
 
   // Strict GPS Verification
   const runStrictGpsVerification = async () => {
@@ -167,6 +169,40 @@ export default function RunnerApp() {
     if (status.coords) {
       setStartPos(status.coords);
     }
+  };
+
+  // Mobile Bottom Sheet Drag & Swipe Gestures
+  const handleSheetHeaderTouchStart = (e: React.TouchEvent) => {
+    e.stopPropagation();
+    touchStartYRef.current = e.touches[0].clientY;
+    hasMovedRef.current = false;
+  };
+
+  const handleSheetHeaderTouchMove = (e: React.TouchEvent) => {
+    e.stopPropagation();
+    if (touchStartYRef.current === null) return;
+    const currentY = e.touches[0].clientY;
+    const diff = touchStartYRef.current - currentY; // > 0 = drag UP
+
+    if (diff > 25 && !isMobileExpanded) {
+      setIsMobileExpanded(true);
+      hasMovedRef.current = true;
+    } else if (diff < -25 && isMobileExpanded) {
+      setIsMobileExpanded(false);
+      hasMovedRef.current = true;
+    }
+  };
+
+  const handleSheetHeaderTouchEnd = (e: React.TouchEvent) => {
+    e.stopPropagation();
+    touchStartYRef.current = null;
+  };
+
+  const handleSheetHeaderClick = () => {
+    if (!hasMovedRef.current) {
+      setIsMobileExpanded((prev) => !prev);
+    }
+    hasMovedRef.current = false;
   };
 
   useEffect(() => {
@@ -1002,10 +1038,13 @@ export default function RunnerApp() {
         >
           {/* Mobile Drag Handle & Toggle Header */}
           <div
-            onClick={() => setIsMobileExpanded(!isMobileExpanded)}
-            className="md:hidden flex flex-col items-center pb-2 cursor-pointer select-none"
+            onClick={handleSheetHeaderClick}
+            onTouchStart={handleSheetHeaderTouchStart}
+            onTouchMove={handleSheetHeaderTouchMove}
+            onTouchEnd={handleSheetHeaderTouchEnd}
+            className="md:hidden flex flex-col items-center pb-2 cursor-pointer select-none touch-none active:opacity-90"
           >
-            <div className="w-10 h-1 bg-gray-700 rounded-full mb-2"></div>
+            <div className="w-12 h-1.5 bg-gray-600 rounded-full mb-2 active:bg-[#C6FF33] transition-colors"></div>
             <div className="w-full flex items-center justify-between text-xs">
               <div className="flex items-center gap-2">
                 <span className="font-mono font-black text-[#7D39EB] text-sm">
