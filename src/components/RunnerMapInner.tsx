@@ -13,6 +13,7 @@ import {
 import L from 'leaflet';
 import { RouteResult } from '@/lib/routing';
 import { LiveOnlineRunner } from '@/lib/supabase';
+import { GoogleUser } from '@/lib/auth';
 
 // Fix standard Leaflet icon paths
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -31,6 +32,7 @@ interface RunnerMapProps {
   traversedCoords?: [number, number][];
   isTrackingActive?: boolean;
   onlineRunners?: LiveOnlineRunner[];
+  currentUser?: GoogleUser | null;
 }
 
 function MapViewController({
@@ -78,43 +80,63 @@ export default function RunnerMapInner({
   traversedCoords = [],
   isTrackingActive = false,
   onlineRunners = [],
+  currentUser = null,
 }: RunnerMapProps) {
-  // Custom Runner Start/Finish Pin Icon
+  // Custom Runner Start/Finish Pin Icon with Current User Avatar
   const startIcon = useMemo(
     () =>
       L.divIcon({
         className: 'custom-start-marker',
         html: `
-          <div class="relative flex items-center justify-center">
-            <div class="absolute w-10 h-10 rounded-full bg-emerald-500 opacity-30 animate-ping"></div>
-            <div class="w-8 h-8 rounded-full bg-emerald-500 border-2 border-white shadow-xl flex items-center justify-center text-white font-bold text-xs">
-              🏁
+          <div class="relative flex flex-col items-center">
+            <div class="absolute -top-7 px-2.5 py-0.5 rounded-full bg-emerald-950/95 border border-emerald-400 text-emerald-300 text-[10px] font-black tracking-wide whitespace-nowrap shadow-xl flex items-center gap-1 z-20">
+              <span>🏁</span>
+              <span>${currentUser?.name ? `ВЫ (${currentUser.name})` : 'Старт'}</span>
+            </div>
+            <div class="relative">
+              <div class="absolute -inset-1.5 rounded-full bg-emerald-400 opacity-60 animate-ping"></div>
+              <div class="w-10 h-10 rounded-full overflow-hidden border-2 border-emerald-400 bg-gray-950 shadow-2xl flex items-center justify-center ring-2 ring-emerald-500/50">
+                ${
+                  currentUser?.avatar
+                    ? `<img src="${currentUser.avatar}" class="w-full h-full object-cover" />`
+                    : `<span class="text-xs font-black text-emerald-300">🏁</span>`
+                }
+              </div>
             </div>
           </div>
         `,
-        iconSize: [32, 32],
-        iconAnchor: [16, 16],
+        iconSize: [40, 40],
+        iconAnchor: [20, 20],
       }),
-    [],
+    [currentUser],
   );
 
-  // Active Live Runner Location Beacon Icon
+  // Active Live Runner Location Beacon Icon with Current User Avatar
   const liveRunnerIcon = useMemo(
     () =>
       L.divIcon({
         className: 'custom-live-runner-marker',
         html: `
-          <div class="relative flex items-center justify-center">
-            <div class="absolute w-12 h-12 rounded-full bg-cyan-400 opacity-40 animate-ping"></div>
-            <div class="w-9 h-9 rounded-full bg-gradient-to-tr from-cyan-500 to-blue-600 border-2 border-white shadow-2xl flex items-center justify-center text-white font-bold text-sm">
-              🏃‍♂️
+          <div class="relative flex flex-col items-center">
+            <div class="absolute -top-7 px-2.5 py-0.5 rounded-full bg-gradient-to-r from-emerald-500 to-cyan-500 text-black text-[10px] font-black tracking-wider uppercase shadow-xl whitespace-nowrap z-20">
+              ВЫ (${currentUser?.name || 'Бег'})
+            </div>
+            <div class="relative">
+              <div class="absolute -inset-2 rounded-full bg-cyan-400 opacity-70 animate-ping"></div>
+              <div class="w-11 h-11 rounded-full overflow-hidden border-2 border-white bg-gray-950 shadow-2xl flex items-center justify-center ring-2 ring-cyan-400">
+                ${
+                  currentUser?.avatar
+                    ? `<img src="${currentUser.avatar}" class="w-full h-full object-cover" />`
+                    : `<span class="text-xs font-black text-white">🏃‍♂️</span>`
+                }
+              </div>
             </div>
           </div>
         `,
-        iconSize: [36, 36],
-        iconAnchor: [18, 18],
+        iconSize: [44, 44],
+        iconAnchor: [22, 22],
       }),
-    [],
+    [currentUser],
   );
 
   return (

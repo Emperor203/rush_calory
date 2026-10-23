@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic';
 import React from 'react';
 import { RouteResult } from '@/lib/routing';
 import { LiveOnlineRunner } from '@/lib/supabase';
+import { GoogleUser } from '@/lib/auth';
 
 interface RunnerMapProps {
   startPos: [number, number];
@@ -14,6 +15,7 @@ interface RunnerMapProps {
   traversedCoords?: [number, number][];
   isTrackingActive?: boolean;
   onlineRunners?: LiveOnlineRunner[];
+  currentUser?: GoogleUser | null;
 }
 
 const DynamicRunnerMap = dynamic(() => import('./RunnerMapInner'), {

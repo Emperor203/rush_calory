@@ -494,6 +494,7 @@ export default function RunnerApp() {
           traversedCoords={traversedCoords}
           isTrackingActive={isTrackingActive}
           onlineRunners={onlineRunners}
+          currentUser={googleUser}
         />
       </div>
 
