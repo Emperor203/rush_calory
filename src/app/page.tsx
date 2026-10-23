@@ -47,6 +47,7 @@ import {
   SlidersHorizontal,
   Lock,
   Swords,
+  History,
 } from 'lucide-react';
 
 const PRESETS = [
@@ -152,6 +153,12 @@ export default function RunnerApp() {
   const [distanceTraversedKm, setDistanceTraversedKm] = useState<number>(0);
   const [completedWorkout, setCompletedWorkout] = useState<CompletedWorkout | null>(null);
   const [isWorkoutSummaryOpen, setIsWorkoutSummaryOpen] = useState<boolean>(false);
+  const [historyModalTab, setHistoryModalTab] = useState<'summary' | 'history'>('summary');
+
+  const openWorkoutHistory = () => {
+    setHistoryModalTab('history');
+    setIsWorkoutSummaryOpen(true);
+  };
 
   const watchIdRef = useRef<number | null>(null);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -627,6 +634,7 @@ export default function RunnerApp() {
       };
       saveCompletedWorkout(workoutRecord);
       setCompletedWorkout(workoutRecord);
+      setHistoryModalTab('summary');
       setIsWorkoutSummaryOpen(true);
     }
 
@@ -848,6 +856,17 @@ export default function RunnerApp() {
             <Swords className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">PVP Дуэль</span>
           </button>
+
+          {/* History Button on Initial Screen (Header) */}
+          <button
+            type="button"
+            onClick={openWorkoutHistory}
+            className="pointer-events-auto flex items-center gap-1 bg-[#121212] hover:bg-[#1c1c1c] border border-[#242424] hover:border-[#C6FF33] text-gray-200 hover:text-[#C6FF33] p-1.5 sm:px-3 sm:py-2 rounded-2xl shadow-xl font-bold text-xs transition active:scale-95"
+            title="История моих пробежек"
+          >
+            <History className="w-3.5 h-3.5 text-[#C6FF33]" />
+            <span className="hidden sm:inline">История</span>
+          </button>
         </div>
 
         {/* Map Styles & GPS Target + Google User */}
@@ -1068,7 +1087,7 @@ export default function RunnerApp() {
           </div>
 
           {/* Primary Quick CTA for Mobile Peek Mode */}
-          <div className="md:hidden pt-1 pb-2">
+          <div className="md:hidden pt-1 pb-2 space-y-2">
             {!route ? (
               <button
                 type="button"
@@ -1095,6 +1114,16 @@ export default function RunnerApp() {
                 <span>Начать пробежку ({route.distanceKm} км)</span>
               </button>
             )}
+
+            {/* Quick History Button right on mobile peek */}
+            <button
+              type="button"
+              onClick={openWorkoutHistory}
+              className="w-full py-2 bg-[#121212] hover:bg-[#1a1a1a] border border-[#242424] hover:border-[#7D39EB] text-gray-300 hover:text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 active:scale-98"
+            >
+              <History className="w-3.5 h-3.5 text-[#C6FF33]" />
+              <span>История моих пробежек</span>
+            </button>
           </div>
 
           {/* Full Expandable Controls (Always visible on Desktop, Expandable on Mobile) */}
@@ -1322,6 +1351,16 @@ export default function RunnerApp() {
                   </div>
                 </>
               )}
+
+              {/* History Button on Desktop */}
+              <button
+                type="button"
+                onClick={openWorkoutHistory}
+                className="w-full py-2.5 bg-[#121212] hover:bg-[#1a1a1a] border border-[#242424] hover:border-[#7D39EB] text-gray-300 hover:text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-2"
+              >
+                <History className="w-3.5 h-3.5 text-[#C6FF33]" />
+                <span>История всех пробежек</span>
+              </button>
             </div>
 
             {/* Route Details Card */}
@@ -1461,6 +1500,7 @@ export default function RunnerApp() {
         onClose={() => setIsWorkoutSummaryOpen(false)}
         workout={completedWorkout}
         currentUser={googleUser}
+        initialTab={historyModalTab}
       />
     </div>
   );

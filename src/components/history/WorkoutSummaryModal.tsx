@@ -25,6 +25,7 @@ interface WorkoutSummaryModalProps {
   onClose: () => void;
   workout: CompletedWorkout | null;
   currentUser: GoogleUser | null;
+  initialTab?: 'summary' | 'history';
 }
 
 export default function WorkoutSummaryModal({
@@ -32,16 +33,17 @@ export default function WorkoutSummaryModal({
   onClose,
   workout,
   currentUser,
+  initialTab = 'summary',
 }: WorkoutSummaryModalProps) {
-  const [activeTab, setActiveTab] = useState<'summary' | 'history'>('summary');
+  const [activeTab, setActiveTab] = useState<'summary' | 'history'>(initialTab);
   const [historyList, setHistoryList] = useState<CompletedWorkout[]>([]);
 
   useEffect(() => {
     if (isOpen) {
       setHistoryList(getWorkoutHistory());
-      setActiveTab('summary');
+      setActiveTab(initialTab || (workout ? 'summary' : 'history'));
     }
-  }, [isOpen]);
+  }, [isOpen, initialTab, workout]);
 
   if (!isOpen) return null;
 
