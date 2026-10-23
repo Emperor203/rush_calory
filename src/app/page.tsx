@@ -24,6 +24,8 @@ import GoogleAuthModal from '@/components/auth/GoogleAuthModal';
 import UserProfileButton from '@/components/auth/UserProfileButton';
 import PvpDuelSystem from '@/components/pvp/PvpDuelSystem';
 import WorkoutSummaryModal from '@/components/history/WorkoutSummaryModal';
+import { isStreetPassActive } from '@/lib/streetpass';
+import StreetPassModal from '@/components/streetpass/StreetPassModal';
 import {
   Flame,
   CloudRain,
@@ -154,6 +156,7 @@ export default function RunnerApp() {
   const [completedWorkout, setCompletedWorkout] = useState<CompletedWorkout | null>(null);
   const [isWorkoutSummaryOpen, setIsWorkoutSummaryOpen] = useState<boolean>(false);
   const [historyModalTab, setHistoryModalTab] = useState<'summary' | 'history'>('summary');
+  const [isStreetPassModalOpen, setIsStreetPassModalOpen] = useState<boolean>(false);
 
   const openWorkoutHistory = () => {
     setHistoryModalTab('history');
@@ -912,13 +915,31 @@ export default function RunnerApp() {
             </button>
           </div>
 
+          {/* Street Pass VIP Button */}
+          <button
+            type="button"
+            onClick={() => setIsStreetPassModalOpen(true)}
+            className={`pointer-events-auto flex items-center gap-1 p-1 sm:px-2.5 sm:py-1 rounded-2xl shadow-xl font-black text-xs transition active:scale-95 ${
+              isStreetPassActive(googleUser)
+                ? 'bg-[#000000] border-2 border-[#C6FF33] text-[#C6FF33] shadow-[0_0_15px_rgba(198,255,51,0.25)]'
+                : 'bg-[#7D39EB] hover:bg-[#6c28d9] text-white border border-[#7D39EB]'
+            }`}
+            title="Уличный допуск (Street Pass) — соревновательный пропуск атлета"
+          >
+            <Zap className={`w-3.5 h-3.5 ${isStreetPassActive(googleUser) ? 'fill-[#C6FF33]' : 'fill-white'}`} />
+            <span className="hidden sm:inline font-mono">
+              {isStreetPassActive(googleUser) ? 'VERIFIED' : 'STREET PASS'}
+            </span>
+          </button>
+
           {/* Google Sign-in / Profile Button */}
           <UserProfileButton
             user={googleUser}
             onOpenAuth={() => setIsAuthModalOpen(true)}
             onUserLogin={handleUserLogin}
             onLogout={handleLogout}
-            onOpenHistory={() => setIsWorkoutSummaryOpen(true)}
+            onOpenHistory={openWorkoutHistory}
+            onOpenStreetPass={() => setIsStreetPassModalOpen(true)}
           />
         </div>
       </header>
@@ -1501,6 +1522,16 @@ export default function RunnerApp() {
         workout={completedWorkout}
         currentUser={googleUser}
         initialTab={historyModalTab}
+      />
+
+      {/* Competitive Subscription: Street Pass Modal */}
+      <StreetPassModal
+        isOpen={isStreetPassModalOpen}
+        onClose={() => setIsStreetPassModalOpen(false)}
+        currentUser={googleUser}
+        onUserUpdate={(updated) => {
+          setGoogleUser(updated);
+        }}
       />
     </div>
   );

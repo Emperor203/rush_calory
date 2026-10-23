@@ -82,6 +82,12 @@ export default function RunnerMapInner({
   onlineRunners = [],
   currentUser = null,
 }: RunnerMapProps) {
+  const isPassActive = Boolean(
+    currentUser?.hasStreetPass &&
+    currentUser.streetPassExpiresAt &&
+    currentUser.streetPassExpiresAt > Date.now()
+  );
+
   // Custom Runner Start/Finish Pin Icon with Current User Avatar (Pure Lime & Black)
   const startIcon = useMemo(
     () =>
@@ -89,13 +95,13 @@ export default function RunnerMapInner({
         className: 'custom-start-marker',
         html: `
           <div class="relative flex flex-col items-center">
-            <div class="absolute -top-7 px-2.5 py-0.5 rounded-full bg-[#000000] border-2 border-[#C6FF33] text-[#C6FF33] text-[10px] font-black tracking-wide whitespace-nowrap shadow-xl flex items-center gap-1 z-20">
-              <span>🏁</span>
-              <span>${currentUser?.name ? `ВЫ (${currentUser.name})` : 'Старт'}</span>
+            <div class="absolute -top-7 px-2.5 py-0.5 rounded-full ${isPassActive ? 'bg-[#C6FF33] text-[#000000] border-2 border-[#7D39EB]' : 'bg-[#000000] border-2 border-[#C6FF33] text-[#C6FF33]'} text-[10px] font-black tracking-wide whitespace-nowrap shadow-xl flex items-center gap-1 z-20 font-mono">
+              <span>${isPassActive ? '⚡' : '🏁'}</span>
+              <span>${currentUser?.name ? `ВЫ (${currentUser.name})` : 'Старт'}${isPassActive ? ' // PASS' : ''}</span>
             </div>
             <div class="relative">
-              <div class="absolute -inset-1.5 rounded-full bg-[#C6FF33] opacity-60 animate-ping"></div>
-              <div class="w-10 h-10 rounded-full overflow-hidden border-2 border-[#C6FF33] bg-[#000000] shadow-2xl flex items-center justify-center ring-2 ring-[#C6FF33]/50">
+              <div class="absolute -inset-1.5 rounded-full ${isPassActive ? 'bg-[#7D39EB]' : 'bg-[#C6FF33]'} opacity-70 animate-ping"></div>
+              <div class="w-10 h-10 rounded-full overflow-hidden border-2 ${isPassActive ? 'border-[#C6FF33] ring-4 ring-[#7D39EB]' : 'border-[#C6FF33] ring-2 ring-[#C6FF33]/50'} bg-[#000000] shadow-2xl flex items-center justify-center">
                 ${
                   currentUser?.avatar
                     ? `<img src="${currentUser.avatar}" class="w-full h-full object-cover" />`
@@ -108,7 +114,7 @@ export default function RunnerMapInner({
         iconSize: [40, 40],
         iconAnchor: [20, 20],
       }),
-    [currentUser],
+    [currentUser, isPassActive],
   );
 
   // Active Live Runner Location Beacon Icon with Current User Avatar (Pure Lime with Black text)
@@ -118,12 +124,12 @@ export default function RunnerMapInner({
         className: 'custom-live-runner-marker',
         html: `
           <div class="relative flex flex-col items-center">
-            <div class="absolute -top-7 px-2.5 py-0.5 rounded-full bg-[#C6FF33] text-[#000000] text-[10px] font-black tracking-wider uppercase shadow-xl whitespace-nowrap z-20">
-              ВЫ (${currentUser?.name || 'Бег'})
+            <div class="absolute -top-7 px-2.5 py-0.5 rounded-full ${isPassActive ? 'bg-[#7D39EB] text-white border-2 border-[#C6FF33]' : 'bg-[#C6FF33] text-[#000000]'} text-[10px] font-black tracking-wider uppercase shadow-xl whitespace-nowrap z-20 font-mono">
+              ${isPassActive ? '⚡ ' : ''}ВЫ (${currentUser?.name || 'Бег'})
             </div>
             <div class="relative">
-              <div class="absolute -inset-2 rounded-full bg-[#C6FF33] opacity-70 animate-ping"></div>
-              <div class="w-11 h-11 rounded-full overflow-hidden border-2 border-[#FFFFFF] bg-[#000000] shadow-2xl flex items-center justify-center ring-2 ring-[#C6FF33]">
+              <div class="absolute -inset-2 rounded-full ${isPassActive ? 'bg-[#C6FF33]' : 'bg-[#C6FF33]'} opacity-80 animate-ping"></div>
+              <div class="w-11 h-11 rounded-full overflow-hidden border-2 ${isPassActive ? 'border-[#C6FF33] ring-4 ring-[#C6FF33]' : 'border-[#FFFFFF] ring-2 ring-[#C6FF33]'} bg-[#000000] shadow-2xl flex items-center justify-center">
                 ${
                   currentUser?.avatar
                     ? `<img src="${currentUser.avatar}" class="w-full h-full object-cover" />`
@@ -136,7 +142,7 @@ export default function RunnerMapInner({
         iconSize: [44, 44],
         iconAnchor: [22, 22],
       }),
-    [currentUser],
+    [currentUser, isPassActive],
   );
 
   return (

@@ -8,6 +8,9 @@ export interface GoogleUser {
   totalKmRun?: number;
   completedRunsCount?: number;
   joinedAt: string;
+  hasStreetPass?: boolean;
+  streetPassPlan?: 'monthly' | 'season' | null;
+  streetPassExpiresAt?: number | null;
 }
 
 const STORAGE_KEY = 'runner_google_user';

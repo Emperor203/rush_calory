@@ -8,7 +8,8 @@ import {
   triggerRealGoogleOAuth,
 } from '@/lib/auth';
 import { GoogleIcon } from './GoogleAuthModal';
-import { LogOut, Flame, TrendingUp, Award, UserCheck, ChevronDown } from 'lucide-react';
+import { LogOut, Flame, TrendingUp, Award, UserCheck, ChevronDown, Zap } from 'lucide-react';
+import { isStreetPassActive, getStreetPassDaysRemaining } from '@/lib/streetpass';
 
 interface UserProfileButtonProps {
   user: GoogleUser | null;
@@ -16,6 +17,7 @@ interface UserProfileButtonProps {
   onUserLogin?: (u: GoogleUser) => void;
   onLogout: () => void;
   onOpenHistory?: () => void;
+  onOpenStreetPass?: () => void;
 }
 
 export default function UserProfileButton({
@@ -24,9 +26,15 @@ export default function UserProfileButton({
   onUserLogin,
   onLogout,
   onOpenHistory,
+  onOpenStreetPass,
 }: UserProfileButtonProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isSigningIn, setIsSigningIn] = useState(false);
+
+  const hasPass = isStreetPassActive(user);
+  const daysRemaining = getStreetPassDaysRemaining(user);
+  const totalDays = user?.streetPassPlan === 'season' ? 90 : 30;
+  const passPercent = Math.min(100, Math.round((daysRemaining / totalDays) * 100));
 
   const handleSignInClick = () => {
     const clientId = getStoredGoogleClientId();
@@ -83,8 +91,9 @@ export default function UserProfileButton({
             <span className="font-bold text-xs text-white">{firstName[0]}</span>
           )}
         </div>
-        <span className="hidden sm:inline font-bold text-white text-xs max-w-[80px] truncate">
-          {firstName}
+        <span className="hidden sm:inline font-bold text-white text-xs max-w-[80px] truncate flex items-center gap-1">
+          <span>{firstName}</span>
+          {hasPass && <Zap className="w-3 h-3 fill-[#C6FF33] text-[#C6FF33] shrink-0" />}
         </span>
         <ChevronDown className="hidden sm:block w-3.5 h-3.5 text-gray-400" />
       </button>
@@ -109,11 +118,61 @@ export default function UserProfileButton({
               <div className="truncate">
                 <div className="font-black text-sm text-white truncate flex items-center gap-1.5">
                   <span className="truncate">{user.name}</span>
-                  <UserCheck className="w-3.5 h-3.5 text-[#C6FF33] shrink-0" />
+                  {hasPass ? (
+                    <span className="px-1.5 py-0.2 rounded text-[8px] font-black bg-[#C6FF33] text-black font-mono flex items-center gap-0.5">
+                      <Zap className="w-2.5 h-2.5 fill-black" /> VERIFIED
+                    </span>
+                  ) : (
+                    <UserCheck className="w-3.5 h-3.5 text-[#C6FF33] shrink-0" />
+                  )}
                 </div>
                 <div className="text-[11px] text-gray-400 truncate">{user.email}</div>
               </div>
             </div>
+
+            {/* Street Pass Subscription Banner / Purchase CTA */}
+            {hasPass ? (
+              <div
+                onClick={() => {
+                  setIsDropdownOpen(false);
+                  onOpenStreetPass?.();
+                }}
+                className="bg-[#121212] border-2 border-[#C6FF33] p-2.5 rounded-2xl cursor-pointer hover:bg-[#181818] transition space-y-1.5 shadow-[0_0_15px_rgba(198,255,51,0.15)]"
+              >
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="font-mono font-black text-[#C6FF33] flex items-center gap-1">
+                    <Zap className="w-3.5 h-3.5 fill-[#C6FF33]" /> STREET PASS
+                  </span>
+                  <span className="font-mono font-bold text-white text-[10px]">
+                    {daysRemaining} дн.
+                  </span>
+                </div>
+                <div className="w-full bg-[#000000] rounded-full h-1.5 overflow-hidden border border-[#242424]">
+                  <div
+                    className="bg-[#C6FF33] h-full transition-all"
+                    style={{ width: `${passPercent}%` }}
+                  />
+                </div>
+                <div className="text-[9px] text-gray-400 flex items-center justify-between font-mono">
+                  <span>Статус активен</span>
+                  <span className="text-[#C6FF33] hover:underline">Продлить &rarr;</span>
+                </div>
+              </div>
+            ) : (
+              onOpenStreetPass && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsDropdownOpen(false);
+                    onOpenStreetPass();
+                  }}
+                  className="w-full py-2.5 px-3 rounded-2xl bg-gradient-to-r from-[#7D39EB] to-[#631fe0] hover:brightness-110 text-white text-xs font-black transition flex items-center justify-center gap-1.5 shadow-lg active:scale-95 border border-[#7D39EB]"
+                >
+                  <Zap className="w-3.5 h-3.5 fill-[#C6FF33] text-[#C6FF33]" />
+                  <span>Купить Street Pass</span>
+                </button>
+              )
+            )}
 
             {/* Career Stats */}
             <div className="grid grid-cols-2 gap-2 text-center">
