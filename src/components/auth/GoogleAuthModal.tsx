@@ -288,18 +288,10 @@ export default function GoogleAuthModal({
           </button>
         </div>
 
-        {/* Security badge & Boss quick access */}
-        <div className="flex flex-col items-center justify-center gap-2 pt-1 text-[11px] text-gray-500">
-          <div className="flex items-center gap-1.5">
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
-            <span>Прямой запрос к https://accounts.google.com</span>
-          </div>
-          <a
-            href="/admin"
-            className="text-[10px] text-gray-600 hover:text-cyan-400 transition"
-          >
-            🔒 Панель администратора (boss)
-          </a>
+        {/* Security badge */}
+        <div className="flex items-center justify-center gap-1.5 text-[10px] text-gray-500">
+          <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
+          <span>Прямой запрос к https://accounts.google.com</span>
         </div>
       </div>
     </div>

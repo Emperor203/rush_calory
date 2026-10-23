@@ -487,13 +487,6 @@ export default function RunnerApp() {
             >
               <Crosshair className={`w-4 h-4 text-emerald-400 ${isCheckingGps ? 'animate-spin' : ''}`} />
             </button>
-            <Link
-              href="/admin"
-              className="p-1 sm:p-1.5 rounded-xl text-gray-400 hover:text-cyan-400 hover:bg-gray-800 transition flex items-center justify-center"
-              title="Панель администратора (boss)"
-            >
-              <Lock className="w-3.5 h-3.5" />
-            </Link>
           </div>
 
           {/* Google Sign-in / Profile Button */}
