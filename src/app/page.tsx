@@ -18,8 +18,10 @@ import {
 } from '@/lib/gps';
 import { GoogleUser, getSavedGoogleUser, saveGoogleUser } from '@/lib/auth';
 import { supabase, LiveOnlineRunner } from '@/lib/supabase';
+import { PvpBattle, PvpInvitePayload } from '@/lib/pvp';
 import GoogleAuthModal from '@/components/auth/GoogleAuthModal';
 import UserProfileButton from '@/components/auth/UserProfileButton';
+import PvpDuelSystem from '@/components/pvp/PvpDuelSystem';
 import {
   Flame,
   CloudRain,
@@ -42,6 +44,7 @@ import {
   Navigation2,
   SlidersHorizontal,
   Lock,
+  Swords,
 } from 'lucide-react';
 
 const PRESETS = [
@@ -66,6 +69,11 @@ export default function RunnerApp() {
   const [isAuthChecked, setIsAuthChecked] = useState<boolean>(false);
   const [isUserBanned, setIsUserBanned] = useState<boolean>(false);
   const [onlineRunners, setOnlineRunners] = useState<LiveOnlineRunner[]>([]);
+
+  // PVP Battle State
+  const [isPvpLobbyOpen, setIsPvpLobbyOpen] = useState<boolean>(false);
+  const [activeBattle, setActiveBattle] = useState<PvpBattle | null>(null);
+  const [incomingInvite, setIncomingInvite] = useState<PvpInvitePayload | null>(null);
 
   const playBanSound = () => {
     try {
@@ -261,6 +269,54 @@ export default function RunnerApp() {
         });
         setOnlineRunners(runners);
       })
+      .on('broadcast', { event: 'pvp_invite' }, ({ payload }) => {
+        if (payload?.toUserId === googleUser.id) {
+          setIncomingInvite(payload);
+        }
+      })
+      .on('broadcast', { event: 'pvp_accept' }, ({ payload }) => {
+        const b = payload?.battle;
+        if (b && (b.challenger.id === googleUser.id || b.opponent.id === googleUser.id)) {
+          setActiveBattle(b);
+          setIncomingInvite(null);
+          setIsPvpLobbyOpen(false);
+        }
+      })
+      .on('broadcast', { event: 'pvp_decline' }, ({ payload }) => {
+        if (payload?.challengerId === googleUser.id) {
+          alert(`${payload.declinedByName || 'Соперник'} отклонил вызов на дуэль.`);
+        }
+      })
+      .on('broadcast', { event: 'pvp_progress' }, ({ payload }) => {
+        setActiveBattle((prev) => {
+          if (!prev || prev.id !== payload?.battleId) return prev;
+          const isOppChallenger = prev.challenger.id === payload.userId;
+          const updated = {
+            ...prev,
+            challenger: isOppChallenger
+              ? { ...prev.challenger, currentKm: payload.currentKm, currentKcal: payload.currentKcal }
+              : prev.challenger,
+            opponent: !isOppChallenger
+              ? { ...prev.opponent, currentKm: payload.currentKm, currentKcal: payload.currentKcal }
+              : prev.opponent,
+          };
+          if (payload.currentKm >= prev.targetKm && prev.status === 'active') {
+            updated.status = 'finished';
+            updated.winnerId = payload.userId;
+          }
+          return updated;
+        });
+      })
+      .on('broadcast', { event: 'pvp_surrender' }, ({ payload }) => {
+        setActiveBattle((prev) => {
+          if (!prev || prev.id !== payload?.battleId) return prev;
+          return {
+            ...prev,
+            status: 'finished',
+            winnerId: payload.winnerId,
+          };
+        });
+      })
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
           await channel.track({
@@ -302,6 +358,121 @@ export default function RunnerApp() {
       })
       .catch(() => {});
   }, [liveRunnerPos, startPos, isTrackingActive, currentSpeedKmh, activeCaloriesBurned]);
+
+  // PVP Battle Live Progress Sync
+  useEffect(() => {
+    if (!activeBattle || activeBattle.status !== 'active' || !googleUser) return;
+
+    const channel = supabase.channel('rush-live-runners');
+    channel
+      .send({
+        type: 'broadcast',
+        event: 'pvp_progress',
+        payload: {
+          battleId: activeBattle.id,
+          userId: googleUser.id,
+          currentKm: distanceTraversedKm,
+          currentKcal: activeCaloriesBurned,
+        },
+      })
+      .catch(() => {});
+
+    // Win check
+    if (distanceTraversedKm >= activeBattle.targetKm) {
+      setActiveBattle((prev) => (prev ? { ...prev, status: 'finished', winnerId: googleUser.id } : null));
+    }
+  }, [distanceTraversedKm, activeCaloriesBurned, activeBattle?.status]);
+
+  const handleSendPvpInvite = async (targetRunner: LiveOnlineRunner, targetKm: number) => {
+    if (!googleUser) return;
+    const battleId = `pvp-${Date.now()}`;
+    const payload: PvpInvitePayload = {
+      battleId,
+      fromUser: {
+        id: googleUser.id,
+        name: googleUser.name,
+        avatar: googleUser.avatar,
+      },
+      toUserId: targetRunner.id,
+      targetKm,
+    };
+
+    const channel = supabase.channel('rush-live-runners');
+    await channel.send({
+      type: 'broadcast',
+      event: 'pvp_invite',
+      payload,
+    });
+
+    setIsPvpLobbyOpen(false);
+    alert(`⚔️ Вызов на ${targetKm} км отправлен атлету ${targetRunner.name}! Ожидаем ответа...`);
+  };
+
+  const handleAcceptPvpInvite = async (invite: PvpInvitePayload) => {
+    if (!googleUser) return;
+    const newBattle: PvpBattle = {
+      id: invite.battleId,
+      challenger: {
+        id: invite.fromUser.id,
+        name: invite.fromUser.name,
+        avatar: invite.fromUser.avatar,
+        currentKm: 0,
+        currentKcal: 0,
+      },
+      opponent: {
+        id: googleUser.id,
+        name: googleUser.name,
+        avatar: googleUser.avatar,
+        currentKm: 0,
+        currentKcal: 0,
+      },
+      targetKm: invite.targetKm,
+      status: 'active',
+      startedAt: new Date().toISOString(),
+    };
+
+    setActiveBattle(newBattle);
+    setIncomingInvite(null);
+
+    const channel = supabase.channel('rush-live-runners');
+    await channel.send({
+      type: 'broadcast',
+      event: 'pvp_accept',
+      payload: { battle: newBattle },
+    });
+  };
+
+  const handleDeclinePvpInvite = async (invite: PvpInvitePayload) => {
+    if (!googleUser) return;
+    setIncomingInvite(null);
+    const channel = supabase.channel('rush-live-runners');
+    await channel.send({
+      type: 'broadcast',
+      event: 'pvp_decline',
+      payload: {
+        challengerId: invite.fromUser.id,
+        declinedByName: googleUser.name,
+      },
+    });
+  };
+
+  const handleSurrenderBattle = async () => {
+    if (!activeBattle || !googleUser) return;
+    const isChallenger = activeBattle.challenger.id === googleUser.id;
+    const winnerId = isChallenger ? activeBattle.opponent.id : activeBattle.challenger.id;
+
+    const channel = supabase.channel('rush-live-runners');
+    await channel.send({
+      type: 'broadcast',
+      event: 'pvp_surrender',
+      payload: {
+        battleId: activeBattle.id,
+        winnerId,
+      },
+    });
+
+    setActiveBattle(null);
+  };
 
   // Fetch Weather on position change
   useEffect(() => {
@@ -595,6 +766,17 @@ export default function RunnerApp() {
             <span className="font-mono font-bold text-xs">{onlineRunners.length + 1}</span>
             <span className="text-[10px] text-gray-300 font-semibold hidden sm:inline">онлайн</span>
           </div>
+
+          {/* PVP Duel Arena Button */}
+          <button
+            type="button"
+            onClick={() => setIsPvpLobbyOpen(true)}
+            className="pointer-events-auto flex items-center gap-1.5 bg-gradient-to-r from-amber-500 via-rose-500 to-amber-500 bg-size-200 hover:bg-pos-100 text-black px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-2xl shadow-xl font-black text-xs transition active:scale-95 animate-pulse"
+            title="Открыть арену PVP забегов и вызвать соперника"
+          >
+            <Swords className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">PVP Дуэль</span>
+          </button>
         </div>
 
         {/* Map Styles & GPS Target + Google User */}
@@ -1066,6 +1248,24 @@ export default function RunnerApp() {
             )}
           </div>
         </div>
+      )}
+
+      {/* PVP Duel System (HUD, Lobby, Invites, Victory) */}
+      {googleUser && (
+        <PvpDuelSystem
+          currentUser={googleUser}
+          onlineRunners={onlineRunners}
+          activeBattle={activeBattle}
+          incomingInvite={incomingInvite}
+          isLobbyOpen={isPvpLobbyOpen}
+          onCloseLobby={() => setIsPvpLobbyOpen(false)}
+          onSendInvite={handleSendPvpInvite}
+          onAcceptInvite={handleAcceptPvpInvite}
+          onDeclineInvite={handleDeclinePvpInvite}
+          onSurrenderBattle={handleSurrenderBattle}
+          myLiveKm={distanceTraversedKm}
+          myLiveKcal={activeCaloriesBurned}
+        />
       )}
 
       {/* Google Authentication Modal */}
