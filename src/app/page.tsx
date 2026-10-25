@@ -1752,45 +1752,47 @@ export default function RunnerApp() {
             </div>
           </div>
 
-          {/* Primary Quick CTA for Mobile Peek Mode */}
-          <div className="md:hidden pt-1 pb-2 space-y-2">
-            {!route ? (
-              <button
-                type="button"
-                onClick={() => handleGenerateRoute()}
-                disabled={isGenerating}
-                className="w-full py-3 bg-[#C6FF33] hover:bg-[#b0f020] text-[#000000] font-black text-xs uppercase tracking-wider rounded-xl shadow-lg transition flex items-center justify-center gap-1.5 active:scale-98"
-              >
-                {isGenerating ? (
-                  <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <>
-                    <Zap className="w-3.5 h-3.5 fill-black" />
-                    <span>Сгенерировать круговой маршрут</span>
-                  </>
-                )}
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={startTracking}
-                className="w-full py-3 bg-[#7D39EB] hover:bg-[#6c28d9] text-[#FFFFFF] font-black text-xs uppercase tracking-wider rounded-xl shadow-lg transition flex items-center justify-center gap-1.5 active:scale-98"
-              >
-                <Play className="w-3.5 h-3.5 fill-white" />
-                <span>Начать пробежку ({route.distanceKm} км)</span>
-              </button>
-            )}
+          {/* Primary Quick CTA for Mobile Peek Mode (Only shown when collapsed to prevent duplicate buttons) */}
+          {!isMobileExpanded && (
+            <div className="md:hidden pt-1 pb-2 space-y-2">
+              {!route ? (
+                <button
+                  type="button"
+                  onClick={() => handleGenerateRoute()}
+                  disabled={isGenerating}
+                  className="w-full py-3 bg-[#C6FF33] hover:bg-[#b0f020] text-[#000000] font-black text-xs uppercase tracking-wider rounded-xl shadow-lg transition flex items-center justify-center gap-1.5 active:scale-98"
+                >
+                  {isGenerating ? (
+                    <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      <Zap className="w-3.5 h-3.5 fill-black" />
+                      <span>Сгенерировать круговой маршрут</span>
+                    </>
+                  )}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={startTracking}
+                  className="w-full py-3 bg-[#7D39EB] hover:bg-[#6c28d9] text-[#FFFFFF] font-black text-xs uppercase tracking-wider rounded-xl shadow-lg transition flex items-center justify-center gap-1.5 active:scale-98"
+                >
+                  <Play className="w-3.5 h-3.5 fill-white" />
+                  <span>Начать пробежку ({route.distanceKm} км)</span>
+                </button>
+              )}
 
-            {/* Quick History Button right on mobile peek */}
-            <button
-              type="button"
-              onClick={openWorkoutHistory}
-              className="w-full py-2 bg-[#121212] hover:bg-[#1a1a1a] border border-[#242424] hover:border-[#7D39EB] text-gray-300 hover:text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 active:scale-98"
-            >
-              <History className="w-3.5 h-3.5 text-[#C6FF33]" />
-              <span>История моих пробежек</span>
-            </button>
-          </div>
+              {/* Quick History Button right on mobile peek */}
+              <button
+                type="button"
+                onClick={openWorkoutHistory}
+                className="w-full py-2 bg-[#121212] hover:bg-[#1a1a1a] border border-[#242424] hover:border-[#7D39EB] text-gray-300 hover:text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 active:scale-98"
+              >
+                <History className="w-3.5 h-3.5 text-[#C6FF33]" />
+                <span>История моих пробежек</span>
+              </button>
+            </div>
+          )}
 
           {/* Full Expandable Controls (Always visible on Desktop, Expandable on Mobile) */}
           <div className={`${isMobileExpanded ? 'block' : 'hidden md:block'} space-y-3.5 pt-2 md:pt-0`}>
