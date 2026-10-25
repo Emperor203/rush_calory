@@ -299,7 +299,7 @@ export default function RunnerMapInner({
         {/* Real-time Online Runners (Solid Violet & White) */}
         {onlineRunners
           .filter((runner) => {
-            if (!runner || !runner.lat || !runner.lng) return false;
+            if (!runner || typeof runner.lat !== 'number' || typeof runner.lng !== 'number' || isNaN(runner.lat) || isNaN(runner.lng)) return false;
             // Never render current user as an online peer runner
             if (
               currentUser &&

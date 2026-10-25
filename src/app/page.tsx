@@ -83,6 +83,7 @@ export default function RunnerApp() {
   const [activeRoom, setActiveRoom] = useState<PvpRoom | null>(null);
   const [openRooms, setOpenRooms] = useState<PvpRoom[]>([]);
   const [incomingInvite, setIncomingInvite] = useState<PvpInvitePayload | null>(null);
+  const [pvpTraversedKm, setPvpTraversedKm] = useState<number>(0);
 
   const playBanSound = () => {
     try {
@@ -339,6 +340,7 @@ export default function RunnerApp() {
 
   // Live Burned Calories
   const activeCaloriesBurned = Math.round(distanceTraversedKm * weightKg * 1.036);
+  const pvpCaloriesBurned = Math.round(pvpTraversedKm * (weightKg || 70) * 1.036);
   const remainingCalories = Math.max(0, calories - activeCaloriesBurned);
   const caloriePercent = Math.min(100, Math.round((activeCaloriesBurned / calories) * 100));
 
@@ -509,10 +511,23 @@ export default function RunnerApp() {
           b.opponent.id === myId || (myEmail && b.opponent.email?.toLowerCase() === myEmail);
         if (isChallenger || isOpponent) {
           setActiveBattle(b);
+          setPvpTraversedKm(0);
           setActiveRoom(null);
           setIncomingInvite(null);
           setIsPvpLobbyOpen(false);
         }
+      })
+      // PVP Guest Left Waiting Room
+      .on('broadcast', { event: 'pvp_room_guest_leave' }, ({ payload }) => {
+        if (!payload?.roomCode) return;
+        setActiveRoom((prev) => {
+          if (!prev || prev.roomCode.toUpperCase() !== payload.roomCode.toUpperCase()) return prev;
+          return {
+            ...prev,
+            guest: null,
+            status: 'waiting',
+          };
+        });
       })
       // PVP Direct Invite
       .on('broadcast', { event: 'pvp_invite' }, ({ payload }) => {
@@ -537,6 +552,7 @@ export default function RunnerApp() {
           b.opponent.id === myId || (myEmail && b.opponent.email?.toLowerCase() === myEmail);
         if (isChallenger || isOpponent) {
           setActiveBattle(b);
+          setPvpTraversedKm(0);
           setActiveRoom(null);
           setIncomingInvite(null);
           setIsPvpLobbyOpen(false);
@@ -777,7 +793,7 @@ export default function RunnerApp() {
     return () => clearInterval(pruneInterval);
   }, [googleUser?.id, googleUser?.email]);
 
-  // PVP Battle Live Progress Sync
+  // PVP Battle Live Progress Sync (Uses dedicated pvpTraversedKm)
   useEffect(() => {
     if (!activeBattle || activeBattle.status !== 'active' || !googleUser) return;
 
@@ -789,14 +805,14 @@ export default function RunnerApp() {
         payload: {
           battleId: activeBattle.id,
           userId: googleUser.id,
-          currentKm: distanceTraversedKm,
-          currentKcal: activeCaloriesBurned,
+          currentKm: pvpTraversedKm,
+          currentKcal: pvpCaloriesBurned,
         },
       })
       .catch(() => {});
 
     // Win check
-    if (distanceTraversedKm >= activeBattle.targetKm) {
+    if (pvpTraversedKm >= activeBattle.targetKm) {
       channel
         .send({
           type: 'broadcast',
@@ -820,7 +836,7 @@ export default function RunnerApp() {
           : null
       );
 
-      if (googleUser?.mvpAnthemUrl) {
+      if (googleUser?.mvpAnthemUrl && googleUser.mvpAnthemUrl.trim() !== '') {
         try {
           const anthemAudio = new Audio(googleUser.mvpAnthemUrl);
           anthemAudio.volume = 0.9;
@@ -828,7 +844,28 @@ export default function RunnerApp() {
         } catch (e) {}
       }
     }
-  }, [distanceTraversedKm, activeCaloriesBurned, activeBattle?.status]);
+  }, [pvpTraversedKm, pvpCaloriesBurned, activeBattle?.status]);
+
+  // Host periodic room re-announce so newly connected players discover waiting rooms
+  useEffect(() => {
+    if (!activeRoom || activeRoom.status !== 'waiting' || !googleUser) return;
+    const isHost = activeRoom.host.id === googleUser.id;
+    if (!isHost) return;
+
+    const interval = setInterval(() => {
+      if (realtimeChannelRef.current) {
+        realtimeChannelRef.current
+          .send({
+            type: 'broadcast',
+            event: 'pvp_room_announce',
+            payload: { room: activeRoom },
+          })
+          .catch(() => {});
+      }
+    }, 8000);
+
+    return () => clearInterval(interval);
+  }, [activeRoom, googleUser?.id]);
 
   // PVP Action Handlers
   const handleCreateRoom = async (targetKm: number) => {
@@ -871,6 +908,19 @@ export default function RunnerApp() {
       return;
     }
     const cleanCode = roomCode.trim().toUpperCase();
+    if (!cleanCode) return;
+
+    // Prevent joining own room
+    const existing = openRooms.find((r) => r.roomCode.toUpperCase() === cleanCode);
+    if (
+      existing &&
+      (existing.host.id === googleUser.id ||
+        (googleUser.email && existing.host.email?.toLowerCase() === googleUser.email.toLowerCase()))
+    ) {
+      alert('Вы являетесь создателем этой комнаты!');
+      return;
+    }
+
     const guestData: PvpRoomRunner = {
       id: googleUser.id,
       name: googleUser.name,
@@ -880,12 +930,20 @@ export default function RunnerApp() {
       currentKcal: 0,
     };
 
-    const existing = openRooms.find((r) => r.roomCode.toUpperCase() === cleanCode);
     if (existing) {
       setActiveRoom({
         ...existing,
         guest: guestData,
         status: 'ready',
+      });
+    } else {
+      setActiveRoom({
+        roomCode: cleanCode,
+        host: { id: '', name: 'Ожидание хоста...', avatar: '', currentKm: 0, currentKcal: 0 },
+        guest: guestData,
+        targetKm: 1.0,
+        status: 'waiting',
+        createdAt: Date.now(),
       });
     }
 
@@ -903,13 +961,25 @@ export default function RunnerApp() {
   };
 
   const handleCancelRoom = async () => {
-    if (!activeRoom) return;
+    if (!activeRoom || !googleUser) return;
+    const isHost =
+      activeRoom.host.id === googleUser.id ||
+      (googleUser.email && activeRoom.host.email?.toLowerCase() === googleUser.email.toLowerCase());
+
     const channel = realtimeChannelRef.current || supabase.channel('rush-live-runners');
-    await channel.send({
-      type: 'broadcast',
-      event: 'pvp_room_cancel',
-      payload: { roomCode: activeRoom.roomCode },
-    });
+    if (isHost) {
+      await channel.send({
+        type: 'broadcast',
+        event: 'pvp_room_cancel',
+        payload: { roomCode: activeRoom.roomCode },
+      });
+    } else {
+      await channel.send({
+        type: 'broadcast',
+        event: 'pvp_room_guest_leave',
+        payload: { roomCode: activeRoom.roomCode },
+      });
+    }
     setActiveRoom(null);
   };
 
@@ -926,6 +996,7 @@ export default function RunnerApp() {
     };
 
     setActiveBattle(newBattle);
+    setPvpTraversedKm(0);
     setActiveRoom(null);
 
     const channel = realtimeChannelRef.current || supabase.channel('rush-live-runners');
@@ -1014,6 +1085,7 @@ export default function RunnerApp() {
     };
 
     setActiveBattle(newBattle);
+    setPvpTraversedKm(0);
     setActiveRoom(null);
     setIncomingInvite(null);
 
@@ -1074,6 +1146,7 @@ export default function RunnerApp() {
 
   const handleCloseBattle = () => {
     setActiveBattle(null);
+    setPvpTraversedKm(0);
     if (realtimeChannelRef.current && googleUser) {
       const s = latestTrackingStateRef.current;
       realtimeChannelRef.current
@@ -1095,7 +1168,7 @@ export default function RunnerApp() {
   };
 
   const handleAddTestDistance = (km: number) => {
-    setDistanceTraversedKm((prev) => {
+    setPvpTraversedKm((prev) => {
       const next = parseFloat((prev + km).toFixed(2));
       const kcalBurned = Math.round(next * (weightKg || 70) * 1.036);
 
@@ -1138,7 +1211,7 @@ export default function RunnerApp() {
               : null
           );
 
-          if (googleUser.mvpAnthemUrl) {
+          if (googleUser?.mvpAnthemUrl && googleUser.mvpAnthemUrl.trim() !== '') {
             try {
               const anthemAudio = new Audio(googleUser.mvpAnthemUrl);
               anthemAudio.volume = 0.9;
@@ -1150,6 +1223,8 @@ export default function RunnerApp() {
 
       return next;
     });
+
+    setDistanceTraversedKm((prev) => parseFloat((prev + km).toFixed(2)));
   };
 
   // Fetch Weather on position change
@@ -1202,13 +1277,17 @@ export default function RunnerApp() {
       setIsAuthModalOpen(true);
       return;
     }
-    if (!route) return;
+    if (!route && !activeBattle) return;
 
+    const initialPos = liveRunnerPos || startPos;
     setIsTrackingActive(true);
     setElapsedSeconds(0);
     setDistanceTraversedKm(0);
-    setTraversedCoords([startPos]);
-    setLiveRunnerPos(startPos);
+    if (activeBattle) {
+      setPvpTraversedKm(0);
+    }
+    setTraversedCoords([initialPos]);
+    setLiveRunnerPos(initialPos);
     setIsMobileExpanded(false);
 
     timerIntervalRef.current = setInterval(() => {
@@ -1229,7 +1308,11 @@ export default function RunnerApp() {
               const last = prev[prev.length - 1];
               const addedMeters = haversineDistance(last[0], last[1], newPos[0], newPos[1]);
               if (addedMeters > 3) {
-                setDistanceTraversedKm((d) => Math.round((d + addedMeters / 1000) * 100) / 100);
+                const addKm = addedMeters / 1000;
+                setDistanceTraversedKm((d) => Math.round((d + addKm) * 100) / 100);
+                if (activeBattle && activeBattle.status === 'active') {
+                  setPvpTraversedKm((d) => Math.round((d + addKm) * 100) / 100);
+                }
                 return [...prev, newPos];
               }
               return prev;
@@ -1249,8 +1332,8 @@ export default function RunnerApp() {
     const finalSeconds = elapsedSeconds;
     const avgPace = finalDist > 0.01 ? (finalSeconds / 60) / finalDist : pace;
 
-    // Save to workout history & show summary modal
-    if (finalDist >= 0.01 || finalSeconds >= 3) {
+    // Save to workout history & show summary modal (only for solo run, not duel)
+    if (!activeBattle && (finalDist >= 0.01 || finalSeconds >= 3)) {
       const workoutRecord: CompletedWorkout = {
         id: `run-${Date.now()}`,
         date: new Date().toISOString(),
@@ -2088,8 +2171,8 @@ export default function RunnerApp() {
           isLobbyOpen={isPvpLobbyOpen}
           openRooms={openRooms}
           isTrackingActive={isTrackingActive}
-          myLiveKm={distanceTraversedKm}
-          myLiveKcal={activeCaloriesBurned}
+          myLiveKm={pvpTraversedKm}
+          myLiveKcal={pvpCaloriesBurned}
           onCloseLobby={() => setIsPvpLobbyOpen(false)}
           onCreateRoom={handleCreateRoom}
           onJoinRoom={handleJoinRoom}

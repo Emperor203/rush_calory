@@ -537,7 +537,17 @@ export default function PvpDuelSystem({
 
   // 6. PVP LOBBY (Create Room, Join by Code, Online Athletes)
   if (isLobbyOpen) {
-    const otherRunners = onlineRunners.filter((r) => r.id !== currentUser.id);
+    const otherRunners = onlineRunners.filter((r) => {
+      if (!r || r.id === currentUser.id) return false;
+      if (r.email && currentUser.email && r.email.toLowerCase() === currentUser.email.toLowerCase()) return false;
+      return true;
+    });
+
+    const joinableRooms = openRooms.filter((r) => {
+      if (!r || r.host.id === currentUser.id) return false;
+      if (r.host.email && currentUser.email && r.host.email.toLowerCase() === currentUser.email.toLowerCase()) return false;
+      return true;
+    });
 
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-fade-in safe-bottom">
@@ -660,7 +670,10 @@ export default function PvpDuelSystem({
 
               <button
                 type="button"
-                onClick={() => onCreateRoom(selectedTargetKm)}
+                onClick={() => {
+                  const km = parseFloat(Math.max(0.1, Math.min(42.2, selectedTargetKm || 1.0)).toFixed(2));
+                  onCreateRoom(km);
+                }}
                 className="w-full py-3.5 px-4 rounded-2xl bg-[#C6FF33] hover:bg-[#b0f020] text-[#000000] font-black text-xs uppercase tracking-wider transition active:scale-98 shadow-xl flex items-center justify-center gap-2"
               >
                 <span>⚡ СОЗДАТЬ КОМНАТУ ({selectedTargetKm} КМ)</span>
@@ -700,13 +713,13 @@ export default function PvpDuelSystem({
                 <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block">
                   Открытые комнаты онлайн:
                 </label>
-                {openRooms.length === 0 ? (
+                {joinableRooms.length === 0 ? (
                   <div className="p-4 rounded-2xl bg-[#121212] border border-[#242424] text-center text-xs text-gray-500 font-mono">
                     Нет ожидающих комнат. Создайте свою во вкладке «Создать»!
                   </div>
                 ) : (
                   <div className="space-y-1.5 max-h-44 overflow-y-auto pr-1">
-                    {openRooms.map((room) => (
+                    {joinableRooms.map((room) => (
                       <div
                         key={room.roomCode}
                         className="p-3 rounded-2xl bg-[#121212] border border-[#242424] hover:border-[#7D39EB] transition flex items-center justify-between"
