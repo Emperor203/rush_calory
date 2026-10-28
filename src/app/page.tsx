@@ -178,6 +178,8 @@ export default function RunnerApp() {
   const watchIdRef = useRef<number | null>(null);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const simIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const simIndexRef = useRef<number>(0);
+  const [isSimulating, setIsSimulating] = useState<boolean>(false);
   const touchStartYRef = useRef<number | null>(null);
   const hasMovedRef = useRef<boolean>(false);
   const realtimeChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
@@ -1321,6 +1323,8 @@ export default function RunnerApp() {
     setIsTrackingActive(true);
     setElapsedSeconds(0);
     setDistanceTraversedKm(0);
+    simIndexRef.current = 0;
+    setIsSimulating(false);
     if (activeBattle) {
       setPvpTraversedKm(0);
     }
@@ -1439,27 +1443,114 @@ export default function RunnerApp() {
       clearInterval(simIntervalRef.current);
       simIntervalRef.current = null;
     }
+    simIndexRef.current = 0;
+    setIsSimulating(false);
   };
 
-  // Movement Simulator for testing on PC
+  // Movement Simulator for testing on PC (No teleportation, smooth progression, stops at finish)
   const simulateMovementAlongRoute = () => {
-    if (!route || route.coordinates.length < 2) return;
+    // If currently running, pause it right where runner is
     if (simIntervalRef.current) {
       clearInterval(simIntervalRef.current);
       simIntervalRef.current = null;
+      setIsSimulating(false);
+      setCurrentSpeedKmh(0);
       return;
     }
 
-    let currentIndex = 0;
-    setCurrentSpeedKmh(10.5);
+    setIsSimulating(true);
+    setCurrentSpeedKmh(11.5);
+
+    // Case 1: Route is loaded with coordinates
+    if (route && route.coordinates.length >= 2) {
+      const coords = route.coordinates;
+      const totalPoints = coords.length;
+      // Step size ensures smooth animation that completes in reasonable time (~20-30s)
+      const step = Math.max(1, Math.floor(totalPoints / 75));
+      const intervalMs = 380;
+
+      simIntervalRef.current = setInterval(() => {
+        const prevIdx = simIndexRef.current;
+        const nextIdx = Math.min(prevIdx + step, totalPoints - 1);
+        simIndexRef.current = nextIdx;
+
+        const p1 = coords[prevIdx];
+        const p2 = coords[nextIdx];
+        const segmentMeters = haversineDistance(p1[0], p1[1], p2[0], p2[1]);
+        const addKm = segmentMeters / 1000;
+
+        setLiveRunnerPos(p2);
+        setTraversedCoords((prev) => [...prev, p2]);
+
+        const isFinish = nextIdx >= totalPoints - 1;
+
+        setDistanceTraversedKm((d) => {
+          if (isFinish) return route.distanceKm;
+          return Math.round((d + addKm) * 100) / 100;
+        });
+
+        if (activeBattle && activeBattle.status === 'active') {
+          setPvpTraversedKm((d) => {
+            if (isFinish) return Math.max(route.distanceKm, activeBattle.targetKm);
+            return Math.round((d + addKm) * 100) / 100;
+          });
+        }
+
+        // Reached the finish line: STOP cleanly! Never teleport back to start!
+        if (isFinish) {
+          if (simIntervalRef.current) {
+            clearInterval(simIntervalRef.current);
+            simIntervalRef.current = null;
+          }
+          setIsSimulating(false);
+          setCurrentSpeedKmh(0);
+        }
+      }, intervalMs);
+      return;
+    }
+
+    // Case 2: No route loaded (e.g. PvP duel without pre-generated route)
+    const origin = liveRunnerPos || startPos;
+    const intervalMs = 400;
+    const targetDistKm = activeBattle ? activeBattle.targetKm : 1.0;
+    const stepKm = 0.025; // 25 meters per step
 
     simIntervalRef.current = setInterval(() => {
-      currentIndex = (currentIndex + 1) % route.coordinates.length;
-      const pt = route.coordinates[currentIndex];
-      setLiveRunnerPos(pt);
-      setTraversedCoords((prev) => [...prev, pt]);
-      setDistanceTraversedKm((d) => Math.round((d + 0.05) * 100) / 100);
-    }, 1200);
+      simIndexRef.current += 1;
+      const angle = simIndexRef.current * 0.15;
+      const radiusDeg = 0.0015; // ~150m radius
+      const newLat = origin[0] + radiusDeg * Math.sin(angle);
+      const newLng = origin[1] + (radiusDeg * Math.cos(angle)) / Math.cos((origin[0] * Math.PI) / 180);
+      const newPos: [number, number] = [newLat, newLng];
+
+      setLiveRunnerPos(newPos);
+      setTraversedCoords((prev) => [...prev, newPos]);
+
+      let reached = false;
+
+      setDistanceTraversedKm((d) => {
+        const nextD = Math.round((d + stepKm) * 100) / 100;
+        if (nextD >= targetDistKm) reached = true;
+        return nextD;
+      });
+
+      if (activeBattle && activeBattle.status === 'active') {
+        setPvpTraversedKm((d) => {
+          const nextD = Math.round((d + stepKm) * 100) / 100;
+          if (nextD >= activeBattle.targetKm) reached = true;
+          return nextD;
+        });
+      }
+
+      if (reached) {
+        if (simIntervalRef.current) {
+          clearInterval(simIntervalRef.current);
+          simIntervalRef.current = null;
+        }
+        setIsSimulating(false);
+        setCurrentSpeedKmh(0);
+      }
+    }, intervalMs);
   };
 
   const formatTimer = (totalSeconds: number) => {
@@ -1818,9 +1909,13 @@ export default function RunnerApp() {
             <button
               type="button"
               onClick={simulateMovementAlongRoute}
-              className="flex-1 py-2.5 bg-[#000000] hover:bg-[#151515] border border-[#7D39EB] rounded-xl text-xs font-bold text-white transition"
+              className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 ${
+                isSimulating
+                  ? 'bg-amber-500/20 text-amber-300 border border-amber-500/50 hover:bg-amber-500/30'
+                  : 'bg-[#000000] hover:bg-[#151515] border border-[#7D39EB] text-white'
+              }`}
             >
-              🏃 Симулятор
+              <span>{isSimulating ? '⏸ Пауза симулятора' : '🏃 Симулятор'}</span>
             </button>
             <button
               type="button"
