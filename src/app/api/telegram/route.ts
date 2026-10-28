@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 const TELEGRAM_API = 'https://api.telegram.org';
+const DEFAULT_BOT_TOKEN = '9283056362:AAFMJQfV3Hjjp8_MornRiK4IxG6OS39SrjI';
 
 function getBotToken(): string {
-  return process.env.TELEGRAM_BOT_TOKEN || '';
+  return process.env.TELEGRAM_BOT_TOKEN || DEFAULT_BOT_TOKEN;
 }
 
 function getAppUrl(req: NextRequest): string {
