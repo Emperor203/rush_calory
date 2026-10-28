@@ -16,7 +16,7 @@ import {
   GPS_ACCURACY_THRESHOLD_METERS,
   GpsStatus,
 } from '@/lib/gps';
-import { GoogleUser, getSavedGoogleUser, saveGoogleUser } from '@/lib/auth';
+import { GoogleUser, getSavedGoogleUser, saveGoogleUser, getTelegramWebUser } from '@/lib/auth';
 import { supabase, LiveOnlineRunner } from '@/lib/supabase';
 import { PvpBattle, PvpInvitePayload, PvpRoom, PvpRoomRunner } from '@/lib/pvp';
 import { CompletedWorkout, saveCompletedWorkout } from '@/lib/history';
@@ -229,8 +229,28 @@ export default function RunnerApp() {
   };
 
   useEffect(() => {
-    // Load saved athlete profile & Google user
-    const savedUser = getSavedGoogleUser();
+    // 1. Telegram WebApp Integration & Auto-Login
+    let savedUser = getSavedGoogleUser();
+    if (typeof window !== 'undefined' && (window as any).Telegram?.WebApp) {
+      const tg = (window as any).Telegram.WebApp;
+      try {
+        tg.ready();
+        tg.expand();
+        tg.setHeaderColor?.('#000000');
+        tg.setBackgroundColor?.('#000000');
+      } catch (e) {}
+
+      // If opening in Telegram and not logged in yet, auto-login with Telegram profile!
+      if (!savedUser) {
+        const tgUser = getTelegramWebUser();
+        if (tgUser) {
+          savedUser = tgUser;
+          saveGoogleUser(tgUser);
+        }
+      }
+    }
+
+    // 2. Load athlete profile
     if (savedUser) {
       if (savedUser.avatar === '/avatar.jpg') {
         savedUser.avatar = '';
@@ -265,6 +285,24 @@ export default function RunnerApp() {
       setWeightKg(parseFloat(savedWeight));
     }
     runStrictGpsVerification();
+
+    // 3. Check Telegram / URL Query Params (e.g. ?room=4821 or ?pvp=true)
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const roomParam = params.get('room') || params.get('startapp');
+      const pvpParam = params.get('pvp');
+
+      if (roomParam) {
+        const cleanRoom = roomParam.replace('room-', '').replace('pvp-', '').trim().toUpperCase();
+        if (cleanRoom) {
+          setTimeout(() => {
+            handleJoinRoom(cleanRoom);
+          }, 800);
+        }
+      } else if (pvpParam === 'true') {
+        setIsPvpLobbyOpen(true);
+      }
+    }
 
     return () => {
       stopTracking();

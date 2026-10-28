@@ -14,10 +14,45 @@ export interface GoogleUser {
   mvpAnthemUrl?: string | null;
   mvpAnthemName?: string | null;
   neonTrailColor?: string | null;
+  telegramUsername?: string | null;
 }
 
 const STORAGE_KEY = 'runner_google_user';
 const CLIENT_ID_KEY = 'google_client_id';
+
+/**
+ * Extracts logged-in Telegram user if opened inside Telegram WebApp
+ */
+export function getTelegramWebUser(weightKg = 70): GoogleUser | null {
+  if (typeof window === 'undefined') return null;
+  const tg = (window as any).Telegram?.WebApp;
+  const tgUser = tg?.initDataUnsafe?.user;
+  if (!tgUser || !tgUser.id) return null;
+
+  const fullName = [tgUser.first_name, tgUser.last_name].filter(Boolean).join(' ') || 'Telegram Athlete';
+  const welcomeExpiry = Date.now() + 30 * 24 * 60 * 60 * 1000; // 30 days Street Pass trial for Telegram athletes
+
+  return {
+    id: `tg-${tgUser.id}`,
+    name: fullName,
+    email: tgUser.username ? `@${tgUser.username}` : `tg_${tgUser.id}@telegram.org`,
+    avatar:
+      tgUser.photo_url ||
+      `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(fullName)}`,
+    weightKg,
+    totalCaloriesBurned: 0,
+    totalKmRun: 0,
+    completedRunsCount: 0,
+    joinedAt: new Date().toISOString(),
+    hasStreetPass: true,
+    streetPassPlan: 'trial',
+    streetPassExpiresAt: welcomeExpiry,
+    neonTrailColor: '#00F5FF', // Telegram Cyan neon trail!
+    mvpAnthemName: 'Cyberpunk Phonk (Neon Drift)',
+    mvpAnthemUrl: '/sounds/anthem-drift.mp3',
+    telegramUsername: tgUser.username || null,
+  };
+}
 
 export function getSavedGoogleUser(): GoogleUser | null {
   if (typeof window === 'undefined') return null;
