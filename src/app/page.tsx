@@ -1933,8 +1933,8 @@ export default function RunnerApp() {
           onTouchStart={(e) => e.stopPropagation()}
           className={`fixed bottom-0 left-0 right-0 md:absolute md:bottom-auto md:left-4 md:top-20 md:right-auto md:w-96 z-20 bg-[#000000] border-t md:border-2 border-[#242424] rounded-t-3xl md:rounded-3xl shadow-2xl bottom-sheet ${
             isMobileExpanded
-              ? 'max-h-[85dvh] overflow-y-auto overscroll-contain p-4 sm:p-5 pb-32 md:pb-5'
-              : 'max-h-[190px] sm:max-h-none overflow-hidden md:overflow-y-auto md:max-h-[82vh] p-4 sm:p-5'
+              ? 'max-h-[85dvh] overflow-y-auto overscroll-contain p-4 sm:p-5 pb-4 md:pb-5'
+              : 'max-h-[220px] overflow-hidden md:overflow-y-auto md:max-h-[82vh] p-4 sm:p-5 pb-3 md:pb-5'
           }`}
         >
           {/* Mobile Drag Handle & Toggle Header */}
@@ -2005,7 +2005,7 @@ export default function RunnerApp() {
                 className="w-full py-2 bg-[#121212] hover:bg-[#1a1a1a] border border-[#242424] hover:border-[#7D39EB] text-gray-300 hover:text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 active:scale-98"
               >
                 <History className="w-3.5 h-3.5 text-[#C6FF33]" />
-                <span>История моих пробежек</span>
+                <span>История всех пробежек</span>
               </button>
             </div>
           )}
@@ -2286,9 +2286,6 @@ export default function RunnerApp() {
                 )}
               </div>
             )}
-
-            {/* Bottom spacer for comfortable mobile scrolling */}
-            <div className="h-16 md:hidden" />
           </div>
         </div>
       ) : null}
