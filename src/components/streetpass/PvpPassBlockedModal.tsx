@@ -1,9 +1,8 @@
 'use client';
 
 import React, { useEffect } from 'react';
-import { Lock, Zap, X, ShieldAlert, Volume2, Sparkles } from 'lucide-react';
+import { Lock, Zap, X, ShieldAlert } from 'lucide-react';
 import { GoogleUser } from '@/lib/auth';
-import { activateStreetPass } from '@/lib/streetpass';
 
 interface PvpPassBlockedModalProps {
   isOpen: boolean;
@@ -13,31 +12,15 @@ interface PvpPassBlockedModalProps {
   onUserUpdate?: (updatedUser: GoogleUser) => void;
 }
 
-export function speakPvpBlockedVoice() {
-  if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-    try {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance('Чтобы бегать с друзьями и создать комнату, нужен Премиум на месяц, год или звёзды!');
-      utterance.lang = 'ru-RU';
-      utterance.pitch = 0.95;
-      utterance.rate = 1.0;
-      window.speechSynthesis.speak(utterance);
-    } catch (err) {
-      console.warn('Speech synthesis error:', err);
-    }
-  }
-}
-
 export default function PvpPassBlockedModal({
   isOpen,
   onClose,
   onOpenStreetPass,
-  currentUser,
-  onUserUpdate,
 }: PvpPassBlockedModalProps) {
+  // Silence any speech synthesis if running
   useEffect(() => {
-    if (isOpen) {
-      speakPvpBlockedVoice();
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
     }
   }, [isOpen]);
 
@@ -60,12 +43,8 @@ export default function PvpPassBlockedModal({
           <X className="w-5 h-5" />
         </button>
 
-        {/* Big Lock Icon with Voice trigger */}
-        <div
-          onClick={speakPvpBlockedVoice}
-          className="w-20 h-20 mx-auto rounded-3xl bg-rose-950/60 border-2 border-rose-500 flex items-center justify-center text-4xl shadow-xl animate-pulse cursor-pointer hover:scale-105 transition"
-          title="Нажмите, чтобы повторить голос"
-        >
+        {/* Big Lock Icon */}
+        <div className="w-20 h-20 mx-auto rounded-3xl bg-rose-950/60 border-2 border-rose-500 flex items-center justify-center text-4xl shadow-xl animate-pulse">
           🔒
         </div>
 
@@ -109,15 +88,6 @@ export default function PvpPassBlockedModal({
           >
             <Zap className="w-4 h-4 fill-black text-black" />
             <span>Купить Премиум / Оплатить звёздами ⭐</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={speakPvpBlockedVoice}
-            className="w-full py-2 bg-[#121212] hover:bg-[#1a1a1a] border border-[#242424] text-gray-300 hover:text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5"
-          >
-            <Volume2 className="w-3.5 h-3.5 text-[#C6FF33]" />
-            <span>Повторить голосовое предупреждение</span>
           </button>
         </div>
       </div>
