@@ -589,6 +589,11 @@ export default function AdminDashboard() {
                             <div className="font-bold text-white flex items-center gap-1.5 flex-wrap">
                               <span>{a.name}</span>
                               <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                              {a.hasStreetPass && a.streetPassExpiresAt && a.streetPassExpiresAt > Date.now() ? (
+                                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-black bg-purple-950 text-[#C6FF33] border border-[#C6FF33]/40 font-mono">
+                                  👑 {a.streetPassPlan === 'yearly' ? 'ПРЕМИУМ ГОД' : 'ПРЕМИУМ МЕСЯЦ'}
+                                </span>
+                              ) : null}
                               {onlineRunners.some(
                                 (o) => (o.email || '').toLowerCase() === (a.email || '').toLowerCase(),
                               ) && (
@@ -598,7 +603,34 @@ export default function AdminDashboard() {
                                 </span>
                               )}
                             </div>
-                            <span className="text-[10px] text-gray-500">ID: {a.id.slice(0, 12)}</span>
+                            <span className="text-[10px] text-gray-500 block">ID: {a.id.slice(0, 12)}</span>
+
+                            {/* Mobile Quick Premium Buttons (Directly visible on phones without horizontal scroll) */}
+                            <div className="flex items-center gap-1 mt-1 sm:hidden">
+                              <button
+                                type="button"
+                                onClick={() => handleGrantPremium(a.id, 'monthly')}
+                                className="px-1.5 py-0.5 bg-purple-950 text-purple-300 border border-purple-500/50 rounded text-[9px] font-bold"
+                              >
+                                + Месяц
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleGrantPremium(a.id, 'yearly')}
+                                className="px-1.5 py-0.5 bg-[#C6FF33]/20 text-[#C6FF33] border border-[#C6FF33]/50 rounded text-[9px] font-bold"
+                              >
+                                + Год
+                              </button>
+                              {a.hasStreetPass && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleGrantPremium(a.id, null)}
+                                  className="px-1 py-0.5 bg-rose-950 text-rose-300 border border-rose-500/50 rounded text-[9px] font-bold"
+                                >
+                                  Снять
+                                </button>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </td>
