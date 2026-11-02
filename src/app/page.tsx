@@ -256,8 +256,14 @@ export default function RunnerApp() {
     if (savedUser) {
       if (savedUser.avatar === '/avatar.jpg') {
         savedUser.avatar = '';
-        saveGoogleUser(savedUser);
       }
+      // Migrate from old test trial to real paid subscription
+      if (savedUser.streetPassPlan === 'trial') {
+        savedUser.hasStreetPass = false;
+        savedUser.streetPassPlan = null;
+        savedUser.streetPassExpiresAt = null;
+      }
+      saveGoogleUser(savedUser);
       setGoogleUser(savedUser);
       if (savedUser.weightKg) {
         setWeightKg(savedUser.weightKg);

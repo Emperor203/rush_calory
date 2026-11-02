@@ -17,9 +17,9 @@ export function speakPvpBlockedVoice() {
   if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
     try {
       window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance('Тебе нельзя! У тебя нет подписки Street Pass!');
+      const utterance = new SpeechSynthesisUtterance('Чтобы бегать с друзьями и создать комнату, нужен Премиум на месяц, год или звёзды!');
       utterance.lang = 'ru-RU';
-      utterance.pitch = 0.9;
+      utterance.pitch = 0.95;
       utterance.rate = 1.0;
       window.speechSynthesis.speak(utterance);
     } catch (err) {
@@ -71,55 +71,44 @@ export default function PvpPassBlockedModal({
 
         {/* Titles */}
         <div className="space-y-1.5">
-          <span className="inline-block px-3 py-1 rounded-full text-[10px] font-black bg-rose-950 text-rose-400 border border-rose-500/50 uppercase tracking-widest font-mono">
-            ДОСТУП ЗАБЛОКИРОВАН
+          <span className="inline-block px-3 py-1 rounded-full text-[10px] font-black bg-purple-950 text-[#C6FF33] border border-[#C6FF33]/50 uppercase tracking-widest font-mono">
+            PVP ДУЭЛИ • STREET PASS
           </span>
-          <h2 className="text-xl sm:text-2xl font-black text-white uppercase font-mono tracking-wide">
-            ТЕБЕ НЕЛЬЗЯ!
+          <h2 className="text-lg sm:text-xl font-black text-white uppercase font-mono tracking-wide">
+            КОМНАТА С ДРУЗЬЯМИ
           </h2>
-          <p className="text-xs text-rose-200/90 leading-relaxed font-bold">
-            У тебя нет соревновательной подписки <span className="text-[#C6FF33] font-mono">Street Pass</span>!
+          <p className="text-xs text-gray-300 leading-relaxed font-bold">
+            Чтобы создавать комнаты и бегать наперегонки с друзьями, нужен{' '}
+            <span className="text-[#C6FF33] font-mono">Премиум (Месяц / Год)</span> или Звёзды Telegram!
           </p>
         </div>
 
         {/* Explanation Card */}
-        <div className="p-3 bg-[#121212] rounded-2xl border border-[#242424] text-[11px] text-gray-400 leading-relaxed space-y-1 text-left">
+        <div className="p-3 bg-[#121212] rounded-2xl border border-[#242424] text-[11px] text-gray-400 leading-relaxed space-y-1.5 text-left">
           <div className="flex items-center gap-1.5 text-white font-bold">
-            <ShieldAlert className="w-3.5 h-3.5 text-rose-400 shrink-0" />
-            <span>Ранговая защита PVP</span>
+            <ShieldAlert className="w-3.5 h-3.5 text-[#C6FF33] shrink-0" />
+            <span>Что даёт Street Pass:</span>
           </div>
           <p className="text-[10px]">
-            Уличный допуск (Street Pass) защищает дуэли от читеров и открывает рейтинговые бои наперегонки с другими атлетами.
+            ⚡ Создание комнат дуэлей на любую дистанцию (0.5 – 42 км).
+          </p>
+          <p className="text-[10px]">
+            🌟 Неоновый светящийся след бегуна и MVP-гимны на финише.
           </p>
         </div>
 
         {/* Action Buttons */}
         <div className="space-y-2 pt-1">
-          {currentUser && onUserUpdate && (
-            <button
-              type="button"
-              onClick={() => {
-                const updated = activateStreetPass(currentUser, 'trial');
-                onUserUpdate(updated);
-                onClose();
-              }}
-              className="w-full py-3.5 px-4 bg-[#7D39EB] hover:bg-[#6823d6] text-white font-black text-xs uppercase tracking-wider rounded-2xl shadow-xl transition active:scale-98 flex items-center justify-center gap-2 border border-[#C6FF33]"
-            >
-              <Sparkles className="w-4 h-4 text-[#C6FF33]" />
-              <span>Включить 3 дня бесплатно (Trial Pass)</span>
-            </button>
-          )}
-
           <button
             type="button"
             onClick={() => {
               onClose();
               onOpenStreetPass();
             }}
-            className="w-full py-3 px-4 bg-[#C6FF33] hover:bg-[#b0f020] text-black font-black text-xs uppercase tracking-wider rounded-2xl shadow-xl transition active:scale-98 flex items-center justify-center gap-2"
+            className="w-full py-3.5 px-4 bg-[#C6FF33] hover:bg-[#b0f020] text-black font-black text-xs uppercase tracking-wider rounded-2xl shadow-xl transition active:scale-98 flex items-center justify-center gap-2"
           >
             <Zap className="w-4 h-4 fill-black text-black" />
-            <span>Купить Street Pass (от 29,000 UZS)</span>
+            <span>Купить Премиум / Оплатить звёздами ⭐</span>
           </button>
 
           <button
@@ -127,7 +116,7 @@ export default function PvpPassBlockedModal({
             onClick={speakPvpBlockedVoice}
             className="w-full py-2 bg-[#121212] hover:bg-[#1a1a1a] border border-[#242424] text-gray-300 hover:text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5"
           >
-            <Volume2 className="w-3.5 h-3.5 text-rose-400" />
+            <Volume2 className="w-3.5 h-3.5 text-[#C6FF33]" />
             <span>Повторить голосовое предупреждение</span>
           </button>
         </div>

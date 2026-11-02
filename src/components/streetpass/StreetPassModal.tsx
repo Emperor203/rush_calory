@@ -52,7 +52,7 @@ export default function StreetPassModal({
   initialTab = 'plans',
 }: StreetPassModalProps) {
   const [activeTab, setActiveTab] = useState<'plans' | 'studio'>(initialTab);
-  const [selectedPlanId, setSelectedPlanId] = useState<'monthly' | 'season'>('season');
+  const [selectedPlanId, setSelectedPlanId] = useState<'single' | 'monthly' | 'yearly'>('monthly');
   const [selectedPaymentId, setSelectedPaymentId] = useState<PaymentMethodId>('stars');
   const [isProcessing, setIsProcessing] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -329,31 +329,6 @@ export default function StreetPassModal({
         {/* TAB 1: PLANS & SUBSCRIPTION */}
         {activeTab === 'plans' && (
           <div className="space-y-4">
-            {/* Free Trial Banner for non-active or new users */}
-            {!isActive && (
-              <div className="p-3.5 bg-gradient-to-r from-purple-950/60 to-black border-2 border-[#C6FF33] rounded-2xl flex items-center justify-between gap-3 shadow-[0_0_20px_rgba(198,255,51,0.15)]">
-                <div>
-                  <div className="flex items-center gap-1.5">
-                    <Sparkles className="w-4 h-4 text-[#C6FF33]" />
-                    <span className="font-mono font-black text-xs text-white">
-                      ПРИВЕТСТВЕННЫЙ ТЕСТ-ДРАЙВ
-                    </span>
-                  </div>
-                  <p className="text-[10px] text-gray-300 font-mono mt-0.5">
-                    3 дня полного допуска Street Pass бесплатно для новых атлетов!
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  disabled={isProcessing}
-                  onClick={handleActivateTrial}
-                  className="px-3 py-2 bg-[#C6FF33] hover:bg-[#b0f020] text-black font-black text-[11px] uppercase font-mono rounded-xl shrink-0 transition active:scale-95 shadow"
-                >
-                  Включить 3 дня
-                </button>
-              </div>
-            )}
-
             {/* Active Street Pass Status Bar */}
             {isActive && (
               <div className="p-3.5 bg-[#121212] border-2 border-[#C6FF33] rounded-2xl space-y-2">
@@ -372,7 +347,7 @@ export default function StreetPassModal({
                   />
                 </div>
                 <div className="text-[10px] text-gray-400 text-center font-mono">
-                  Тариф: {currentUser?.streetPassPlan === 'season' ? 'Сезон (90 дней)' : currentUser?.streetPassPlan === 'trial' ? 'Пробный (3 дня)' : '1 Месяц (30 дней)'} • Продлите для сохранения бонусов
+                  Тариф: {currentUser?.streetPassPlan === 'yearly' ? 'Премиум Год (365 дней)' : currentUser?.streetPassPlan === 'monthly' ? 'Премиум Месяц (30 дней)' : 'Разовый доступ (1 дуэль)'} • Продлите для сохранения бонусов
                 </div>
               </div>
             )}
@@ -382,7 +357,7 @@ export default function StreetPassModal({
               <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block font-mono">
                 1. Выберите тарифный план:
               </label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                 {STREET_PASS_PLANS.map((plan) => {
                   const isSelected = selectedPlanId === plan.id;
                   return (

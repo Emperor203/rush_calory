@@ -1,7 +1,7 @@
 import { GoogleUser, saveGoogleUser } from './auth';
 
 export interface StreetPassPlan {
-  id: 'monthly' | 'season';
+  id: 'single' | 'monthly' | 'yearly';
   name: string;
   durationDays: number;
   starsAmount: number;
@@ -14,8 +14,18 @@ export interface StreetPassPlan {
 
 export const STREET_PASS_PLANS: StreetPassPlan[] = [
   {
+    id: 'single',
+    name: '1 ДУЭЛЬ (РАЗОВО)',
+    durationDays: 1,
+    starsAmount: 15,
+    priceStars: '15 ⭐️',
+    priceUzs: '3,000 UZS',
+    priceUsd: '$0.25',
+    badge: 'БЫСТРЫЙ СТАРТ',
+  },
+  {
     id: 'monthly',
-    name: '1 МЕСЯЦ',
+    name: 'ПРЕМИУМ МЕСЯЦ (30 ДНЕЙ)',
     durationDays: 30,
     starsAmount: 150,
     priceStars: '150 ⭐️',
@@ -24,14 +34,14 @@ export const STREET_PASS_PLANS: StreetPassPlan[] = [
     badge: 'СТАНДАРТ',
   },
   {
-    id: 'season',
-    name: 'СЕЗОН (3 МЕСЯЦА)',
-    durationDays: 90,
-    starsAmount: 350,
-    priceStars: '350 ⭐️',
-    priceUzs: '69,000 UZS',
-    priceUsd: '$5.99',
-    badge: 'ВЫБОР АТЛЕТА // ВЫГОДА 18,000 UZS',
+    id: 'yearly',
+    name: 'ПРЕМИУМ ГОД (365 ДНЕЙ)',
+    durationDays: 365,
+    starsAmount: 990,
+    priceStars: '990 ⭐️',
+    priceUzs: '189,000 UZS',
+    priceUsd: '$14.99',
+    badge: 'МАКСИМАЛЬНАЯ ВЫГОДА // -50%',
     isPopular: true,
   },
 ];
@@ -162,11 +172,14 @@ export function getStreetPassDaysRemaining(user: GoogleUser | null): number {
 
 export function activateStreetPass(
   user: GoogleUser,
-  planId: 'monthly' | 'season' | 'trial',
+  planId: 'single' | 'monthly' | 'yearly' | 'season' | 'trial',
 ): GoogleUser {
   let durationDays = 30;
-  if (planId === 'season') durationDays = 90;
-  if (planId === 'trial') durationDays = 3;
+  if (planId === 'single') durationDays = 1;
+  else if (planId === 'monthly') durationDays = 30;
+  else if (planId === 'yearly') durationDays = 365;
+  else if (planId === 'season') durationDays = 90;
+  else if (planId === 'trial') durationDays = 3;
 
   const now = Date.now();
   const currentExpiry =

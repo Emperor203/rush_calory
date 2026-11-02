@@ -9,7 +9,7 @@ export interface GoogleUser {
   completedRunsCount?: number;
   joinedAt: string;
   hasStreetPass?: boolean;
-  streetPassPlan?: 'monthly' | 'season' | 'trial' | null;
+  streetPassPlan?: 'single' | 'monthly' | 'yearly' | 'season' | 'trial' | null;
   streetPassExpiresAt?: number | null;
   mvpAnthemUrl?: string | null;
   mvpAnthemName?: string | null;
@@ -44,9 +44,9 @@ export function getTelegramWebUser(weightKg = 70): GoogleUser | null {
     totalKmRun: 0,
     completedRunsCount: 0,
     joinedAt: new Date().toISOString(),
-    hasStreetPass: true,
-    streetPassPlan: 'trial',
-    streetPassExpiresAt: welcomeExpiry,
+    hasStreetPass: false,
+    streetPassPlan: null,
+    streetPassExpiresAt: null,
     neonTrailColor: '#00F5FF', // Telegram Cyan neon trail!
     mvpAnthemName: 'Cyberpunk Phonk (Neon Drift)',
     mvpAnthemUrl: '/sounds/anthem-drift.mp3',
@@ -169,9 +169,9 @@ export async function triggerRealGoogleOAuth(
             totalKmRun: 0,
             completedRunsCount: 0,
             joinedAt: new Date().toISOString(),
-            hasStreetPass: true,
-            streetPassPlan: 'trial',
-            streetPassExpiresAt: welcomeExpiry,
+            hasStreetPass: false,
+            streetPassPlan: null,
+            streetPassExpiresAt: null,
             neonTrailColor: '#C6FF33',
             mvpAnthemName: 'Cyberpunk Phonk (Neon Drift)',
             mvpAnthemUrl: '/sounds/anthem-drift.mp3',
