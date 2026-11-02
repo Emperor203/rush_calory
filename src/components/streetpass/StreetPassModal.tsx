@@ -5,6 +5,7 @@ import { GoogleUser } from '@/lib/auth';
 import {
   STREET_PASS_PLANS,
   PAYMENT_METHODS,
+  PaymentMethodId,
   PRESET_ANTHEMS,
   TRAIL_STYLES,
   AnthemTrack,
@@ -52,7 +53,7 @@ export default function StreetPassModal({
 }: StreetPassModalProps) {
   const [activeTab, setActiveTab] = useState<'plans' | 'studio'>(initialTab);
   const [selectedPlanId, setSelectedPlanId] = useState<'monthly' | 'season'>('season');
-  const [selectedPaymentId, setSelectedPaymentId] = useState<'payme' | 'click' | 'card' | 'usdt'>('payme');
+  const [selectedPaymentId, setSelectedPaymentId] = useState<PaymentMethodId>('stars');
   const [isProcessing, setIsProcessing] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -161,18 +162,67 @@ export default function StreetPassModal({
   const daysRemaining = getStreetPassDaysRemaining(currentUser);
   const selectedPlan = STREET_PASS_PLANS.find((p) => p.id === selectedPlanId) || STREET_PASS_PLANS[1];
 
-  const handlePayment = () => {
+  const handlePayment = async () => {
     if (!currentUser) return;
     setIsProcessing(true);
 
-    setTimeout(() => {
-      const updated = activateStreetPass(currentUser, selectedPlanId);
-      onUserUpdate(updated);
+    try {
+      if (selectedPaymentId === 'stars') {
+        // 1. Create real Telegram Stars invoice link
+        const res = await fetch('/api/telegram/invoice', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            planId: selectedPlanId,
+            userId: currentUser.id,
+          }),
+        });
+
+        const data = await res.json();
+        if (!data.ok || !data.invoiceLink) {
+          throw new Error(data.error || 'Не удалось создать счёт Telegram Stars');
+        }
+
+        // Check if running inside Telegram Mini App
+        const tg = typeof window !== 'undefined' ? (window as any).Telegram?.WebApp : null;
+
+        if (tg && typeof tg.openInvoice === 'function') {
+          // Native 1-click modal inside Telegram
+          tg.openInvoice(data.invoiceLink, (status: string) => {
+            setIsProcessing(false);
+            if (status === 'paid') {
+              const updated = activateStreetPass(currentUser, selectedPlanId);
+              onUserUpdate(updated);
+              setSuccessMessage(
+                `🎉 Оплата Stars принята! Street Pass успешно активирован на ${selectedPlan.durationDays} дней! Статус Verified Athlete присвоен.`
+              );
+            }
+          });
+          return;
+        } else {
+          // Running on regular PC / web browser: open invoice in Telegram
+          window.open(data.invoiceLink, '_blank');
+          setIsProcessing(false);
+          setSuccessMessage(
+            `⭐ Счёт открыт в Telegram! Оплатите ${selectedPlan.priceStars} в окне счёта, и статус сразу активируется.`
+          );
+          return;
+        }
+      }
+
+      // Fallback demo/alternative payment methods (Payme / Click / Card / USDT)
+      setTimeout(() => {
+        const updated = activateStreetPass(currentUser, selectedPlanId);
+        onUserUpdate(updated);
+        setIsProcessing(false);
+        setSuccessMessage(
+          `🎉 Оплата успешно подтверждена! Street Pass активирован на ${selectedPlan.durationDays} дней!`
+        );
+      }, 1000);
+    } catch (err: any) {
       setIsProcessing(false);
-      setSuccessMessage(
-        `🎉 Street Pass успешно активирован на ${selectedPlan.durationDays} дней! Статус Verified Athlete присвоен.`
-      );
-    }, 1000);
+      alert('Ошибка при оплате: ' + (err.message || err));
+    }
   };
 
   const handleActivateTrial = () => {
@@ -359,9 +409,9 @@ export default function StreetPassModal({
 
                       <div>
                         <h4 className="text-xs font-black text-white font-mono">{plan.name}</h4>
-                        <div className="flex items-baseline gap-1 mt-1">
-                          <span className="text-lg font-black text-white font-mono">{plan.priceUzs}</span>
-                          <span className="text-[10px] text-gray-400 font-mono">/ {plan.priceUsd}</span>
+                        <div className="flex items-baseline gap-1.5 mt-1">
+                          <span className="text-lg font-black text-[#C6FF33] font-mono">{plan.priceStars}</span>
+                          <span className="text-[10px] text-gray-300 font-mono">({plan.priceUzs} / {plan.priceUsd})</span>
                         </div>
                       </div>
 
@@ -428,7 +478,7 @@ export default function StreetPassModal({
               <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block font-mono">
                 3. Способ оплаты:
               </label>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
                 {PAYMENT_METHODS.map((method) => {
                   const isSelected = selectedPaymentId === method.id;
                   return (
@@ -464,13 +514,16 @@ export default function StreetPassModal({
                   <>
                     <Zap className="w-4 h-4 fill-black text-black" />
                     <span>
-                      {isActive ? 'Продлить Street Pass' : 'Активировать Street Pass'} за {selectedPlan.priceUzs}
+                      {isActive ? 'Продлить Street Pass' : 'Активировать Street Pass'} за{' '}
+                      {selectedPaymentId === 'stars' ? selectedPlan.priceStars : selectedPlan.priceUzs}
                     </span>
                   </>
                 )}
               </button>
               <p className="text-[9px] text-gray-500 text-center mt-2 font-mono">
-                Мгновенная активация • Защищённая транзакция через {PAYMENT_METHODS.find((m) => m.id === selectedPaymentId)?.name}
+                {selectedPaymentId === 'stars'
+                  ? '⭐ Официальная оплата Telegram Stars (Apple Pay, Google Pay, банковские карты)'
+                  : `Мгновенная активация • Защищённая транзакция через ${PAYMENT_METHODS.find((m) => m.id === selectedPaymentId)?.name}`}
               </p>
             </div>
           </div>

@@ -115,7 +115,49 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
-  // 1. Handle Inline Query (Share duels in any chat e.g. @bot 1km)
+  // 1. Handle Pre-Checkout Query (Mandatory for Telegram Stars / Invoices)
+  if (update.pre_checkout_query) {
+    await sendTelegramRequest('answerPreCheckoutQuery', {
+      pre_checkout_query_id: update.pre_checkout_query.id,
+      ok: true,
+    });
+    return NextResponse.json({ ok: true });
+  }
+
+  // 2. Handle Successful Payment Notification
+  if (update.message?.successful_payment) {
+    const chatId = update.message.chat.id;
+    const payment = update.message.successful_payment;
+    const totalStars = payment.total_amount;
+    let planDays = 30;
+    try {
+      const payload = JSON.parse(payment.invoice_payload);
+      if (payload.durationDays) planDays = payload.durationDays;
+    } catch {}
+
+    await sendTelegramRequest('sendMessage', {
+      chat_id: chatId,
+      text:
+        `🎉 *ОПЛАТА УСПЕШНО ПОЛУЧЕНА!*\n\n` +
+        `⚡ *${totalStars} Telegram Stars* зачислено!\n` +
+        `🏆 Твой *Street Pass* активирован на *${planDays} дней*!\n\n` +
+        `В приложении тебе открыты:\n` +
+        `• ⚔️ Соревновательные PvP-дуэли\n` +
+        `• 🌟 Неоновый след бегуна на карте\n` +
+        `• 🎵 Студия победных гимнов\n\n` +
+        `Удачных пробежек и побед! 🏃💨`,
+      parse_mode: 'Markdown',
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: '🏃 Открыть Calorie Runner', web_app: { url: appUrl } }],
+        ],
+      },
+    });
+
+    return NextResponse.json({ ok: true });
+  }
+
+  // 3. Handle Inline Query (Share duels in any chat e.g. @bot 1km)
   if (update.inline_query) {
     const query = update.inline_query.query?.trim() || '1.0';
     const numKm = parseFloat(query) || 1.0;

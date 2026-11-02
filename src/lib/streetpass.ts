@@ -4,6 +4,8 @@ export interface StreetPassPlan {
   id: 'monthly' | 'season';
   name: string;
   durationDays: number;
+  starsAmount: number;
+  priceStars: string;
   priceUzs: string;
   priceUsd: string;
   badge: string;
@@ -15,6 +17,8 @@ export const STREET_PASS_PLANS: StreetPassPlan[] = [
     id: 'monthly',
     name: '1 МЕСЯЦ',
     durationDays: 30,
+    starsAmount: 150,
+    priceStars: '150 ⭐️',
     priceUzs: '29,000 UZS',
     priceUsd: '$2.49',
     badge: 'СТАНДАРТ',
@@ -23,6 +27,8 @@ export const STREET_PASS_PLANS: StreetPassPlan[] = [
     id: 'season',
     name: 'СЕЗОН (3 МЕСЯЦА)',
     durationDays: 90,
+    starsAmount: 350,
+    priceStars: '350 ⭐️',
     priceUzs: '69,000 UZS',
     priceUsd: '$5.99',
     badge: 'ВЫБОР АТЛЕТА // ВЫГОДА 18,000 UZS',
@@ -30,14 +36,22 @@ export const STREET_PASS_PLANS: StreetPassPlan[] = [
   },
 ];
 
+export type PaymentMethodId = 'stars' | 'payme' | 'click' | 'card' | 'usdt';
+
 export interface PaymentMethod {
-  id: 'payme' | 'click' | 'card' | 'usdt';
+  id: PaymentMethodId;
   name: string;
   icon: string;
   description: string;
 }
 
 export const PAYMENT_METHODS: PaymentMethod[] = [
+  {
+    id: 'stars',
+    name: 'Telegram Stars ⭐',
+    icon: '⭐',
+    description: 'В 1 клик через Telegram (Apple Pay, Карты)',
+  },
   {
     id: 'payme',
     name: 'Payme',
