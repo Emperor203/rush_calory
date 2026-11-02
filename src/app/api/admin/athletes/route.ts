@@ -17,50 +17,10 @@ export interface RegisteredAthlete {
   lastActiveAt: string;
 }
 
-// In-memory persistent state during server runtime
+// In-memory persistent state during server runtime (starts EMPTY - NO FAKE PROFILES)
 class AthletesStore {
   private static instance: AthletesStore;
-  public athletes: RegisteredAthlete[] = [
-    {
-      id: 'athlete-1',
-      name: 'Abdurahmon',
-      email: 'farmonovabdurahmon7@gmail.com',
-      avatar: 'https://api.dicebear.com/7.x/initials/svg?seed=Abdurahmon&backgroundColor=06b6d4,10b981',
-      weightKg: 70,
-      totalCaloriesBurned: 1840,
-      totalKmRun: 24.5,
-      completedRunsCount: 4,
-      isBanned: false,
-      registeredAt: '2026-10-22T19:30:00Z',
-      lastActiveAt: new Date().toISOString(),
-    },
-    {
-      id: 'athlete-2',
-      name: 'Aziz Calisthenics',
-      email: 'aziz@turfwars.com',
-      avatar: 'https://api.dicebear.com/7.x/initials/svg?seed=Aziz&backgroundColor=ef4444',
-      weightKg: 75,
-      totalCaloriesBurned: 950,
-      totalKmRun: 12.8,
-      completedRunsCount: 2,
-      isBanned: false,
-      registeredAt: '2026-10-22T20:15:00Z',
-      lastActiveAt: '2026-10-22T22:45:00Z',
-    },
-    {
-      id: 'athlete-3',
-      name: 'Beka Runner',
-      email: 'beka@turfwars.com',
-      avatar: 'https://api.dicebear.com/7.x/initials/svg?seed=Beka&backgroundColor=10b981',
-      weightKg: 68,
-      totalCaloriesBurned: 3120,
-      totalKmRun: 42.1,
-      completedRunsCount: 6,
-      isBanned: false,
-      registeredAt: '2026-10-22T18:00:00Z',
-      lastActiveAt: '2026-10-22T23:10:00Z',
-    },
-  ];
+  public athletes: RegisteredAthlete[] = [];
 
   public static getInstance(): AthletesStore {
     if (!AthletesStore.instance) {

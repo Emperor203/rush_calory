@@ -282,20 +282,15 @@ export default function RunnerApp() {
             setIsUserBanned(true);
             playBanSound();
           }
-          // Server athlete authority for Street Pass
-          if (data?.athlete) {
-            const adminPass = Boolean(
-              data.athlete.hasStreetPass &&
-              data.athlete.streetPassExpiresAt &&
-              data.athlete.streetPassExpiresAt > Date.now()
-            );
+          // Server athlete authority for Street Pass: adopt if server has valid pass
+          if (data?.athlete?.hasStreetPass && data.athlete.streetPassExpiresAt && data.athlete.streetPassExpiresAt > Date.now()) {
             setGoogleUser((prev) => {
               if (!prev) return null;
               const updated: GoogleUser = {
                 ...prev,
-                hasStreetPass: adminPass,
-                streetPassPlan: adminPass ? data.athlete.streetPassPlan : null,
-                streetPassExpiresAt: adminPass ? data.athlete.streetPassExpiresAt : null,
+                hasStreetPass: true,
+                streetPassPlan: data.athlete.streetPassPlan,
+                streetPassExpiresAt: data.athlete.streetPassExpiresAt,
               };
               saveGoogleUser(updated);
               return updated;
@@ -651,6 +646,44 @@ export default function RunnerApp() {
           }
         }
       })
+      // Admin requests all online runners to announce profile
+      .on('broadcast', { event: 'admin_ping' }, () => {
+        if (googleUser && channel) {
+          channel.send({
+            type: 'broadcast',
+            event: 'athlete_announce',
+            payload: {
+              athlete: {
+                id: googleUser.id,
+                name: googleUser.name,
+                email: googleUser.email,
+                avatar: googleUser.avatar,
+                weightKg: googleUser.weightKg,
+                totalCaloriesBurned: googleUser.totalCaloriesBurned || 0,
+                totalKmRun: googleUser.totalKmRun || 0,
+                completedRunsCount: googleUser.completedRunsCount || 0,
+                hasStreetPass: googleUser.hasStreetPass || false,
+                streetPassPlan: googleUser.streetPassPlan || null,
+                streetPassExpiresAt: googleUser.streetPassExpiresAt || null,
+                registeredAt: googleUser.joinedAt || new Date().toISOString(),
+                onlineAt: new Date().toISOString(),
+              },
+            },
+          }).catch(() => {});
+        }
+      })
+      // Admin banned athlete live
+      .on('broadcast', { event: 'athlete_banned' }, ({ payload }) => {
+        const myEmail = googleUser.email?.toLowerCase();
+        const myId = googleUser.id;
+        if (
+          payload?.userId === myId ||
+          (payload?.userEmail && myEmail && payload.userEmail.toLowerCase() === myEmail)
+        ) {
+          setIsUserBanned(true);
+          playBanSound();
+        }
+      })
       .on('broadcast', { event: 'pvp_decline' }, ({ payload }) => {
         const myId = googleUser.id;
         const myEmail = googleUser.email?.toLowerCase();
@@ -739,11 +772,18 @@ export default function RunnerApp() {
       })
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
-          await channel.track({
+          const athletePayload = {
             id: googleUser.id,
             name: googleUser.name,
             email: googleUser.email,
             avatar: googleUser.avatar,
+            weightKg: googleUser.weightKg,
+            totalCaloriesBurned: googleUser.totalCaloriesBurned || 0,
+            totalKmRun: googleUser.totalKmRun || 0,
+            completedRunsCount: googleUser.completedRunsCount || 0,
+            hasStreetPass: googleUser.hasStreetPass || false,
+            streetPassPlan: googleUser.streetPassPlan || null,
+            streetPassExpiresAt: googleUser.streetPassExpiresAt || null,
             lat: liveRunnerPos ? liveRunnerPos[0] : startPos[0],
             lng: liveRunnerPos ? liveRunnerPos[1] : startPos[1],
             speedKmh: currentSpeedKmh,
@@ -751,7 +791,16 @@ export default function RunnerApp() {
             isTracking: isTrackingActive,
             onlineAt: new Date().toISOString(),
             lastSeen: Date.now(),
-          });
+          };
+
+          await channel.track(athletePayload);
+
+          // Broadcast announcement so any open admin panels add this athlete immediately
+          channel.send({
+            type: 'broadcast',
+            event: 'athlete_announce',
+            payload: { athlete: athletePayload },
+          }).catch(() => {});
         }
       });
 

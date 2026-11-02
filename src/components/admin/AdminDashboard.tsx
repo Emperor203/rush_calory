@@ -13,7 +13,7 @@ import {
   Lock,
   User,
   LogOut,
-  Map,
+  Map as MapIcon,
   CheckCircle2,
   XCircle,
   Download,
@@ -93,24 +93,135 @@ export default function AdminDashboard() {
     }
   }, []);
 
+  // Helper to merge athletes from multiple sources (API, localStorage, Realtime presence, Realtime announce)
+  // Strips out any fake mock accounts (aziz@turfwars.com, beka@turfwars.com, etc.)
+  const mergeAthletes = (incoming: any[]) => {
+    setAthletes((prev: RegisteredAthlete[]): RegisteredAthlete[] => {
+      const map = new Map<string, RegisteredAthlete>();
+
+      // Filter out fake mock athletes from existing state
+      prev
+        .filter((a) => {
+          const e = (a.email || '').toLowerCase();
+          return (
+            !e.includes('turfwars.com') &&
+            a.id !== 'athlete-1' &&
+            a.id !== 'athlete-2' &&
+            a.id !== 'athlete-3'
+          );
+        })
+        .forEach((a) => {
+          const key = (a.email || a.id).toLowerCase();
+          map.set(key, a);
+        });
+
+      // Merge incoming athletes
+      incoming
+        .filter((item) => {
+          if (!item) return false;
+          const e = (item.email || '').toLowerCase();
+          return (
+            !e.includes('turfwars.com') &&
+            item.id !== 'athlete-1' &&
+            item.id !== 'athlete-2' &&
+            item.id !== 'athlete-3'
+          );
+        })
+        .forEach((r) => {
+          const key = (r.email || r.id).toLowerCase();
+          const existing = map.get(key);
+          if (existing) {
+            map.set(key, {
+              ...existing,
+              name: r.name || existing.name,
+              avatar: r.avatar || existing.avatar,
+              weightKg: r.weightKg || existing.weightKg,
+              totalCaloriesBurned: Math.max(
+                existing.totalCaloriesBurned || 0,
+                r.caloriesBurned || r.totalCaloriesBurned || 0,
+              ),
+              totalKmRun: Math.max(existing.totalKmRun || 0, r.totalKmRun || 0),
+              completedRunsCount: Math.max(existing.completedRunsCount || 0, r.completedRunsCount || 0),
+              hasStreetPass:
+                r.hasStreetPass !== undefined ? Boolean(r.hasStreetPass) : existing.hasStreetPass,
+              streetPassPlan: r.streetPassPlan !== undefined ? r.streetPassPlan : existing.streetPassPlan,
+              streetPassExpiresAt:
+                r.streetPassExpiresAt !== undefined ? r.streetPassExpiresAt : existing.streetPassExpiresAt,
+              isBanned: existing.isBanned || Boolean(r.isBanned),
+              lastActiveAt: new Date().toISOString(),
+            });
+          } else {
+            map.set(key, {
+              id: r.id || `athlete-${Date.now()}`,
+              name: r.name || 'Атлет',
+              email: r.email || `${r.id}@runner.app`,
+              avatar:
+                r.avatar ||
+                `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(r.name || 'Athlete')}`,
+              weightKg: r.weightKg || 70,
+              totalCaloriesBurned: r.caloriesBurned || r.totalCaloriesBurned || 0,
+              totalKmRun: r.totalKmRun || 0,
+              completedRunsCount: r.completedRunsCount || 0,
+              isBanned: Boolean(r.isBanned),
+              hasStreetPass: Boolean(
+                r.hasStreetPass && r.streetPassExpiresAt && r.streetPassExpiresAt > Date.now(),
+              ),
+              streetPassPlan: r.streetPassPlan || null,
+              streetPassExpiresAt: r.streetPassExpiresAt || null,
+              registeredAt: r.registeredAt || r.onlineAt || new Date().toISOString(),
+              lastActiveAt: new Date().toISOString(),
+            });
+          }
+        });
+
+      const list: RegisteredAthlete[] = Array.from(map.values());
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('rush_cached_athletes', JSON.stringify(list));
+      }
+      return list;
+    });
+  };
+
+  const handleClearCache = () => {
+    if (confirm('Очистить список и удалить старый кэш?')) {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('rush_cached_athletes');
+      }
+      setAthletes([]);
+      fetchAthletes();
+    }
+  };
+
   const fetchAthletes = async () => {
     setIsLoading(true);
     try {
+      // 1. Load locally cached real athletes first
+      let localCached: RegisteredAthlete[] = [];
+      if (typeof window !== 'undefined') {
+        try {
+          const raw = localStorage.getItem('rush_cached_athletes');
+          if (raw) {
+            localCached = JSON.parse(raw);
+          }
+        } catch {}
+      }
+
       const res = await fetch('/api/admin/athletes');
       if (res.ok) {
         const data = await res.json();
-        const rawBanned = typeof window !== 'undefined' ? localStorage.getItem('rush_banned_emails') || '[]' : '[]';
+        const rawBanned =
+          typeof window !== 'undefined' ? localStorage.getItem('rush_banned_emails') || '[]' : '[]';
         let localBannedEmails: string[] = [];
         try {
           localBannedEmails = JSON.parse(rawBanned);
         } catch {}
 
-        const mergedAthletes = (data.athletes || []).map((a: RegisteredAthlete) => ({
+        const serverAthletes = (data.athletes || []).map((a: RegisteredAthlete) => ({
           ...a,
           isBanned: a.isBanned || localBannedEmails.includes((a.email || '').toLowerCase()),
         }));
 
-        setAthletes(mergedAthletes);
+        mergeAthletes([...localCached, ...serverAthletes]);
         setStats(
           data.stats || {
             totalAthletes: 0,
@@ -119,6 +230,8 @@ export default function AdminDashboard() {
             totalRunsCompleted: 0,
           },
         );
+      } else if (localCached.length > 0) {
+        mergeAthletes(localCached);
       }
     } catch (e) {
       console.error('Error fetching athletes:', e);
@@ -141,8 +254,25 @@ export default function AdminDashboard() {
             presences.forEach((p) => runners.push(p));
           });
           setOnlineRunners(runners);
+          mergeAthletes(runners);
         })
-        .subscribe();
+        .on('broadcast', { event: 'athlete_announce' }, ({ payload }) => {
+          if (payload?.athlete) {
+            mergeAthletes([payload.athlete]);
+          }
+        })
+        .subscribe(async (status) => {
+          if (status === 'SUBSCRIBED') {
+            // Ping all currently running athlete web apps to announce themselves immediately
+            channel
+              .send({
+                type: 'broadcast',
+                event: 'admin_ping',
+                payload: {},
+              })
+              .catch(() => {});
+          }
+        });
 
       return () => {
         channel.unsubscribe();
@@ -183,10 +313,14 @@ export default function AdminDashboard() {
         playBanSound();
       }
 
-      // Optimistic state update in UI
-      setAthletes((prev) =>
-        prev.map((a) => (a.id === athleteId ? { ...a, isBanned: newBannedState } : a)),
-      );
+      // Optimistic state update in UI & localStorage
+      setAthletes((prev) => {
+        const next = prev.map((a) => (a.id === athleteId ? { ...a, isBanned: newBannedState } : a));
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('rush_cached_athletes', JSON.stringify(next));
+        }
+        return next;
+      });
 
       // Persist in localStorage so it stays banned across sessions and tabs
       if (typeof window !== 'undefined' && target?.email) {
@@ -203,11 +337,26 @@ export default function AdminDashboard() {
         } catch {}
       }
 
-      const res = await fetch('/api/admin/athletes', {
+      // Broadcast ban live to runner's device
+      const channel = supabase.channel('rush-live-runners');
+      if (newBannedState) {
+        channel
+          .send({
+            type: 'broadcast',
+            event: 'athlete_banned',
+            payload: {
+              userId: target?.id,
+              userEmail: target?.email,
+            },
+          })
+          .catch(() => {});
+      }
+
+      fetch('/api/admin/athletes', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: athleteId, isBanned: newBannedState }),
-      });
+      }).catch(() => {});
 
       if (newBannedState) {
         setBanNotification(`🔨 БАН ВЫДАН: ${target?.name || 'Пользователь'} заблокирован шефом!`);
@@ -222,7 +371,44 @@ export default function AdminDashboard() {
     try {
       const target = athletes.find((a) => a.id === athleteId);
       const days = plan === 'yearly' ? 365 : plan === 'monthly' ? 30 : 0;
-      const res = await fetch('/api/admin/athletes', {
+      const expiresAt = plan ? Date.now() + days * 86400000 : null;
+
+      // Update state and localStorage
+      setAthletes((prev) => {
+        const next = prev.map((a) => {
+          if (a.id === athleteId) {
+            return {
+              ...a,
+              hasStreetPass: Boolean(plan),
+              streetPassPlan: plan,
+              streetPassExpiresAt: expiresAt,
+            };
+          }
+          return a;
+        });
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('rush_cached_athletes', JSON.stringify(next));
+        }
+        return next;
+      });
+
+      // Broadcast to user device live via Supabase Realtime!
+      const channel = supabase.channel('rush-live-runners');
+      channel
+        .send({
+          type: 'broadcast',
+          event: 'streetpass_granted',
+          payload: {
+            userId: target?.id,
+            userEmail: target?.email,
+            plan,
+            days,
+            expiresAt,
+          },
+        })
+        .catch(() => {});
+
+      fetch('/api/admin/athletes', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -230,45 +416,14 @@ export default function AdminDashboard() {
           streetPassPlan: plan,
           streetPassDays: days,
         }),
-      });
+      }).catch(() => {});
 
-      if (res.ok) {
-        setAthletes((prev) =>
-          prev.map((a) => {
-            if (a.id === athleteId) {
-              return {
-                ...a,
-                hasStreetPass: Boolean(plan),
-                streetPassPlan: plan,
-                streetPassExpiresAt: plan ? Date.now() + days * 86400000 : null,
-              };
-            }
-            return a;
-          })
-        );
-
-        // Broadcast to user device live via Supabase Realtime!
-        const channel = supabase.channel('rush-live-runners');
-        channel
-          .send({
-            type: 'broadcast',
-            event: 'streetpass_granted',
-            payload: {
-              userId: target?.id,
-              userEmail: target?.email,
-              plan,
-              days,
-            },
-          })
-          .catch(() => {});
-
-        setBanNotification(
-          plan
-            ? `👑 ПРЕМИУМ ВЫДАН: ${target?.name} получил Street Pass на ${days} дней!`
-            : `⚡ Премиум снят с пользователя ${target?.name}`
-        );
-        setTimeout(() => setBanNotification(null), 4000);
-      }
+      setBanNotification(
+        plan
+          ? `👑 ПРЕМИУМ ВЫДАН: ${target?.name} получил Street Pass на ${days} дней!`
+          : `⚡ Премиум снят с пользователя ${target?.name}`,
+      );
+      setTimeout(() => setBanNotification(null), 4000);
     } catch (e: any) {
       alert(`Ошибка: ${e.message}`);
     }
@@ -403,7 +558,7 @@ export default function AdminDashboard() {
             href="/"
             className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gray-900 hover:bg-gray-800 border border-gray-800 text-xs font-bold text-gray-300 transition"
           >
-            <Map className="w-3.5 h-3.5 text-cyan-400" />
+            <MapIcon className="w-3.5 h-3.5 text-cyan-400" />
             <span>На карту</span>
           </Link>
 
@@ -546,11 +701,150 @@ export default function AdminDashboard() {
                 <Download className="w-3.5 h-3.5 text-cyan-400" />
                 <span className="hidden sm:inline">Экспорт</span>
               </button>
+
+              <button
+                type="button"
+                onClick={handleClearCache}
+                className="px-3 py-1.5 bg-rose-950/40 hover:bg-rose-900/60 border border-rose-900/40 rounded-xl text-xs font-bold text-rose-300 transition flex items-center gap-1.5"
+                title="Очистить старый кэш"
+              >
+                <XCircle className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Сброс кэша</span>
+              </button>
             </div>
           </div>
 
-          {/* Table */}
-          <div className="overflow-x-auto rounded-2xl border border-gray-800/80">
+          {/* MOBILE CARDS VIEW (< md screens) - NO HORIZONTAL SCROLL NEEDED! */}
+          <div className="block md:hidden space-y-3">
+            {filteredAthletes.length === 0 ? (
+              <div className="p-8 text-center text-gray-500 bg-[#090D14] rounded-2xl border border-gray-800">
+                {searchTerm ? 'Ничего не найдено по вашему запросу' : 'Пока нет зарегистрированных атлетов'}
+              </div>
+            ) : (
+              filteredAthletes.map((a) => {
+                const isOnline = onlineRunners.some(
+                  (o) => (o.email || '').toLowerCase() === (a.email || '').toLowerCase() || o.id === a.id,
+                );
+                const hasPass = Boolean(a.hasStreetPass && a.streetPassExpiresAt && a.streetPassExpiresAt > Date.now());
+                const daysRemaining = hasPass && a.streetPassExpiresAt ? Math.max(1, Math.ceil((a.streetPassExpiresAt - Date.now()) / 86400000)) : 0;
+
+                return (
+                  <div
+                    key={a.id}
+                    className="p-4 rounded-2xl bg-[#090D14] border border-gray-800 space-y-3 shadow-xl"
+                  >
+                    {/* Athlete Header */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full overflow-hidden bg-gradient-to-tr from-cyan-500 to-emerald-500 flex items-center justify-center border border-cyan-400/50 shrink-0">
+                          {a.avatar ? (
+                            <img src={a.avatar} alt={a.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <span className="font-bold text-black text-sm">{a.name[0]}</span>
+                          )}
+                        </div>
+                        <div>
+                          <div className="font-bold text-white text-sm flex items-center gap-1.5 flex-wrap">
+                            <span>{a.name}</span>
+                            <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                          </div>
+                          <span className="text-[11px] font-mono text-gray-400 block">{a.email}</span>
+                        </div>
+                      </div>
+
+                      {/* Online Status */}
+                      {isOnline ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-950 text-emerald-400 border border-emerald-500/50">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                          В сети
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-gray-900 text-gray-500 border border-gray-800">
+                          Офлайн
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Stats Grid */}
+                    <div className="grid grid-cols-3 gap-2 p-2.5 rounded-xl bg-[#0E1420] border border-gray-800/80 text-center">
+                      <div>
+                        <span className="text-[9px] text-gray-500 block uppercase font-mono">Вес</span>
+                        <span className="font-mono text-xs font-bold text-white">{a.weightKg} кг</span>
+                      </div>
+                      <div>
+                        <span className="text-[9px] text-gray-500 block uppercase font-mono">Калории</span>
+                        <span className="font-mono text-xs font-bold text-amber-400">
+                          {(a.totalCaloriesBurned || 0).toLocaleString()}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-[9px] text-gray-500 block uppercase font-mono">Пробег</span>
+                        <span className="font-mono text-xs font-bold text-emerald-400">
+                          {(a.totalKmRun || 0).toFixed(1)} км
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Street Pass Status */}
+                    <div className="flex items-center justify-between p-2.5 rounded-xl bg-purple-950/30 border border-purple-900/40">
+                      <div className="flex items-center gap-1.5">
+                        <Crown className={`w-4 h-4 ${hasPass ? 'text-[#C6FF33]' : 'text-gray-500'}`} />
+                        <div>
+                          <span className="text-[9px] text-gray-400 block font-mono">Street Pass:</span>
+                          <span className="text-xs font-bold text-white font-mono">
+                            {hasPass
+                              ? `${a.streetPassPlan === 'yearly' ? '👑 ПРЕМИУМ ГОД' : '👑 ПРЕМИУМ МЕСЯЦ'} (${daysRemaining} дн)`
+                              : '⚪ Нет подписки'}
+                          </span>
+                        </div>
+                      </div>
+                      {hasPass && (
+                        <button
+                          type="button"
+                          onClick={() => handleGrantPremium(a.id, null)}
+                          className="px-2 py-1 bg-rose-950/80 hover:bg-rose-900 text-rose-300 border border-rose-500/40 rounded-lg text-[10px] font-bold transition"
+                        >
+                          ✕ Снять
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="grid grid-cols-3 gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => handleGrantPremium(a.id, 'monthly')}
+                        className="py-2.5 px-1 bg-purple-950 hover:bg-purple-900 text-purple-200 border border-purple-500/50 rounded-xl text-xs font-black transition active:scale-95 text-center"
+                      >
+                        👑 + Месяц
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleGrantPremium(a.id, 'yearly')}
+                        className="py-2.5 px-1 bg-[#C6FF33]/20 hover:bg-[#C6FF33]/30 text-[#C6FF33] border border-[#C6FF33]/50 rounded-xl text-xs font-black transition active:scale-95 text-center"
+                      >
+                        👑 + Год
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleToggleBan(a.id, a.isBanned)}
+                        className={`py-2.5 px-1 rounded-xl text-xs font-bold transition active:scale-95 text-center ${
+                          a.isBanned
+                            ? 'bg-emerald-950 text-emerald-400 border border-emerald-500/40 hover:bg-emerald-900'
+                            : 'bg-rose-950 text-rose-400 border border-rose-500/40 hover:bg-rose-900'
+                        }`}
+                      >
+                        {a.isBanned ? '✔ Разбан' : '⛔ Бан'}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* Desktop Table (hidden md:block) */}
+          <div className="hidden md:block overflow-x-auto rounded-2xl border border-gray-800/80">
             <table className="w-full text-left text-xs">
               <thead className="bg-gray-950/80 text-gray-400 border-b border-gray-800">
                 <tr>
