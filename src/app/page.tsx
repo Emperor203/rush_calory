@@ -257,8 +257,9 @@ export default function RunnerApp() {
       if (savedUser.avatar === '/avatar.jpg') {
         savedUser.avatar = '';
       }
-      // Migrate from old test trial to real paid subscription
-      if (savedUser.streetPassPlan === 'trial') {
+      // Force clean up legacy mock street pass (must be explicitly granted by Admin or paid via Stars)
+      const hasRealPaidPlan = savedUser.streetPassPlan === 'yearly' || savedUser.streetPassPlan === 'monthly' || savedUser.streetPassPlan === 'single';
+      if (!hasRealPaidPlan || !savedUser.streetPassExpiresAt || savedUser.streetPassExpiresAt <= Date.now()) {
         savedUser.hasStreetPass = false;
         savedUser.streetPassPlan = null;
         savedUser.streetPassExpiresAt = null;
@@ -280,6 +281,25 @@ export default function RunnerApp() {
           if (data?.isBanned) {
             setIsUserBanned(true);
             playBanSound();
+          }
+          // Server athlete authority for Street Pass
+          if (data?.athlete) {
+            const adminPass = Boolean(
+              data.athlete.hasStreetPass &&
+              data.athlete.streetPassExpiresAt &&
+              data.athlete.streetPassExpiresAt > Date.now()
+            );
+            setGoogleUser((prev) => {
+              if (!prev) return null;
+              const updated: GoogleUser = {
+                ...prev,
+                hasStreetPass: adminPass,
+                streetPassPlan: adminPass ? data.athlete.streetPassPlan : null,
+                streetPassExpiresAt: adminPass ? data.athlete.streetPassExpiresAt : null,
+              };
+              saveGoogleUser(updated);
+              return updated;
+            });
           }
         })
         .catch(() => {});
@@ -602,6 +622,33 @@ export default function RunnerApp() {
           setActiveRoom(null);
           setIncomingInvite(null);
           setIsPvpLobbyOpen(false);
+        }
+      })
+      // Admin granted Street Pass live
+      .on('broadcast', { event: 'streetpass_granted' }, ({ payload }) => {
+        const myId = googleUser.id;
+        const myEmail = googleUser.email?.toLowerCase();
+        const isForMe =
+          payload?.userId === myId ||
+          (payload?.userEmail && myEmail && payload.userEmail.toLowerCase() === myEmail);
+
+        if (isForMe) {
+          const isGrant = Boolean(payload.plan);
+          const days = payload.days || 30;
+          setGoogleUser((prev) => {
+            if (!prev) return null;
+            const updated: GoogleUser = {
+              ...prev,
+              hasStreetPass: isGrant,
+              streetPassPlan: isGrant ? payload.plan : null,
+              streetPassExpiresAt: isGrant ? Date.now() + days * 86400000 : null,
+            };
+            saveGoogleUser(updated);
+            return updated;
+          });
+          if (isGrant) {
+            alert(`👑 Шеф выдал вам Street Pass (${days} дней)! Приятных забегов!`);
+          }
         }
       })
       .on('broadcast', { event: 'pvp_decline' }, ({ payload }) => {

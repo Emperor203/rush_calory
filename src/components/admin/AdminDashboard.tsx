@@ -22,6 +22,8 @@ import {
   Mail,
   Calendar,
   Volume2,
+  Crown,
+  Zap,
 } from 'lucide-react';
 import { supabase, LiveOnlineRunner } from '@/lib/supabase';
 
@@ -35,6 +37,9 @@ interface RegisteredAthlete {
   totalKmRun: number;
   completedRunsCount: number;
   isBanned: boolean;
+  hasStreetPass?: boolean;
+  streetPassPlan?: 'single' | 'monthly' | 'yearly' | 'season' | 'trial' | null;
+  streetPassExpiresAt?: number | null;
   registeredAt: string;
   lastActiveAt: string;
 }
@@ -206,6 +211,62 @@ export default function AdminDashboard() {
 
       if (newBannedState) {
         setBanNotification(`🔨 БАН ВЫДАН: ${target?.name || 'Пользователь'} заблокирован шефом!`);
+        setTimeout(() => setBanNotification(null), 4000);
+      }
+    } catch (e: any) {
+      alert(`Ошибка: ${e.message}`);
+    }
+  };
+
+  const handleGrantPremium = async (athleteId: string, plan: 'monthly' | 'yearly' | null) => {
+    try {
+      const target = athletes.find((a) => a.id === athleteId);
+      const days = plan === 'yearly' ? 365 : plan === 'monthly' ? 30 : 0;
+      const res = await fetch('/api/admin/athletes', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: athleteId,
+          streetPassPlan: plan,
+          streetPassDays: days,
+        }),
+      });
+
+      if (res.ok) {
+        setAthletes((prev) =>
+          prev.map((a) => {
+            if (a.id === athleteId) {
+              return {
+                ...a,
+                hasStreetPass: Boolean(plan),
+                streetPassPlan: plan,
+                streetPassExpiresAt: plan ? Date.now() + days * 86400000 : null,
+              };
+            }
+            return a;
+          })
+        );
+
+        // Broadcast to user device live via Supabase Realtime!
+        const channel = supabase.channel('rush-live-runners');
+        channel
+          .send({
+            type: 'broadcast',
+            event: 'streetpass_granted',
+            payload: {
+              userId: target?.id,
+              userEmail: target?.email,
+              plan,
+              days,
+            },
+          })
+          .catch(() => {});
+
+        setBanNotification(
+          plan
+            ? `👑 ПРЕМИУМ ВЫДАН: ${target?.name} получил Street Pass на ${days} дней!`
+            : `⚡ Премиум снят с пользователя ${target?.name}`
+        );
         setTimeout(() => setBanNotification(null), 4000);
       }
     } catch (e: any) {
@@ -499,6 +560,7 @@ export default function AdminDashboard() {
                   <th className="p-3.5 font-bold text-center">Вес</th>
                   <th className="p-3.5 font-bold text-right">Сожжено ккал</th>
                   <th className="p-3.5 font-bold text-right">Пробег (км)</th>
+                  <th className="p-3.5 font-bold text-center">Street Pass (Премиум)</th>
                   <th className="p-3.5 font-bold text-center">Статус</th>
                   <th className="p-3.5 font-bold text-right">Действие</th>
                 </tr>
@@ -506,7 +568,7 @@ export default function AdminDashboard() {
               <tbody className="divide-y divide-gray-800 text-gray-300">
                 {filteredAthletes.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="p-8 text-center text-gray-500">
+                    <td colSpan={9} className="p-8 text-center text-gray-500">
                       {searchTerm ? 'Ничего не найдено по вашему запросу' : 'Пока нет зарегистрированных атлетов'}
                     </td>
                   </tr>
@@ -568,6 +630,55 @@ export default function AdminDashboard() {
                       {/* Distance */}
                       <td className="p-3.5 text-right font-mono font-bold text-emerald-400">
                         {(a.totalKmRun || 0).toFixed(1)} км
+                      </td>
+
+                      {/* Street Pass / Premium Control */}
+                      <td className="p-3.5 text-center">
+                        <div className="flex flex-col items-center gap-1.5">
+                          {a.hasStreetPass && a.streetPassExpiresAt && a.streetPassExpiresAt > Date.now() ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-purple-950 text-[#C6FF33] border border-[#C6FF33]/50 font-mono">
+                              <Crown className="w-3 h-3 text-[#C6FF33]" />
+                              <span>
+                                {a.streetPassPlan === 'yearly'
+                                  ? 'Премиум 1 Год'
+                                  : a.streetPassPlan === 'monthly'
+                                  ? 'Премиум 1 Месяц'
+                                  : 'Активен'}
+                              </span>
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-gray-500 font-mono">— Нет</span>
+                          )}
+
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => handleGrantPremium(a.id, 'monthly')}
+                              className="px-2 py-0.5 bg-purple-950 hover:bg-purple-900 border border-purple-600/50 text-purple-300 rounded text-[9px] font-bold transition active:scale-95"
+                              title="Выдать Street Pass на 30 дней"
+                            >
+                              + Месяц
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleGrantPremium(a.id, 'yearly')}
+                              className="px-2 py-0.5 bg-[#C6FF33]/20 hover:bg-[#C6FF33]/30 border border-[#C6FF33]/50 text-[#C6FF33] rounded text-[9px] font-bold transition active:scale-95"
+                              title="Выдать Street Pass на 365 дней"
+                            >
+                              + Год
+                            </button>
+                            {a.hasStreetPass && (
+                              <button
+                                type="button"
+                                onClick={() => handleGrantPremium(a.id, null)}
+                                className="px-1.5 py-0.5 bg-gray-900 hover:bg-rose-950 text-gray-400 hover:text-rose-400 border border-gray-700 rounded text-[9px] font-bold transition"
+                                title="Снять Street Pass"
+                              >
+                                ✕
+                              </button>
+                            )}
+                          </div>
+                        </div>
                       </td>
 
                       {/* Status */}

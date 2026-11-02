@@ -10,6 +10,9 @@ export interface RegisteredAthlete {
   totalKmRun: number;
   completedRunsCount: number;
   isBanned: boolean;
+  hasStreetPass?: boolean;
+  streetPassPlan?: 'single' | 'monthly' | 'yearly' | 'season' | 'trial' | null;
+  streetPassExpiresAt?: number | null;
   registeredAt: string;
   lastActiveAt: string;
 }
@@ -129,6 +132,9 @@ export async function POST(req: Request) {
         totalCaloriesBurned: Math.max(current.totalCaloriesBurned, body.totalCaloriesBurned || 0),
         totalKmRun: Math.max(current.totalKmRun, body.totalKmRun || 0),
         completedRunsCount: Math.max(current.completedRunsCount, body.completedRunsCount || 0),
+        hasStreetPass: Boolean(current.hasStreetPass && current.streetPassExpiresAt && current.streetPassExpiresAt > Date.now()),
+        streetPassPlan: current.streetPassPlan || null,
+        streetPassExpiresAt: current.streetPassExpiresAt || null,
         isBanned: finalBanned,
         lastActiveAt: new Date().toISOString(),
       };
@@ -152,6 +158,9 @@ export async function POST(req: Request) {
       totalKmRun: body.totalKmRun || 0,
       completedRunsCount: body.completedRunsCount || 0,
       isBanned: isBanned,
+      hasStreetPass: false,
+      streetPassPlan: null,
+      streetPassExpiresAt: null,
       registeredAt: new Date().toISOString(),
       lastActiveAt: new Date().toISOString(),
     };
@@ -169,7 +178,7 @@ export async function POST(req: Request) {
 
 export async function PATCH(req: Request) {
   try {
-    const { id, isBanned } = await req.json();
+    const { id, isBanned, streetPassPlan, streetPassDays } = await req.json();
     const store = AthletesStore.getInstance();
 
     const athlete = store.athletes.find((a) => a.id === id);
@@ -177,16 +186,30 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: 'Athlete not found' }, { status: 404 });
     }
 
-    athlete.isBanned = isBanned;
-    const email = athlete.email.toLowerCase();
-
-    if (isBanned) {
-      globalBannedEmails.add(email);
-    } else {
-      globalBannedEmails.delete(email);
+    if (typeof isBanned === 'boolean') {
+      athlete.isBanned = isBanned;
+      const email = athlete.email.toLowerCase();
+      if (isBanned) {
+        globalBannedEmails.add(email);
+      } else {
+        globalBannedEmails.delete(email);
+      }
     }
 
-    return NextResponse.json({ message: `Status updated`, athlete, isBanned });
+    if (streetPassPlan !== undefined) {
+      if (streetPassPlan === null) {
+        athlete.hasStreetPass = false;
+        athlete.streetPassPlan = null;
+        athlete.streetPassExpiresAt = null;
+      } else {
+        const days = streetPassDays || (streetPassPlan === 'yearly' ? 365 : 30);
+        athlete.hasStreetPass = true;
+        athlete.streetPassPlan = streetPassPlan;
+        athlete.streetPassExpiresAt = Date.now() + days * 24 * 60 * 60 * 1000;
+      }
+    }
+
+    return NextResponse.json({ message: 'Status updated', athlete });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 400 });
   }
