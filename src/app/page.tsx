@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import RunnerMap from '@/components/RunnerMap';
 import { fetchLiveWeather, WeatherData } from '@/lib/weather';
@@ -20,13 +21,15 @@ import { GoogleUser, getSavedGoogleUser, saveGoogleUser, getTelegramWebUser } fr
 import { supabase, LiveOnlineRunner } from '@/lib/supabase';
 import { PvpBattle, PvpInvitePayload, PvpRoom, PvpRoomRunner } from '@/lib/pvp';
 import { CompletedWorkout, saveCompletedWorkout } from '@/lib/history';
-import GoogleAuthModal from '@/components/auth/GoogleAuthModal';
 import UserProfileButton from '@/components/auth/UserProfileButton';
-import PvpDuelSystem from '@/components/pvp/PvpDuelSystem';
-import WorkoutSummaryModal from '@/components/history/WorkoutSummaryModal';
 import { isStreetPassActive } from '@/lib/streetpass';
-import StreetPassModal from '@/components/streetpass/StreetPassModal';
-import PvpPassBlockedModal from '@/components/streetpass/PvpPassBlockedModal';
+
+// Lazy-loaded on-demand components (Reduces initial JS bundle size significantly)
+const GoogleAuthModal = dynamic(() => import('@/components/auth/GoogleAuthModal'), { ssr: false });
+const PvpDuelSystem = dynamic(() => import('@/components/pvp/PvpDuelSystem'), { ssr: false });
+const WorkoutSummaryModal = dynamic(() => import('@/components/history/WorkoutSummaryModal'), { ssr: false });
+const StreetPassModal = dynamic(() => import('@/components/streetpass/StreetPassModal'), { ssr: false });
+const PvpPassBlockedModal = dynamic(() => import('@/components/streetpass/PvpPassBlockedModal'), { ssr: false });
 import {
   Flame,
   CloudRain,
