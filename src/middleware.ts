@@ -150,7 +150,7 @@ export function middleware(req: NextRequest) {
   const clientIp = getClientIp(req);
   const userAgent = req.headers.get('user-agent') || '';
 
-  // 1. FAST-PATH: Static assets are cached by Vercel CDN; skip rate-limit overhead
+  // 1. FAST-PATH: Static assets are cached with immutable 1-year browser & CDN cache
   if (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/sounds/') ||
@@ -162,7 +162,9 @@ export function middleware(req: NextRequest) {
     pathname.endsWith('.ico') ||
     pathname === '/favicon.ico'
   ) {
-    return NextResponse.next();
+    const res = NextResponse.next();
+    res.headers.set('Cache-Control', 'public, max-age=31536000, immutable');
+    return res;
   }
 
   // 2. LAYER 7 WAF: Block Vulnerability Scanners & Probing Bots

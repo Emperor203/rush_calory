@@ -33,6 +33,17 @@ export default function RootLayout({
   return (
     <html lang="ru">
       <head>
+        {/* Preconnect & DNS-prefetch to speed up critical external APIs & CDN maps */}
+        <link rel="preconnect" href="https://hbzoiltldxlbjwskfebw.supabase.co" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://hbzoiltldxlbjwskfebw.supabase.co" />
+        <link rel="preconnect" href="https://basemaps.cartocdn.com" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://basemaps.cartocdn.com" />
+        <link rel="preconnect" href="https://api.dicebear.com" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://api.dicebear.com" />
+        <link rel="preconnect" href="https://router.project-osrm.org" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://router.project-osrm.org" />
+        <link rel="preconnect" href="https://api.open-meteo.com" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://api.open-meteo.com" />
         <Script
           src="https://telegram.org/js/telegram-web-app.js"
           strategy="beforeInteractive"
