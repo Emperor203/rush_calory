@@ -84,7 +84,7 @@ export default function UserProfileButton({
       <button
         type="button"
         onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-        className="flex items-center gap-2 p-1 pl-1.5 sm:px-2.5 sm:py-1 rounded-2xl bg-[#000000] border border-[#242424] hover:border-[#7D39EB] transition shadow-2xl active:scale-95 text-xs"
+        className="flex items-center gap-2 p-1 pl-1.5 sm:px-2.5 sm:py-1 rounded-2xl bg-[#000000]/80 backdrop-blur-xl border border-white/10 hover:border-[#7D39EB] transition shadow-2xl active:scale-95 text-xs"
       >
         <div className="w-7 h-7 rounded-full overflow-hidden bg-[#7D39EB] flex items-center justify-center border-2 border-[#C6FF33] shadow shrink-0">
           {user.avatar && user.avatar !== '/avatar.jpg' ? (
@@ -108,7 +108,7 @@ export default function UserProfileButton({
             className="fixed inset-0 z-40 bg-black/50 backdrop-blur-[2px]"
             onClick={() => setIsDropdownOpen(false)}
           />
-          <div className="absolute right-0 top-11 z-50 w-72 max-w-[calc(100vw-24px)] bg-[#000000] border-2 border-[#242424] rounded-3xl p-4 shadow-2xl text-white space-y-3 animate-fade-in safe-bottom">
+          <div className="absolute right-0 top-11 z-50 w-72 max-w-[calc(100vw-24px)] bg-[#000000]/85 backdrop-blur-2xl border border-white/10 rounded-3xl p-4 shadow-[0_16px_40px_rgba(0,0,0,0.8)] text-white space-y-3 animate-fade-in safe-bottom">
             {/* User Bio */}
             <div className="flex items-center gap-3 pb-3 border-b border-[#242424]">
               <div className="w-11 h-11 rounded-full overflow-hidden bg-[#7D39EB] flex items-center justify-center border-2 border-[#C6FF33] shrink-0">

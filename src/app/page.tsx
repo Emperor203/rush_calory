@@ -1772,7 +1772,7 @@ export default function RunnerApp() {
       <header className="absolute top-2 sm:top-4 left-3 right-3 sm:left-4 sm:right-4 z-40 flex items-center justify-between pointer-events-none">
         <div className="flex items-center gap-1.5 sm:gap-2">
           {/* Brand Chip */}
-          <div className="pointer-events-auto flex items-center gap-1.5 sm:gap-2 bg-[#000000] border-2 border-[#222222] p-1.5 sm:px-4 sm:py-2 rounded-2xl shadow-2xl">
+          <div className="pointer-events-auto flex items-center gap-1.5 sm:gap-2 bg-[#000000]/75 backdrop-blur-xl border border-white/10 p-1.5 sm:px-4 sm:py-2 rounded-2xl shadow-2xl">
             <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl overflow-hidden border border-[#7D39EB] bg-[#000000] flex items-center justify-center shadow-lg shrink-0">
               <img src="/avatar.jpg" alt="Calorie Runner" className="w-full h-full object-cover" />
             </div>
@@ -1788,7 +1788,7 @@ export default function RunnerApp() {
 
           {/* Supabase Live Online Badge (Pure Lime & Black) */}
           <div
-            className="pointer-events-auto flex items-center gap-1 bg-[#000000] border-2 border-[#C6FF33] px-2 py-1.5 sm:px-3 sm:py-2 rounded-2xl shadow-xl text-[#C6FF33]"
+            className="pointer-events-auto flex items-center gap-1 bg-[#000000]/75 backdrop-blur-xl border-2 border-[#C6FF33] px-2 py-1.5 sm:px-3 sm:py-2 rounded-2xl shadow-xl text-[#C6FF33]"
             title={`${onlineRunners.length + (googleUser ? 1 : 0)} бегунов онлайн сейчас (Supabase Realtime)`}
           >
             <span className="relative flex h-2 w-2">
@@ -1813,7 +1813,7 @@ export default function RunnerApp() {
               }
               setIsPvpLobbyOpen(true);
             }}
-            className="pointer-events-auto flex items-center gap-1 bg-[#7D39EB] hover:bg-[#6c28d9] text-white p-1.5 sm:px-3 sm:py-2 rounded-2xl shadow-xl font-black text-xs transition active:scale-95 animate-pulse"
+            className="pointer-events-auto flex items-center gap-1 bg-[#7D39EB]/90 hover:bg-[#6c28d9] backdrop-blur-md text-white p-1.5 sm:px-3 sm:py-2 rounded-2xl shadow-xl font-black text-xs transition active:scale-95 animate-pulse border border-purple-400/30"
             title="Открыть арену PVP забегов и вызвать соперника"
           >
             <Swords className="w-3.5 h-3.5" />
@@ -1824,7 +1824,7 @@ export default function RunnerApp() {
           <button
             type="button"
             onClick={openWorkoutHistory}
-            className="pointer-events-auto flex items-center gap-1 bg-[#121212] hover:bg-[#1c1c1c] border border-[#242424] hover:border-[#C6FF33] text-gray-200 hover:text-[#C6FF33] p-1.5 sm:px-3 sm:py-2 rounded-2xl shadow-xl font-bold text-xs transition active:scale-95"
+            className="pointer-events-auto flex items-center gap-1 bg-[#121212]/75 hover:bg-[#1c1c1c] backdrop-blur-xl border border-white/10 hover:border-[#C6FF33] text-gray-200 hover:text-[#C6FF33] p-1.5 sm:px-3 sm:py-2 rounded-2xl shadow-xl font-bold text-xs transition active:scale-95"
             title="История моих пробежек"
           >
             <History className="w-3.5 h-3.5 text-[#C6FF33]" />
@@ -1835,7 +1835,7 @@ export default function RunnerApp() {
         {/* Map Styles & GPS Target + Google User */}
         <div className="pointer-events-auto flex items-center gap-1.5 sm:gap-2">
           {/* Desktop Only Map Styles Bar */}
-          <div className="hidden md:flex items-center gap-1.5 bg-[#000000] border-2 border-[#222222] p-1.5 rounded-2xl shadow-2xl">
+          <div className="hidden md:flex items-center gap-1.5 bg-[#000000]/75 backdrop-blur-xl border border-white/10 p-1.5 rounded-2xl shadow-2xl">
             <button
               onClick={() => setMapStyle('dark')}
               className={`px-2.5 py-1 rounded-xl text-[11px] font-bold transition flex items-center gap-1 ${
@@ -1881,8 +1881,8 @@ export default function RunnerApp() {
             onClick={() => openStreetPass('plans')}
             className={`pointer-events-auto flex items-center gap-1 p-1 sm:px-2.5 sm:py-1 rounded-2xl shadow-xl font-black text-xs transition active:scale-95 ${
               isStreetPassActive(googleUser)
-                ? 'bg-[#000000] border-2 border-[#C6FF33] text-[#C6FF33] shadow-[0_0_15px_rgba(198,255,51,0.25)]'
-                : 'bg-[#7D39EB] hover:bg-[#6c28d9] text-white border border-[#7D39EB]'
+                ? 'bg-[#000000]/75 backdrop-blur-xl border-2 border-[#C6FF33] text-[#C6FF33] shadow-[0_0_15px_rgba(198,255,51,0.25)]'
+                : 'bg-[#7D39EB]/90 hover:bg-[#6c28d9] backdrop-blur-md text-white border border-purple-400/30'
             }`}
             title="Уличный допуск (Street Pass) — соревновательный пропуск атлета"
           >
@@ -1908,7 +1908,7 @@ export default function RunnerApp() {
       {!activeBattle && !activeRoom && (
         <div className="md:hidden absolute top-16 left-3 z-10 flex flex-col items-start gap-2 pointer-events-none">
           {/* Floating Map Layers switcher */}
-          <div className="pointer-events-auto bg-[#000000]/95 backdrop-blur-md border border-[#242424] p-1 rounded-2xl shadow-2xl flex flex-col gap-1">
+          <div className="pointer-events-auto bg-[#000000]/75 backdrop-blur-xl border border-white/10 p-1 rounded-2xl shadow-2xl flex flex-col gap-1">
             <button
               onClick={() => setMapStyle('dark')}
               className={`w-8 h-8 rounded-xl text-xs transition flex items-center justify-center ${
@@ -1941,7 +1941,7 @@ export default function RunnerApp() {
           {/* Floating GPS Target button */}
           <button
             onClick={runStrictGpsVerification}
-            className="pointer-events-auto w-9 h-9 rounded-2xl bg-[#000000]/95 backdrop-blur-md border border-[#242424] flex items-center justify-center text-[#C6FF33] hover:border-[#C6FF33] shadow-2xl active:scale-95 transition"
+            className="pointer-events-auto w-9 h-9 rounded-2xl bg-[#000000]/75 backdrop-blur-xl border border-white/10 flex items-center justify-center text-[#C6FF33] hover:border-[#C6FF33] shadow-2xl active:scale-95 transition"
             title="Мой точный GPS"
           >
             <Crosshair className={`w-4 h-4 text-[#C6FF33] ${isCheckingGps ? 'animate-spin' : ''}`} />
@@ -1951,8 +1951,8 @@ export default function RunnerApp() {
 
       {/* --- ACTIVE RUNNING HUD (Live Mode, Solo Run) --- */}
       {isTrackingActive && !activeBattle ? (
-        <div className="absolute bottom-3 left-3 right-3 sm:bottom-6 sm:left-auto sm:right-6 sm:w-96 z-30 bg-[#000000] border-2 border-[#C6FF33] rounded-3xl p-4 sm:p-5 shadow-[0_0_50px_rgba(198,255,51,0.25)] space-y-3.5 safe-bottom animate-slide-up">
-          <div className="flex items-center justify-between border-b border-[#222222] pb-2.5">
+        <div className="absolute bottom-3 left-3 right-3 sm:bottom-6 sm:left-auto sm:right-6 sm:w-96 z-30 bg-[#000000]/80 backdrop-blur-2xl border-2 border-[#C6FF33] rounded-3xl p-4 sm:p-5 shadow-[0_0_50px_rgba(198,255,51,0.25)] space-y-3.5 safe-bottom animate-slide-up">
+          <div className="flex items-center justify-between border-b border-white/10 pb-2.5">
             <div className="flex items-center gap-2">
               <span className="relative flex h-2.5 w-2.5">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#C6FF33] opacity-75"></span>
@@ -1962,7 +1962,7 @@ export default function RunnerApp() {
                 АКТИВНЫЙ БЕГ
               </span>
             </div>
-            <span className="font-mono text-xs sm:text-sm font-bold text-white bg-[#151515] px-2.5 py-0.5 rounded-lg border border-[#333333]">
+            <span className="font-mono text-xs sm:text-sm font-bold text-white bg-[#151515]/80 backdrop-blur-md px-2.5 py-0.5 rounded-lg border border-white/10">
               ⏱ {formatTimer(elapsedSeconds)}
             </span>
           </div>
@@ -1989,7 +1989,7 @@ export default function RunnerApp() {
 
           {/* Speed & Distance Cards */}
           <div className="grid grid-cols-2 gap-2 text-center">
-            <div className="bg-[#111111] p-2.5 rounded-2xl border border-[#242424]">
+            <div className="bg-[#111111]/70 backdrop-blur-md p-2.5 rounded-2xl border border-white/10">
               <span className="text-[9px] uppercase font-bold text-gray-400 block flex items-center justify-center gap-1">
                 <Gauge className="w-3 h-3 text-[#7D39EB]" /> Скорость
               </span>
@@ -1998,7 +1998,7 @@ export default function RunnerApp() {
               </div>
             </div>
 
-            <div className="bg-[#111111] p-2.5 rounded-2xl border border-[#242424]">
+            <div className="bg-[#111111]/70 backdrop-blur-md p-2.5 rounded-2xl border border-white/10">
               <span className="text-[9px] uppercase font-bold text-gray-400 block flex items-center justify-center gap-1">
                 <TrendingUp className="w-3 h-3 text-[#C6FF33]" /> Пройдено
               </span>
@@ -2017,7 +2017,7 @@ export default function RunnerApp() {
               className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 ${
                 isSimulating
                   ? 'bg-amber-500/20 text-amber-300 border border-amber-500/50 hover:bg-amber-500/30'
-                  : 'bg-[#000000] hover:bg-[#151515] border border-[#7D39EB] text-white'
+                  : 'bg-[#000000]/70 hover:bg-[#151515] border border-[#7D39EB] text-white'
               }`}
             >
               <span>{isSimulating ? '⏸ Пауза симулятора' : '🏃 Симулятор'}</span>
@@ -2025,7 +2025,7 @@ export default function RunnerApp() {
             <button
               type="button"
               onClick={stopTracking}
-              className="py-2.5 px-4 bg-[#000000] hover:bg-rose-950 border border-rose-500 text-rose-400 rounded-xl text-xs font-bold transition flex items-center gap-1"
+              className="py-2.5 px-4 bg-[#000000]/70 hover:bg-rose-950 border border-rose-500 text-rose-400 rounded-xl text-xs font-bold transition flex items-center gap-1"
             >
               <Square className="w-3.5 h-3.5" />
               <span>Стоп</span>
@@ -2036,7 +2036,7 @@ export default function RunnerApp() {
         /* --- MOBILE BOTTOM SHEET & DESKTOP SIDEBAR PANEL --- */
         <div
           onTouchStart={(e) => e.stopPropagation()}
-          className={`fixed bottom-0 left-0 right-0 md:absolute md:bottom-auto md:left-4 md:top-20 md:right-auto md:w-96 z-20 bg-[#000000] border-t md:border-2 border-[#242424] rounded-t-3xl md:rounded-3xl shadow-2xl bottom-sheet ${
+          className={`fixed bottom-0 left-0 right-0 md:absolute md:bottom-auto md:left-4 md:top-20 md:right-auto md:w-96 z-20 bg-[#000000]/80 backdrop-blur-2xl border-t md:border-2 border-white/10 rounded-t-3xl md:rounded-3xl shadow-[0_8px_32px_0_rgba(0,0,0,0.8)] bottom-sheet ${
             isMobileExpanded
               ? 'max-h-[85dvh] overflow-y-auto overscroll-contain p-4 sm:p-5 pb-4 md:pb-5'
               : 'max-h-[220px] overflow-hidden md:overflow-y-auto md:max-h-[82vh] p-4 sm:p-5 pb-3 md:pb-5'
@@ -2118,7 +2118,7 @@ export default function RunnerApp() {
           {/* Full Expandable Controls (Always visible on Desktop, Expandable on Mobile) */}
           <div className={`${isMobileExpanded ? 'block' : 'hidden md:block'} space-y-3.5 pt-2 md:pt-0`}>
             {/* Live Weather Radar Widget */}
-            <div className="bg-[#121212] border border-[#242424] rounded-2xl p-3 space-y-1.5">
+            <div className="bg-[#121212]/75 backdrop-blur-md border border-white/10 rounded-2xl p-3 space-y-1.5 shadow-lg">
               <div className="flex items-center justify-between text-xs">
                 <span className="text-[#FFFFFF] font-semibold flex items-center gap-1 text-[11px]">
                   <CloudRain className="w-3.5 h-3.5 text-[#C6FF33]" />
@@ -2141,20 +2141,20 @@ export default function RunnerApp() {
 
               {weather && (
                 <div className="grid grid-cols-3 gap-1.5 pt-0.5 text-center">
-                  <div className="bg-[#000000] p-1.5 rounded-xl border border-[#242424]">
+                  <div className="bg-[#000000]/60 p-1.5 rounded-xl border border-white/5">
                     <span className="text-[9px] text-gray-400 block">Темп.</span>
                     <strong className="text-xs font-bold text-white flex items-center justify-center gap-1 mt-0.5">
                       <Cloud className="w-3.5 h-3.5 text-[#C6FF33] shrink-0" />
                       <span>{weather.temperature > 0 ? `+${weather.temperature}` : weather.temperature}°C</span>
                     </strong>
                   </div>
-                  <div className="bg-[#000000] p-1.5 rounded-xl border border-[#242424]">
+                  <div className="bg-[#000000]/60 p-1.5 rounded-xl border border-white/5">
                     <span className="text-[9px] text-gray-400 block">Ветер</span>
                     <strong className="text-xs font-bold text-[#FFFFFF]">
                       {weather.windSpeed} км/ч
                     </strong>
                   </div>
-                  <div className="bg-[#000000] p-1.5 rounded-xl border border-[#242424]">
+                  <div className="bg-[#000000]/60 p-1.5 rounded-xl border border-white/5">
                     <span className="text-[9px] text-gray-400 block">Дождь</span>
                     <strong className="text-xs font-bold text-[#C6FF33]">
                       {weather.rainProbabilityNext2h}%
@@ -2165,9 +2165,9 @@ export default function RunnerApp() {
             </div>
 
             {/* Park / Nature Filter Toggle */}
-            <div className="bg-[#121212] border border-[#242424] rounded-2xl p-2.5 flex items-center justify-between">
+            <div className="bg-[#121212]/75 backdrop-blur-md border border-white/10 rounded-2xl p-2.5 flex items-center justify-between shadow-lg">
               <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-[#000000] border border-[#242424] flex items-center justify-center text-[#C6FF33]">
+                <div className="w-7 h-7 rounded-lg bg-[#000000]/60 border border-white/5 flex items-center justify-center text-[#C6FF33]">
                   <TreePine className="w-3.5 h-3.5" />
                 </div>
                 <div>
@@ -2208,8 +2208,8 @@ export default function RunnerApp() {
                     onClick={() => setCalories(p.kcal)}
                     className={`p-2 rounded-xl border text-left transition active:scale-95 ${
                       calories === p.kcal
-                        ? 'bg-[#7D39EB] border-[#7D39EB] text-white font-bold'
-                        : 'bg-[#121212] border-[#242424] text-gray-300 hover:border-gray-600'
+                        ? 'bg-[#7D39EB] border-[#7D39EB] text-white font-bold shadow-lg shadow-purple-950/50'
+                        : 'bg-[#121212]/75 backdrop-blur-md border-white/10 text-gray-300 hover:border-gray-500'
                     }`}
                   >
                     <div className="text-sm">{p.icon}</div>
@@ -2249,7 +2249,7 @@ export default function RunnerApp() {
                   max={160}
                   value={weightKg}
                   onChange={(e) => handleWeightChange(parseFloat(e.target.value) || 70)}
-                  className="w-full bg-[#121212] border border-[#242424] rounded-xl px-2.5 py-1.5 text-xs font-mono font-bold text-white focus:outline-none focus:border-[#7D39EB]"
+                  className="w-full bg-[#121212]/75 backdrop-blur-md border border-white/10 rounded-xl px-2.5 py-1.5 text-xs font-mono font-bold text-white focus:outline-none focus:border-[#7D39EB]"
                 />
               </div>
 
@@ -2260,7 +2260,7 @@ export default function RunnerApp() {
                 <select
                   value={pace}
                   onChange={(e) => setPace(parseFloat(e.target.value))}
-                  className="w-full bg-[#121212] border border-[#242424] rounded-xl px-2 py-1.5 text-xs font-semibold text-white focus:outline-none focus:border-[#7D39EB]"
+                  className="w-full bg-[#121212]/75 backdrop-blur-md border border-white/10 rounded-xl px-2 py-1.5 text-xs font-semibold text-white focus:outline-none focus:border-[#7D39EB]"
                 >
                   {PACES.map((pc) => (
                     <option key={pc.minPerKm} value={pc.minPerKm}>
@@ -2272,7 +2272,7 @@ export default function RunnerApp() {
             </div>
 
             {/* Target Calculation Banner (Visible on Desktop) */}
-            <div className="hidden md:flex p-3 bg-[#121212] border border-[#242424] rounded-2xl items-center justify-between">
+            <div className="hidden md:flex p-3 bg-[#121212]/75 backdrop-blur-md border border-white/10 rounded-2xl items-center justify-between shadow-lg">
               <div>
                 <span className="text-[9px] text-[#C6FF33] uppercase font-black tracking-wider flex items-center gap-1">
                   <Sparkles className="w-3 h-3 text-[#C6FF33]" /> Дистанция
