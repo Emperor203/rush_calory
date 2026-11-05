@@ -214,17 +214,6 @@ export default function UserProfileButton({
                       >
                         {rankProgress.currentTier.name}
                       </span>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          playRankUpSound();
-                        }}
-                        title="Прослушать победный звук звания"
-                        className="p-0.5 rounded text-gray-400 hover:text-[#C6FF33] transition"
-                      >
-                        <Volume2 className="w-3 h-3" />
-                      </button>
                     </div>
                     <span className="text-[9px] text-gray-400 font-mono block -mt-0.5">
                       {rankProgress.currentTier.subtitle}

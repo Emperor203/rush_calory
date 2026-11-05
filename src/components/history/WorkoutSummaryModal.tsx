@@ -158,17 +158,9 @@ export default function WorkoutSummaryModal({
                             {rankProgress.currentTier.name} // {rankProgress.currentTier.subtitle}
                           </div>
                           <div className="text-[10px] text-gray-400">
-                            Достижение ранга разблокировано
+                            Новый уровень атлета разблокирован
                           </div>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => playRankUpSound()}
-                          title="Повторить звук звания"
-                          className="p-2.5 rounded-xl bg-[#C6FF33] text-black hover:bg-[#b0f020] active:scale-95 transition shadow-lg shrink-0 flex items-center gap-1 font-mono font-bold text-xs"
-                        >
-                          <Volume2 className="w-4 h-4" />
-                        </button>
                       </div>
                     </div>
                   )}
@@ -245,14 +237,6 @@ export default function WorkoutSummaryModal({
                         >
                           {rankProgress.currentTier.name}
                         </span>
-                        <button
-                          type="button"
-                          onClick={() => playRankUpSound()}
-                          title="Прослушать звук звания"
-                          className="p-1 rounded-md text-gray-400 hover:text-[#C6FF33] hover:bg-white/5 transition ml-0.5"
-                        >
-                          <Volume2 className="w-3.5 h-3.5" />
-                        </button>
                       </div>
                       {rankProgress.nextTier ? (
                         <span className="text-[10px] text-gray-400 font-mono">

@@ -410,6 +410,27 @@ export default function RunnerApp() {
   const remainingCalories = Math.max(0, calories - activeCaloriesBurned);
   const caloriePercent = Math.min(100, Math.round((activeCaloriesBurned / calories) * 100));
 
+  // Live Career KM & Steam-style automatic Rank Up Audio
+  const totalUserKmCareer = (googleUser?.totalKmRun || 0) + distanceTraversedKm;
+  const currentRankTier = calculateUserRank(totalUserKmCareer).currentTier;
+  const lastRankTierRef = useRef<string>(calculateUserRank(googleUser?.totalKmRun || 0).currentTier.id);
+
+  // Synchronize base rank when not running
+  useEffect(() => {
+    if (!isTrackingActive) {
+      lastRankTierRef.current = calculateUserRank(googleUser?.totalKmRun || 0).currentTier.id;
+    }
+  }, [googleUser?.totalKmRun, isTrackingActive]);
+
+  // AUTOMATIC SOUND: If the athlete levels up during the live run!
+  useEffect(() => {
+    if (isTrackingActive && currentRankTier.id !== lastRankTierRef.current) {
+      lastRankTierRef.current = currentRankTier.id;
+      // Play automatically!
+      playRankUpSound();
+    }
+  }, [currentRankTier.id, isTrackingActive]);
+
   // Ref to hold live state for background presence heartbeat without interval thrashing
   const latestTrackingStateRef = useRef({
     liveRunnerPos,
@@ -1502,9 +1523,8 @@ export default function RunnerApp() {
       const prevRank = calculateUserRank(prevKm);
       const newRank = calculateUserRank(newKm);
       if (newRank.currentTier.id !== prevRank.currentTier.id) {
-        setTimeout(() => {
-          playRankUpSound();
-        }, 350);
+        // Play automatically right upon workout completion!
+        playRankUpSound();
       }
 
       // Play MVP Victory Anthem for Street Pass athletes!
