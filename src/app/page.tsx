@@ -23,6 +23,8 @@ import { PvpBattle, PvpInvitePayload, PvpRoom, PvpRoomRunner } from '@/lib/pvp';
 import { CompletedWorkout, saveCompletedWorkout } from '@/lib/history';
 import UserProfileButton from '@/components/auth/UserProfileButton';
 import { isStreetPassActive } from '@/lib/streetpass';
+import { calculateUserRank } from '@/lib/ranks';
+import { playRankUpSound } from '@/lib/sounds';
 
 // Lazy-loaded on-demand components (Reduces initial JS bundle size significantly)
 const GoogleAuthModal = dynamic(() => import('@/components/auth/GoogleAuthModal'), { ssr: false });
@@ -1493,6 +1495,17 @@ export default function RunnerApp() {
       setCompletedWorkout(workoutRecord);
       setHistoryModalTab('summary');
       setIsWorkoutSummaryOpen(true);
+
+      // Check if this run caused a Rank Up (level up like in Steam)!
+      const prevKm = googleUser?.totalKmRun || 0;
+      const newKm = prevKm + workoutRecord.distanceKm;
+      const prevRank = calculateUserRank(prevKm);
+      const newRank = calculateUserRank(newKm);
+      if (newRank.currentTier.id !== prevRank.currentTier.id) {
+        setTimeout(() => {
+          playRankUpSound();
+        }, 350);
+      }
 
       // Play MVP Victory Anthem for Street Pass athletes!
       if (googleUser?.hasStreetPass && googleUser?.mvpAnthemUrl) {

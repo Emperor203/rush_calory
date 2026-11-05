@@ -9,6 +9,7 @@ import {
 } from '@/lib/history';
 import { GoogleUser } from '@/lib/auth';
 import { calculateUserRank } from '@/lib/ranks';
+import { playRankUpSound } from '@/lib/sounds';
 import {
   Trophy,
   Flame,
@@ -19,6 +20,8 @@ import {
   History,
   CheckCircle2,
   Calendar,
+  Sparkles,
+  Volume2,
 } from 'lucide-react';
 
 interface WorkoutSummaryModalProps {
@@ -39,19 +42,34 @@ export default function WorkoutSummaryModal({
   const [activeTab, setActiveTab] = useState<'summary' | 'history'>(initialTab);
   const [historyList, setHistoryList] = useState<CompletedWorkout[]>([]);
 
-  useEffect(() => {
-    if (isOpen) {
-      setHistoryList(getWorkoutHistory());
-      setActiveTab(initialTab || (workout ? 'summary' : 'history'));
-    }
-  }, [isOpen, initialTab, workout]);
-
-  if (!isOpen) return null;
-
   const totalCaloriesAll = historyList.reduce((acc, cur) => acc + (cur.caloriesBurned || 0), 0);
   const totalKmAll = historyList.reduce((acc, cur) => acc + (cur.distanceKm || 0), 0);
   const userTotalKm = (currentUser?.totalKmRun || 0) > 0 ? (currentUser?.totalKmRun || 0) : totalKmAll;
   const rankProgress = calculateUserRank(userTotalKm);
+  const previousKm = Math.max(0, userTotalKm - (workout?.distanceKm || 0));
+  const previousRank = calculateUserRank(previousKm);
+  const isRankUp = !!workout && rankProgress.currentTier.id !== previousRank.currentTier.id;
+
+  useEffect(() => {
+    if (isOpen) {
+      setHistoryList(getWorkoutHistory());
+      setActiveTab(initialTab || (workout ? 'summary' : 'history'));
+
+      if (workout) {
+        const prev = Math.max(0, userTotalKm - (workout.distanceKm || 0));
+        const prevR = calculateUserRank(prev);
+        const curR = calculateUserRank(userTotalKm);
+        if (curR.currentTier.id !== prevR.currentTier.id) {
+          const timer = setTimeout(() => {
+            playRankUpSound();
+          }, 450);
+          return () => clearTimeout(timer);
+        }
+      }
+    }
+  }, [isOpen, initialTab, workout, userTotalKm]);
+
+  if (!isOpen) return null;
 
   return (
     <div
@@ -122,6 +140,39 @@ export default function WorkoutSummaryModal({
             <div className="space-y-3.5">
               {workout ? (
                 <>
+                  {/* Steam-Style Rank Up Achievement Card */}
+                  {isRankUp && (
+                    <div className="relative overflow-hidden bg-gradient-to-r from-[#18181b] via-[#222227] to-[#18181b] border-2 border-[#C6FF33] p-3.5 rounded-3xl shadow-[0_0_35px_rgba(198,255,51,0.35)] animate-fade-in">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-2xl bg-black/80 border-2 border-[#C6FF33] flex items-center justify-center text-2xl shadow-[0_0_15px_rgba(198,255,51,0.4)] shrink-0 animate-bounce">
+                          {rankProgress.currentTier.icon}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[10px] font-black uppercase tracking-wider text-[#C6FF33] font-mono flex items-center gap-1">
+                            <Sparkles className="w-3 h-3 text-[#C6FF33]" /> НОВОЕ ЗВАНИЕ ПОЛУЧЕНО!
+                          </div>
+                          <div
+                            className="text-sm sm:text-base font-black font-mono truncate"
+                            style={{ color: rankProgress.currentTier.textColor }}
+                          >
+                            {rankProgress.currentTier.name} // {rankProgress.currentTier.subtitle}
+                          </div>
+                          <div className="text-[10px] text-gray-400">
+                            Достижение ранга разблокировано
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => playRankUpSound()}
+                          title="Повторить звук звания"
+                          className="p-2.5 rounded-xl bg-[#C6FF33] text-black hover:bg-[#b0f020] active:scale-95 transition shadow-lg shrink-0 flex items-center gap-1 font-mono font-bold text-xs"
+                        >
+                          <Volume2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Big Hero Card */}
                   <div className="bg-[#121212] border-2 border-[#C6FF33] p-4 rounded-3xl text-center space-y-1 shadow-[0_0_30px_rgba(198,255,51,0.15)]">
                     <span className="text-[10px] uppercase font-mono font-bold text-[#C6FF33] tracking-widest block">
@@ -194,6 +245,14 @@ export default function WorkoutSummaryModal({
                         >
                           {rankProgress.currentTier.name}
                         </span>
+                        <button
+                          type="button"
+                          onClick={() => playRankUpSound()}
+                          title="Прослушать звук звания"
+                          className="p-1 rounded-md text-gray-400 hover:text-[#C6FF33] hover:bg-white/5 transition ml-0.5"
+                        >
+                          <Volume2 className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                       {rankProgress.nextTier ? (
                         <span className="text-[10px] text-gray-400 font-mono">
