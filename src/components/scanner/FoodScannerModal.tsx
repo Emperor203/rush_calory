@@ -12,6 +12,7 @@ import {
   ArrowRight,
   RefreshCw,
   CheckCircle2,
+  AlertTriangle,
 } from 'lucide-react';
 import { FoodScanResult } from '@/app/api/ai/scan-food/route';
 
@@ -46,6 +47,7 @@ export default function FoodScannerModal({
   const targetCalories = scanResult ? Math.round(scanResult.calories * multiplier) : 350;
   const targetDistanceKm = Math.min(5.8, Math.max(1.5, Math.round((targetCalories / 110) * 10) / 10));
   const targetMinutes = Math.round(targetDistanceKm * 5.5);
+  const isNotFood = scanResult ? (scanResult.isFood === false || scanResult.calories <= 0 || scanResult.dishName.toLowerCase().includes('не еда')) : false;
 
   const stopLiveCamera = () => {
     if (streamRef.current) {
@@ -435,145 +437,174 @@ export default function FoodScannerModal({
               )}
 
               {scanResult && (
-                <div className="space-y-3 animate-fade-in">
-                  {/* Dish Title & Calories Banner */}
-                  <div className="bg-[#12151F] border border-white/10 rounded-2xl p-4">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <span className="text-[10px] font-heading uppercase tracking-wider text-[#C6FF33] font-bold">
-                          Блюдо распознано
-                        </span>
-                        <h3 className="text-base font-heading font-black text-white">
-                          {scanResult.dishName}
-                        </h3>
-                        {scanResult.weightGrams && (
-                          <span className="text-[11px] text-gray-400 font-body">
-                            Порция: ~{scanResult.weightGrams} г
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-right">
-                        <div className="flex items-center justify-end gap-1 text-[#C6FF33]">
-                          <Flame className="w-5 h-5 fill-[#C6FF33]" />
-                          <span className="text-2xl font-heading font-black">
-                            {scanResult.calories}
-                          </span>
-                        </div>
-                        <span className="text-[10px] text-gray-400 uppercase tracking-wider block font-body">
-                          ккал
-                        </span>
-                      </div>
+                isNotFood ? (
+                  /* Non-Food Warning Card */
+                  <div className="bg-[#12151F] border border-amber-500/30 rounded-2xl p-5 text-center space-y-3 animate-fade-in">
+                    <div className="w-12 h-12 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center mx-auto">
+                      <AlertTriangle className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-heading uppercase tracking-wider text-amber-400 font-bold block mb-1">
+                        Объект распознан: {scanResult.dishName}
+                      </span>
+                      <h3 className="text-base font-heading font-black text-white">
+                        Это не еда и не напиток
+                      </h3>
+                      <p className="text-xs text-gray-300 font-body mt-1.5 leading-relaxed">
+                        {scanResult.motivation || 'На фото обнаружен несъедобный предмет. Сфотографируйте ваше блюдо, чтобы рассчитать калории и построить маршрут!'}
+                      </p>
                     </div>
 
-                    {/* Macros Bars */}
-                    {scanResult.macros && (
-                      <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-white/5 text-center">
-                        <div className="bg-black/40 rounded-lg p-1.5">
-                          <span className="text-[9px] text-gray-400 block font-body">Белки</span>
-                          <span className="text-xs font-heading font-bold text-emerald-400">
-                            {scanResult.macros.protein} г
-                          </span>
-                        </div>
-                        <div className="bg-black/40 rounded-lg p-1.5">
-                          <span className="text-[9px] text-gray-400 block font-body">Жиры</span>
-                          <span className="text-xs font-heading font-bold text-amber-400">
-                            {scanResult.macros.fat} г
-                          </span>
-                        </div>
-                        <div className="bg-black/40 rounded-lg p-1.5">
-                          <span className="text-[9px] text-gray-400 block font-body">Углеводы</span>
-                          <span className="text-xs font-heading font-bold text-sky-400">
-                            {scanResult.macros.carbs} г
-                          </span>
-                        </div>
-                      </div>
-                    )}
+                    <button
+                      type="button"
+                      onClick={resetScanner}
+                      className="w-full py-3 px-4 bg-[#C6FF33] hover:bg-[#b0f020] text-black font-heading text-xs uppercase tracking-wider rounded-full shadow-lg transition font-bold active:scale-95 flex items-center justify-center gap-2"
+                    >
+                      <Camera className="w-4 h-4 fill-black" />
+                      <span>Сфотографировать еду</span>
+                    </button>
                   </div>
-
-                  {/* Burn Intensity Mode Selector */}
-                  <div className="space-y-1.5">
-                    <div className="flex justify-between items-center text-[10px] text-gray-400 font-heading uppercase tracking-wide">
-                      <span>Режим сжигания калорий:</span>
-                      <span className="text-[#C6FF33] font-bold font-mono">~{targetCalories} ккал</span>
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-1.5">
-                      <button
-                        type="button"
-                        onClick={() => setBurnMode('easy')}
-                        className={`p-2 rounded-xl text-center transition active:scale-95 ease-signature ${
-                          burnMode === 'easy'
-                            ? 'bg-[#12151F] border-2 border-[#C6FF33] text-white shadow-md'
-                            : 'bg-[#12151F]/60 border border-white/5 text-gray-400'
-                        }`}
-                      >
-                        <div className="text-[10px] font-heading font-bold text-emerald-400 uppercase">Лёгкий</div>
-                        <div className="text-xs font-mono font-black text-white mt-0.5">
-                          {Math.min(5.5, Math.max(1.5, Math.round((scanResult.calories * 0.45 / 110) * 10) / 10))} км
-                        </div>
-                        <div className="text-[9px] text-gray-400 font-body">45% порции</div>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setBurnMode('balanced')}
-                        className={`p-2 rounded-xl text-center transition active:scale-95 ease-signature ${
-                          burnMode === 'balanced'
-                            ? 'bg-[#7D39EB] text-white shadow-lg border-2 border-purple-400'
-                            : 'bg-[#12151F]/60 border border-white/5 text-gray-400'
-                        }`}
-                      >
-                        <div className="text-[10px] font-heading font-black text-[#C6FF33] uppercase">Баланс</div>
-                        <div className="text-xs font-mono font-black text-white mt-0.5">
-                          {Math.min(5.5, Math.max(1.5, Math.round((scanResult.calories * 0.70 / 110) * 10) / 10))} км
-                        </div>
-                        <div className="text-[9px] text-purple-200 font-body">70% порции</div>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setBurnMode('full')}
-                        className={`p-2 rounded-xl text-center transition active:scale-95 ease-signature ${
-                          burnMode === 'full'
-                            ? 'bg-[#12151F] border-2 border-rose-500 text-white shadow-md'
-                            : 'bg-[#12151F]/60 border border-white/5 text-gray-400'
-                        }`}
-                      >
-                        <div className="text-[10px] font-heading font-bold text-rose-400 uppercase">100%</div>
-                        <div className="text-xs font-mono font-black text-white mt-0.5">
-                          {Math.min(5.8, Math.max(1.5, Math.round((scanResult.calories / 110) * 10) / 10))} км
-                        </div>
-                        <div className="text-[9px] text-gray-400 font-body">Вся еда</div>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Burn Route Mission Banner */}
-                  <div className="bg-gradient-to-r from-[#7D39EB]/20 to-purple-900/10 border border-[#7D39EB]/40 rounded-2xl p-3 flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-9 h-9 rounded-xl bg-[#7D39EB] flex items-center justify-center text-white shrink-0 shadow-lg">
-                        <Zap className="w-4 h-4" />
-                      </div>
-                      <div>
-                        <span className="text-[9px] uppercase tracking-wider text-purple-300 font-heading block">
-                          Оптимальный маршрут от дома
-                        </span>
-                        <div className="flex items-baseline gap-1.5">
-                          <span className="text-lg font-heading font-black text-white">
-                            {targetDistanceKm} км
+                ) : (
+                  <div className="space-y-3 animate-fade-in">
+                    {/* Dish Title & Calories Banner */}
+                    <div className="bg-[#12151F] border border-white/10 rounded-2xl p-4">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <span className="text-[10px] font-heading uppercase tracking-wider text-[#C6FF33] font-bold">
+                            Блюдо распознано
                           </span>
-                          <span className="text-xs text-gray-300 font-body">
-                            (~{targetMinutes} мин в темпе 5:30)
+                          <h3 className="text-base font-heading font-black text-white">
+                            {scanResult.dishName}
+                          </h3>
+                          {scanResult.weightGrams && (
+                            <span className="text-[11px] text-gray-400 font-body">
+                              Порция: ~{scanResult.weightGrams} г
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-right">
+                          <div className="flex items-center justify-end gap-1 text-[#C6FF33]">
+                            <Flame className="w-5 h-5 fill-[#C6FF33]" />
+                            <span className="text-2xl font-heading font-black">
+                              {scanResult.calories}
+                            </span>
+                          </div>
+                          <span className="text-[10px] text-gray-400 uppercase tracking-wider block font-body">
+                            ккал
                           </span>
                         </div>
                       </div>
-                    </div>
-                  </div>
 
-                  <p className="text-[11px] text-gray-400 text-center italic font-body">
-                    «{scanResult.motivation}»
-                  </p>
-                </div>
+                      {/* Macros Bars */}
+                      {scanResult.macros && (
+                        <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-white/5 text-center">
+                          <div className="bg-black/40 rounded-lg p-1.5">
+                            <span className="text-[9px] text-gray-400 block font-body">Белки</span>
+                            <span className="text-xs font-heading font-bold text-emerald-400">
+                              {scanResult.macros.protein} г
+                            </span>
+                          </div>
+                          <div className="bg-black/40 rounded-lg p-1.5">
+                            <span className="text-[9px] text-gray-400 block font-body">Жиры</span>
+                            <span className="text-xs font-heading font-bold text-amber-400">
+                              {scanResult.macros.fat} г
+                            </span>
+                          </div>
+                          <div className="bg-black/40 rounded-lg p-1.5">
+                            <span className="text-[9px] text-gray-400 block font-body">Углеводы</span>
+                            <span className="text-xs font-heading font-bold text-sky-400">
+                              {scanResult.macros.carbs} г
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Burn Intensity Mode Selector */}
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between items-center text-[10px] text-gray-400 font-heading uppercase tracking-wide">
+                        <span>Режим сжигания калорий:</span>
+                        <span className="text-[#C6FF33] font-bold font-mono">~{targetCalories} ккал</span>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setBurnMode('easy')}
+                          className={`p-2 rounded-xl text-center transition active:scale-95 ease-signature ${
+                            burnMode === 'easy'
+                              ? 'bg-[#12151F] border-2 border-[#C6FF33] text-white shadow-md'
+                              : 'bg-[#12151F]/60 border border-white/5 text-gray-400'
+                          }`}
+                        >
+                          <div className="text-[10px] font-heading font-bold text-emerald-400 uppercase">Лёгкий</div>
+                          <div className="text-xs font-mono font-black text-white mt-0.5">
+                            {Math.min(5.5, Math.max(1.5, Math.round((scanResult.calories * 0.45 / 110) * 10) / 10))} км
+                          </div>
+                          <div className="text-[9px] text-gray-400 font-body">45% порции</div>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setBurnMode('balanced')}
+                          className={`p-2 rounded-xl text-center transition active:scale-95 ease-signature ${
+                            burnMode === 'balanced'
+                              ? 'bg-[#7D39EB] text-white shadow-lg border-2 border-purple-400'
+                              : 'bg-[#12151F]/60 border border-white/5 text-gray-400'
+                          }`}
+                        >
+                          <div className="text-[10px] font-heading font-black text-[#C6FF33] uppercase">Баланс</div>
+                          <div className="text-xs font-mono font-black text-white mt-0.5">
+                            {Math.min(5.5, Math.max(1.5, Math.round((scanResult.calories * 0.70 / 110) * 10) / 10))} км
+                          </div>
+                          <div className="text-[9px] text-purple-200 font-body">70% порции</div>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setBurnMode('full')}
+                          className={`p-2 rounded-xl text-center transition active:scale-95 ease-signature ${
+                            burnMode === 'full'
+                              ? 'bg-[#12151F] border-2 border-rose-500 text-white shadow-md'
+                              : 'bg-[#12151F]/60 border border-white/5 text-gray-400'
+                          }`}
+                        >
+                          <div className="text-[10px] font-heading font-bold text-rose-400 uppercase">100%</div>
+                          <div className="text-xs font-mono font-black text-white mt-0.5">
+                            {Math.min(5.8, Math.max(1.5, Math.round((scanResult.calories / 110) * 10) / 10))} км
+                          </div>
+                          <div className="text-[9px] text-gray-400 font-body">Вся еда</div>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Burn Route Mission Banner */}
+                    <div className="bg-gradient-to-r from-[#7D39EB]/20 to-purple-900/10 border border-[#7D39EB]/40 rounded-2xl p-3 flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-9 h-9 rounded-xl bg-[#7D39EB] flex items-center justify-center text-white shrink-0 shadow-lg">
+                          <Zap className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <span className="text-[9px] uppercase tracking-wider text-purple-300 font-heading block">
+                            Оптимальный маршрут от дома
+                          </span>
+                          <div className="flex items-baseline gap-1.5">
+                            <span className="text-lg font-heading font-black text-white">
+                              {targetDistanceKm} км
+                            </span>
+                            <span className="text-xs text-gray-300 font-body">
+                              (~{targetMinutes} мин в темпе 5:30)
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <p className="text-[11px] text-gray-400 text-center italic font-body">
+                      «{scanResult.motivation}»
+                    </p>
+                  </div>
+                )
               )}
             </div>
           )}
@@ -581,7 +612,7 @@ export default function FoodScannerModal({
 
         {/* Footer Actions */}
         <div className="pt-2 border-t border-white/10 shrink-0 space-y-2">
-          {scanResult ? (
+          {scanResult && !isNotFood ? (
             <button
               type="button"
               onClick={handleApply}
@@ -596,13 +627,15 @@ export default function FoodScannerModal({
               onClick={onClose}
               className="w-full py-3 bg-[#12151F] hover:bg-[#1a1e2b] border border-white/10 text-xs font-heading text-gray-300 hover:text-white rounded-full transition active:scale-95 ease-signature"
             >
-              Отмена
+              {isNotFood ? 'Закрыть' : 'Отмена'}
             </button>
           )}
 
-          <span className="block text-[10px] text-gray-500 text-center font-body">
-            ИИ рассчитывает маршрут вокруг вашей текущей геопозиции
-          </span>
+          {!isNotFood && (
+            <span className="block text-[10px] text-gray-500 text-center font-body">
+              ИИ рассчитывает маршрут вокруг вашей текущей геопозиции
+            </span>
+          )}
         </div>
       </div>
     </div>

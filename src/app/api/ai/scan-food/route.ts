@@ -13,6 +13,7 @@ export interface FoodScanResult {
   burnPaceMinPerKm: number;
   burnDurationMinutes: number;
   motivation: string;
+  isFood?: boolean;
 }
 
 const FALLBACK_DISHES: Array<{
@@ -146,21 +147,32 @@ export async function POST(req: NextRequest) {
           const geminiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${geminiKey}`;
 
           const prompt = `Ты — экспертный спортивный диетолог Rush Calory с компьютерным зрением. Твоя задача:
-1. Внимательно рассмотри изображение и ТОЧНО определи, что за блюдо изображено (например: Пицца Маргарита / Пепперони, Бургер, Плов, Салат, Стейк, Суши, Шаурма, Паста и т.д.). Никогда не путай пиццу с шаурмой!
-2. Оцени примерный вес порции в граммах.
-3. Оцени общую калорийность (ккал) и БЖУ (белки, жиры, углеводы в граммах).
-4. Верни ТОЛЬКО строгий JSON без markdown разметки:
-{
-  "dishName": "Точное название блюда на русском",
-  "calories": 520,
-  "weightGrams": 300,
-  "macros": {
-    "protein": 22,
-    "fat": 20,
-    "carbs": 58
-  },
-  "motivation": "Бодрая фраза для бегуна на русском"
-}`;
+1. КРИТИЧЕСКИ ВАЖНО: Определи, изображена ли на фото РЕАЛЬНАЯ ЕДА или НАПИТОК.
+   - Если на фото НЕ еда и НЕ напиток (например: ноутбук, компьютер, клавиатура, телефон, техника, человек, комната, стол, документ, животное, улица или любой несъедобный предмет):
+     Верни JSON:
+     {
+       "isFood": false,
+       "dishName": "Не еда",
+       "calories": 0,
+       "weightGrams": 0,
+       "macros": { "protein": 0, "fat": 0, "carbs": 0 },
+       "motivation": "На фото не обнаружена еда или напиток. Сфотографируйте ваше блюдо, чтобы сжечь калории!"
+     }
+   - Если на фото ДЕЙСТВИТЕЛЬНО еда или напиток:
+     Верни JSON:
+     {
+       "isFood": true,
+       "dishName": "Точное название блюда на русском",
+       "calories": 520,
+       "weightGrams": 300,
+       "macros": {
+         "protein": 22,
+         "fat": 20,
+         "carbs": 58
+       },
+       "motivation": "Бодрая фраза для бегуна на русском"
+     }
+2. Верни ТОЛЬКО строгий JSON без markdown разметки.`;
 
           const response = await fetch(geminiEndpoint, {
             method: 'POST',
@@ -191,14 +203,16 @@ export async function POST(req: NextRequest) {
             const rawText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
             if (rawText) {
               const parsed = JSON.parse(rawText.trim());
-              const calories = Number(parsed.calories) || 500;
+              const isFood = parsed.isFood !== false && Number(parsed.calories) > 0 && !String(parsed.dishName).toLowerCase().includes('не еда');
+              const calories = isFood ? (Number(parsed.calories) || 500) : 0;
               const result = buildResult(
-                parsed.dishName || 'Блюдо',
+                parsed.dishName || (isFood ? 'Блюдо' : 'Не еда'),
                 calories,
-                Number(parsed.weightGrams) || 300,
-                parsed.macros || { protein: 20, fat: 20, carbs: 50 },
+                Number(parsed.weightGrams) || 0,
+                parsed.macros || { protein: 0, fat: 0, carbs: 0 },
                 parsed.motivation
               );
+              result.isFood = isFood;
               return NextResponse.json({ success: true, result, source: `gemini (${modelName})` });
             }
           }
