@@ -146,23 +146,40 @@ export default function FoodScannerModal({
           </button>
         </div>
 
-        {/* Hidden Camera Input (Opens Native Camera Directly) */}
+        {/* Native Camera Input (Off-screen, not display:none to prevent WebView security drop) */}
         <input
+          id="modal-camera-input"
           ref={cameraInputRef}
           type="file"
           accept="image/*"
-          capture="environment"
           onChange={handleFileChange}
-          className="hidden"
+          style={{
+            position: 'fixed',
+            top: '-9999px',
+            left: '-9999px',
+            opacity: 0.001,
+            width: '1px',
+            height: '1px',
+            zIndex: -1,
+          }}
         />
 
-        {/* Hidden Gallery Input (Photo Library) */}
+        {/* Native Gallery Input */}
         <input
+          id="modal-gallery-input"
           ref={galleryInputRef}
           type="file"
           accept="image/*"
           onChange={handleFileChange}
-          className="hidden"
+          style={{
+            position: 'fixed',
+            top: '-9999px',
+            left: '-9999px',
+            opacity: 0.001,
+            width: '1px',
+            height: '1px',
+            zIndex: -1,
+          }}
         />
 
         {/* Content Area */}
@@ -170,11 +187,10 @@ export default function FoodScannerModal({
           {!imagePreview ? (
             /* Upload & Camera Prompt */
             <div className="flex flex-col gap-3">
-              {/* Primary Direct Camera Action */}
-              <button
-                type="button"
-                onClick={() => cameraInputRef.current?.click()}
-                className="w-full py-5 px-4 rounded-2xl bg-[#C6FF33] hover:bg-[#b0f020] text-black font-heading font-black text-sm uppercase tracking-wider shadow-[0_0_25px_rgba(198,255,51,0.3)] transition flex items-center justify-center gap-3 active:scale-95 ease-signature group"
+              {/* Primary Direct Camera Action via Native Label */}
+              <label
+                htmlFor="modal-camera-input"
+                className="cursor-pointer w-full py-5 px-4 rounded-2xl bg-[#C6FF33] hover:bg-[#b0f020] text-black font-heading font-black text-sm uppercase tracking-wider shadow-[0_0_25px_rgba(198,255,51,0.3)] transition flex items-center justify-center gap-3 active:scale-95 ease-signature group"
               >
                 <div className="w-11 h-11 rounded-full bg-black/15 flex items-center justify-center text-black group-hover:scale-110 transition">
                   <Camera className="w-6 h-6" />
@@ -187,19 +203,18 @@ export default function FoodScannerModal({
                     Напрямую открывает камеру телефона
                   </span>
                 </div>
-              </button>
+              </label>
 
-              {/* Secondary Gallery Action */}
-              <button
-                type="button"
-                onClick={() => galleryInputRef.current?.click()}
-                className="w-full py-3.5 px-4 rounded-2xl border border-white/10 bg-[#12151F] hover:bg-[#1a1e2b] text-white transition flex items-center justify-center gap-2 active:scale-95 ease-signature"
+              {/* Secondary Gallery Action via Native Label */}
+              <label
+                htmlFor="modal-gallery-input"
+                className="cursor-pointer w-full py-3.5 px-4 rounded-2xl border border-white/10 bg-[#12151F] hover:bg-[#1a1e2b] text-white transition flex items-center justify-center gap-2 active:scale-95 ease-signature"
               >
                 <Upload className="w-4 h-4 text-gray-400" />
                 <span className="text-xs font-heading font-bold text-gray-300">
                   Выбрать фото из галереи
                 </span>
-              </button>
+              </label>
 
               <div className="grid grid-cols-3 gap-2 pt-1 text-center">
                 <div className="bg-[#12151F] border border-white/5 rounded-xl p-2.5">

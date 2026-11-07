@@ -2063,14 +2063,14 @@ export default function RunnerApp() {
             <Crosshair className={`w-4 h-4 text-[#C6FF33] ${isCheckingGps ? 'animate-spin' : ''}`} />
           </button>
 
-          {/* Floating AI Camera Button (Opens Phone Camera Directly) */}
-          <button
-            onClick={() => mainCameraInputRef.current?.click()}
-            className="pointer-events-auto w-9 h-9 rounded-2xl bg-[#C6FF33] flex items-center justify-center text-black shadow-[0_0_20px_rgba(198,255,51,0.4)] active:scale-95 transition"
+          {/* Floating AI Camera Button (Direct Native Label Trigger) */}
+          <label
+            htmlFor="main-camera-input"
+            className="cursor-pointer pointer-events-auto w-9 h-9 rounded-2xl bg-[#C6FF33] flex items-center justify-center text-black shadow-[0_0_20px_rgba(198,255,51,0.4)] active:scale-95 transition"
             title="Сфотографировать еду на камеру"
           >
             <Camera className="w-4 h-4 fill-black" />
-          </button>
+          </label>
         </div>
       )}
 
@@ -2301,17 +2301,16 @@ export default function RunnerApp() {
                   </button>
                 )}
 
-                {/* Big AI Camera Button (Synchronous Native Camera Trigger) */}
-                <button
-                  type="button"
-                  onClick={() => mainCameraInputRef.current?.click()}
+                {/* Big AI Camera Button (Direct Native Label Trigger) */}
+                <label
+                  htmlFor="main-camera-input"
                   aria-label="ИИ-сканер еды"
-                  className="h-11 px-3.5 bg-[#C6FF33] hover:bg-[#b0f020] text-black font-heading font-black text-xs uppercase tracking-wider rounded-full transition flex items-center gap-1.5 shadow-[0_0_15px_rgba(198,255,51,0.3)] active:scale-95 shrink-0 ease-signature"
+                  className="cursor-pointer h-11 px-3.5 bg-[#C6FF33] hover:bg-[#b0f020] text-black font-heading font-black text-xs uppercase tracking-wider rounded-full transition flex items-center gap-1.5 shadow-[0_0_15px_rgba(198,255,51,0.3)] active:scale-95 shrink-0 ease-signature"
                   title="Открыть камеру и распознать калории"
                 >
                   <Camera className="w-4 h-4 fill-black" />
                   <span>Камера ИИ</span>
-                </button>
+                </label>
 
                 <button
                   type="button"
@@ -2745,14 +2744,22 @@ export default function RunnerApp() {
         }}
       />
 
-      {/* Hidden Native Camera Input triggered directly by user gesture */}
+      {/* Native Camera/File Input (Off-screen to guarantee WebView triggers camera) */}
       <input
+        id="main-camera-input"
         ref={mainCameraInputRef}
         type="file"
         accept="image/*"
-        capture="environment"
         onChange={handleDirectCameraCapture}
-        className="hidden"
+        style={{
+          position: 'fixed',
+          top: '-9999px',
+          left: '-9999px',
+          opacity: 0.001,
+          width: '1px',
+          height: '1px',
+          zIndex: -1,
+        }}
       />
 
       {/* AI Food Scanner Modal */}
