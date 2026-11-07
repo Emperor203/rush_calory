@@ -140,6 +140,15 @@ export default function FoodScannerModal({
   };
 
   React.useEffect(() => {
+    if (isLiveCameraActive && streamRef.current && videoRef.current) {
+      if (videoRef.current.srcObject !== streamRef.current) {
+        videoRef.current.srcObject = streamRef.current;
+      }
+      videoRef.current.play().catch(() => {});
+    }
+  }, [isLiveCameraActive, facingMode]);
+
+  React.useEffect(() => {
     return () => {
       stopLiveCamera();
     };
@@ -267,7 +276,13 @@ export default function FoodScannerModal({
               /* Live Camera Viewfinder */
               <div className="relative w-full h-80 rounded-2xl overflow-hidden bg-black border border-[#C6FF33]/40 flex flex-col justify-between p-3 shadow-[0_0_30px_rgba(198,255,51,0.15)]">
                 <video
-                  ref={videoRef}
+                  ref={(el) => {
+                    videoRef.current = el;
+                    if (el && streamRef.current && el.srcObject !== streamRef.current) {
+                      el.srcObject = streamRef.current;
+                      el.play().catch(() => {});
+                    }
+                  }}
                   autoPlay
                   playsInline
                   muted
