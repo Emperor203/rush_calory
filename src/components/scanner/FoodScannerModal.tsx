@@ -33,8 +33,6 @@ export default function FoodScannerModal({
   const [scanResult, setScanResult] = useState<FoodScanResult | null>(null);
   const [burnMode, setBurnMode] = useState<'easy' | 'balanced' | 'full'>('balanced');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const cameraInputRef = useRef<HTMLInputElement | null>(null);
-  const galleryInputRef = useRef<HTMLInputElement | null>(null);
 
   const multiplier = burnMode === 'easy' ? 0.45 : burnMode === 'balanced' ? 0.70 : 1.0;
   const targetCalories = scanResult ? Math.round(scanResult.calories * multiplier) : 350;
@@ -107,8 +105,6 @@ export default function FoodScannerModal({
     setImagePreview(null);
     setScanResult(null);
     setErrorMsg(null);
-    if (cameraInputRef.current) cameraInputRef.current.value = '';
-    if (galleryInputRef.current) galleryInputRef.current.value = '';
   };
 
   return (
@@ -146,75 +142,45 @@ export default function FoodScannerModal({
           </button>
         </div>
 
-        {/* Native Camera Input (Off-screen, not display:none to prevent WebView security drop) */}
-        <input
-          id="modal-camera-input"
-          ref={cameraInputRef}
-          type="file"
-          accept="image/*"
-          onChange={handleFileChange}
-          style={{
-            position: 'fixed',
-            top: '-9999px',
-            left: '-9999px',
-            opacity: 0.001,
-            width: '1px',
-            height: '1px',
-            zIndex: -1,
-          }}
-        />
-
-        {/* Native Gallery Input */}
-        <input
-          id="modal-gallery-input"
-          ref={galleryInputRef}
-          type="file"
-          accept="image/*"
-          onChange={handleFileChange}
-          style={{
-            position: 'fixed',
-            top: '-9999px',
-            left: '-9999px',
-            opacity: 0.001,
-            width: '1px',
-            height: '1px',
-            zIndex: -1,
-          }}
-        />
-
         {/* Content Area */}
         <div className="py-4 space-y-4">
           {!imagePreview ? (
             /* Upload & Camera Prompt */
             <div className="flex flex-col gap-3">
-              {/* Primary Direct Camera Action via Native Label */}
-              <label
-                htmlFor="modal-camera-input"
-                className="cursor-pointer w-full py-5 px-4 rounded-2xl bg-[#C6FF33] hover:bg-[#b0f020] text-black font-heading font-black text-sm uppercase tracking-wider shadow-[0_0_25px_rgba(198,255,51,0.3)] transition flex items-center justify-center gap-3 active:scale-95 ease-signature group"
-              >
-                <div className="w-11 h-11 rounded-full bg-black/15 flex items-center justify-center text-black group-hover:scale-110 transition">
+              {/* Primary Direct Camera Action via Overlay Input */}
+              <div className="relative overflow-hidden w-full py-5 px-4 rounded-2xl bg-[#C6FF33] hover:bg-[#b0f020] text-black font-heading font-black text-sm uppercase tracking-wider shadow-[0_0_25px_rgba(198,255,51,0.3)] transition flex items-center justify-center gap-3 active:scale-95 ease-signature group">
+                <div className="w-11 h-11 rounded-full bg-black/15 flex items-center justify-center text-black group-hover:scale-110 transition pointer-events-none">
                   <Camera className="w-6 h-6" />
                 </div>
-                <div className="text-left">
+                <div className="text-left pointer-events-none">
                   <span className="block text-sm font-heading font-black text-black">
                     Сфотографировать блюдо
                   </span>
                   <span className="text-[11px] font-body text-black/75">
-                    Напрямую открывает камеру телефона
+                    Нажмите для снимка на камеру
                   </span>
                 </div>
-              </label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-30"
+                />
+              </div>
 
-              {/* Secondary Gallery Action via Native Label */}
-              <label
-                htmlFor="modal-gallery-input"
-                className="cursor-pointer w-full py-3.5 px-4 rounded-2xl border border-white/10 bg-[#12151F] hover:bg-[#1a1e2b] text-white transition flex items-center justify-center gap-2 active:scale-95 ease-signature"
-              >
-                <Upload className="w-4 h-4 text-gray-400" />
-                <span className="text-xs font-heading font-bold text-gray-300">
+              {/* Secondary Gallery Action via Overlay Input */}
+              <div className="relative overflow-hidden w-full py-3.5 px-4 rounded-2xl border border-white/10 bg-[#12151F] hover:bg-[#1a1e2b] text-white transition flex items-center justify-center gap-2 active:scale-95 ease-signature">
+                <Upload className="w-4 h-4 text-gray-400 pointer-events-none" />
+                <span className="text-xs font-heading font-bold text-gray-300 pointer-events-none">
                   Выбрать фото из галереи
                 </span>
-              </label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-30"
+                />
+              </div>
 
               <div className="grid grid-cols-3 gap-2 pt-1 text-center">
                 <div className="bg-[#12151F] border border-white/5 rounded-xl p-2.5">

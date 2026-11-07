@@ -183,7 +183,6 @@ export default function RunnerApp() {
   const [scannedInitialImage, setScannedInitialImage] = useState<{ base64: string; mimeType: string } | null>(null);
   const [isStoryModalOpen, setIsStoryModalOpen] = useState<boolean>(false);
   const [isHudCollapsed, setIsHudCollapsed] = useState<boolean>(false);
-  const mainCameraInputRef = useRef<HTMLInputElement | null>(null);
 
   const handleDirectCameraCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -1434,8 +1433,9 @@ export default function RunnerApp() {
   }, [startPos]);
 
   const handleWeightChange = (val: number) => {
-    setWeightKg(val);
-    localStorage.setItem('runner_weight', val.toString());
+    const clamped = Math.min(100, Math.max(30, Math.round(val)));
+    setWeightKg(clamped);
+    localStorage.setItem('runner_weight', clamped.toString());
   };
 
   const handleGenerateRoute = async (offset = bearingOffset, parks = preferParks) => {
@@ -2063,14 +2063,17 @@ export default function RunnerApp() {
             <Crosshair className={`w-4 h-4 text-[#C6FF33] ${isCheckingGps ? 'animate-spin' : ''}`} />
           </button>
 
-          {/* Floating AI Camera Button (Direct Native Label Trigger) */}
-          <label
-            htmlFor="main-camera-input"
-            className="cursor-pointer pointer-events-auto w-9 h-9 rounded-2xl bg-[#C6FF33] flex items-center justify-center text-black shadow-[0_0_20px_rgba(198,255,51,0.4)] active:scale-95 transition"
-            title="Сфотографировать еду на камеру"
-          >
-            <Camera className="w-4 h-4 fill-black" />
-          </label>
+          {/* Floating AI Camera Button (Direct Overlay Input) */}
+          <div className="relative overflow-hidden pointer-events-auto w-9 h-9 rounded-2xl bg-[#C6FF33] flex items-center justify-center text-black shadow-[0_0_20px_rgba(198,255,51,0.4)] active:scale-95 transition">
+            <Camera className="w-4 h-4 fill-black pointer-events-none" />
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleDirectCameraCapture}
+              className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-30"
+              title="Сфотографировать еду"
+            />
+          </div>
         </div>
       )}
 
@@ -2301,16 +2304,21 @@ export default function RunnerApp() {
                   </button>
                 )}
 
-                {/* Big AI Camera Button (Direct Native Label Trigger) */}
-                <label
-                  htmlFor="main-camera-input"
-                  aria-label="ИИ-сканер еды"
-                  className="cursor-pointer h-11 px-3.5 bg-[#C6FF33] hover:bg-[#b0f020] text-black font-heading font-black text-xs uppercase tracking-wider rounded-full transition flex items-center gap-1.5 shadow-[0_0_15px_rgba(198,255,51,0.3)] active:scale-95 shrink-0 ease-signature"
+                {/* Big AI Camera Button (Direct Overlay Input) */}
+                <div
+                  className="relative overflow-hidden h-11 px-3.5 bg-[#C6FF33] hover:bg-[#b0f020] text-black font-heading font-black text-xs uppercase tracking-wider rounded-full transition flex items-center gap-1.5 shadow-[0_0_15px_rgba(198,255,51,0.3)] active:scale-95 shrink-0 ease-signature cursor-pointer"
                   title="Открыть камеру и распознать калории"
                 >
-                  <Camera className="w-4 h-4 fill-black" />
-                  <span>Камера ИИ</span>
-                </label>
+                  <Camera className="w-4 h-4 fill-black pointer-events-none" />
+                  <span className="pointer-events-none">Камера ИИ</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleDirectCameraCapture}
+                    className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-30"
+                    title="Сфотографировать еду"
+                  />
+                </div>
 
                 <button
                   type="button"
@@ -2474,21 +2482,41 @@ export default function RunnerApp() {
                     </button>
                   </div>
 
-                  {/* Weight & Pace */}
-                  <div className="grid grid-cols-2 gap-1.5">
-                    <div>
-                      <label className="block text-[9px] text-gray-400 font-semibold mb-0.5">
-                        Вес (кг)
-                      </label>
+                  {/* Weight Setting (30 to 100 kg) & Pace */}
+                  <div className="space-y-2">
+                    <div className="bg-[#121212]/75 backdrop-blur-md border border-white/10 rounded-xl p-2.5">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">
+                          Вес бегуна
+                        </label>
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="number"
+                            min={30}
+                            max={100}
+                            value={weightKg}
+                            onChange={(e) => handleWeightChange(parseFloat(e.target.value) || 70)}
+                            className="w-12 bg-black/40 border border-white/10 rounded px-1.5 py-0.5 text-right font-mono font-bold text-xs text-[#C6FF33] focus:outline-none focus:border-[#C6FF33]"
+                          />
+                          <span className="text-[10px] text-gray-400 font-body">кг</span>
+                        </div>
+                      </div>
                       <input
-                        type="number"
-                        min={40}
-                        max={160}
+                        type="range"
+                        min={30}
+                        max={100}
+                        step={1}
                         value={weightKg}
                         onChange={(e) => handleWeightChange(parseFloat(e.target.value) || 70)}
-                        className="w-full bg-[#121212]/75 backdrop-blur-md border border-white/10 rounded-lg px-2 py-1 text-xs font-mono font-bold text-white focus:outline-none focus:border-[#7D39EB]"
+                        className="w-full h-1.5 bg-[#242424] rounded-lg appearance-none cursor-pointer accent-[#C6FF33]"
                       />
+                      <div className="flex justify-between items-center text-[9px] text-gray-400 font-mono mt-1">
+                        <span>30 кг</span>
+                        <span>65 кг</span>
+                        <span>100 кг</span>
+                      </div>
                     </div>
+
                     <div>
                       <label className="block text-[9px] text-gray-400 font-semibold mb-0.5">
                         Темп
@@ -2496,7 +2524,7 @@ export default function RunnerApp() {
                       <select
                         value={pace}
                         onChange={(e) => setPace(parseFloat(e.target.value))}
-                        className="w-full bg-[#121212]/75 backdrop-blur-md border border-white/10 rounded-lg px-1.5 py-1 text-xs font-semibold text-white focus:outline-none focus:border-[#7D39EB]"
+                        className="w-full bg-[#121212]/75 backdrop-blur-md border border-white/10 rounded-lg px-2 py-1.5 text-xs font-semibold text-white focus:outline-none focus:border-[#7D39EB]"
                       >
                         {PACES.map((pc) => (
                           <option key={pc.minPerKm} value={pc.minPerKm}>
@@ -2741,24 +2769,6 @@ export default function RunnerApp() {
         currentUser={googleUser}
         onUserUpdate={(updated) => {
           setGoogleUser(updated);
-        }}
-      />
-
-      {/* Native Camera/File Input (Off-screen to guarantee WebView triggers camera) */}
-      <input
-        id="main-camera-input"
-        ref={mainCameraInputRef}
-        type="file"
-        accept="image/*"
-        onChange={handleDirectCameraCapture}
-        style={{
-          position: 'fixed',
-          top: '-9999px',
-          left: '-9999px',
-          opacity: 0.001,
-          width: '1px',
-          height: '1px',
-          zIndex: -1,
         }}
       />
 
