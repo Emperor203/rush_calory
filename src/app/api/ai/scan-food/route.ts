@@ -94,8 +94,10 @@ function buildResult(
   macros: { protein: number; fat: number; carbs: number } = { protein: 20, fat: 20, carbs: 50 },
   motivation?: string
 ): FoodScanResult {
-  // Average runner burns ~65-75 kcal per km (e.g. 70kg runner ~ 70 kcal/km)
-  const suggestedDistanceKm = Math.max(1.2, Math.round((calories / 68) * 10) / 10);
+  // Balanced metabolic rate (~110 kcal/km with EPOC afterburn and urban pacing)
+  // Targets comfortable ~70% active calorie burn so runners get achievable 2.5–4.5 km routes instead of exhausting 9-10 km!
+  const targetCalories = Math.round(calories * 0.7);
+  const suggestedDistanceKm = Math.min(5.5, Math.max(1.5, Math.round((targetCalories / 110) * 10) / 10));
   const burnPaceMinPerKm = 5.5; // 5:30 min/km
   const burnDurationMinutes = Math.round(suggestedDistanceKm * burnPaceMinPerKm);
 
@@ -109,7 +111,7 @@ function buildResult(
     burnDurationMinutes,
     motivation:
       motivation ||
-      `Чтобы сжечь ${calories} ккал от «${dishName}», пробегите ${suggestedDistanceKm} км в комфортном темпе!`,
+      `Чтобы комфортно сжечь лишнее от «${dishName}», пробегите ${suggestedDistanceKm} км в удовольствие!`,
   };
 }
 

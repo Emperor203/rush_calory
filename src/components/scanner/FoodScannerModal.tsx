@@ -31,9 +31,15 @@ export default function FoodScannerModal({
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
   const [scanResult, setScanResult] = useState<FoodScanResult | null>(null);
+  const [burnMode, setBurnMode] = useState<'easy' | 'balanced' | 'full'>('balanced');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
   const galleryInputRef = useRef<HTMLInputElement | null>(null);
+
+  const multiplier = burnMode === 'easy' ? 0.45 : burnMode === 'balanced' ? 0.70 : 1.0;
+  const targetCalories = scanResult ? Math.round(scanResult.calories * multiplier) : 350;
+  const targetDistanceKm = Math.min(5.8, Math.max(1.5, Math.round((targetCalories / 110) * 10) / 10));
+  const targetMinutes = Math.round(targetDistanceKm * 5.5);
 
   React.useEffect(() => {
     if (isOpen && initialImage) {
@@ -93,7 +99,7 @@ export default function FoodScannerModal({
 
   const handleApply = () => {
     if (!scanResult) return;
-    onApplyCaloriesAndRoute(scanResult.calories);
+    onApplyCaloriesAndRoute(targetCalories);
     onClose();
   };
 
@@ -305,29 +311,87 @@ export default function FoodScannerModal({
                     )}
                   </div>
 
-                  {/* Burn Route Mission */}
-                  <div className="bg-gradient-to-r from-[#7D39EB]/20 to-purple-900/10 border border-[#7D39EB]/40 rounded-2xl p-3.5 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-[#7D39EB] flex items-center justify-center text-white shrink-0 shadow-lg">
-                        <Zap className="w-5 h-5" />
+                  {/* Burn Intensity Mode Selector */}
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between items-center text-[10px] text-gray-400 font-heading uppercase tracking-wide">
+                      <span>Режим сжигания калорий:</span>
+                      <span className="text-[#C6FF33] font-bold font-mono">~{targetCalories} ккал</span>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setBurnMode('easy')}
+                        className={`p-2 rounded-xl text-center transition active:scale-95 ease-signature ${
+                          burnMode === 'easy'
+                            ? 'bg-[#12151F] border-2 border-[#C6FF33] text-white shadow-md'
+                            : 'bg-[#12151F]/60 border border-white/5 text-gray-400'
+                        }`}
+                      >
+                        <div className="text-[10px] font-heading font-bold text-emerald-400 uppercase">Лёгкий</div>
+                        <div className="text-xs font-mono font-black text-white mt-0.5">
+                          {Math.min(5.5, Math.max(1.5, Math.round((scanResult.calories * 0.45 / 110) * 10) / 10))} км
+                        </div>
+                        <div className="text-[9px] text-gray-400 font-body">45% порции</div>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setBurnMode('balanced')}
+                        className={`p-2 rounded-xl text-center transition active:scale-95 ease-signature ${
+                          burnMode === 'balanced'
+                            ? 'bg-[#7D39EB] text-white shadow-lg border-2 border-purple-400'
+                            : 'bg-[#12151F]/60 border border-white/5 text-gray-400'
+                        }`}
+                      >
+                        <div className="text-[10px] font-heading font-black text-[#C6FF33] uppercase">Баланс</div>
+                        <div className="text-xs font-mono font-black text-white mt-0.5">
+                          {Math.min(5.5, Math.max(1.5, Math.round((scanResult.calories * 0.70 / 110) * 10) / 10))} км
+                        </div>
+                        <div className="text-[9px] text-purple-200 font-body">70% порции</div>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setBurnMode('full')}
+                        className={`p-2 rounded-xl text-center transition active:scale-95 ease-signature ${
+                          burnMode === 'full'
+                            ? 'bg-[#12151F] border-2 border-rose-500 text-white shadow-md'
+                            : 'bg-[#12151F]/60 border border-white/5 text-gray-400'
+                        }`}
+                      >
+                        <div className="text-[10px] font-heading font-bold text-rose-400 uppercase">100%</div>
+                        <div className="text-xs font-mono font-black text-white mt-0.5">
+                          {Math.min(5.8, Math.max(1.5, Math.round((scanResult.calories / 110) * 10) / 10))} км
+                        </div>
+                        <div className="text-[9px] text-gray-400 font-body">Вся еда</div>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Burn Route Mission Banner */}
+                  <div className="bg-gradient-to-r from-[#7D39EB]/20 to-purple-900/10 border border-[#7D39EB]/40 rounded-2xl p-3 flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-9 h-9 rounded-xl bg-[#7D39EB] flex items-center justify-center text-white shrink-0 shadow-lg">
+                        <Zap className="w-4 h-4" />
                       </div>
                       <div>
-                        <span className="text-[10px] uppercase tracking-wider text-purple-300 font-heading block">
-                          Маршрут сжигания
+                        <span className="text-[9px] uppercase tracking-wider text-purple-300 font-heading block">
+                          Оптимальный маршрут от дома
                         </span>
                         <div className="flex items-baseline gap-1.5">
-                          <span className="text-xl font-heading font-black text-white">
-                            {scanResult.suggestedDistanceKm} км
+                          <span className="text-lg font-heading font-black text-white">
+                            {targetDistanceKm} км
                           </span>
                           <span className="text-xs text-gray-300 font-body">
-                            (~{scanResult.burnDurationMinutes} мин)
+                            (~{targetMinutes} мин в темпе 5:30)
                           </span>
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  <p className="text-xs text-gray-400 text-center italic font-body">
+                  <p className="text-[11px] text-gray-400 text-center italic font-body">
                     «{scanResult.motivation}»
                   </p>
                 </div>
@@ -345,7 +409,7 @@ export default function FoodScannerModal({
               className="w-full py-3.5 px-4 bg-[#C6FF33] hover:bg-[#b0f020] text-black font-heading text-xs uppercase tracking-wider rounded-full shadow-xl transition flex items-center justify-center gap-2 active:scale-95 ease-signature font-bold"
             >
               <Zap className="w-4 h-4 fill-black" />
-              <span>Построить маршрут на {scanResult.suggestedDistanceKm}&nbsp;км</span>
+              <span>Построить маршрут на {targetDistanceKm}&nbsp;км</span>
             </button>
           ) : (
             <button
