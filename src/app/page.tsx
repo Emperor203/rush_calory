@@ -60,6 +60,7 @@ import {
   Moon,
   Layers,
   Map as MapIcon,
+  X,
 } from 'lucide-react';
 
 const PRESETS = [
@@ -139,7 +140,7 @@ export default function RunnerApp() {
   // GPS & Location State
   const [startPos, setStartPos] = useState<[number, number]>([41.311081, 69.279737]);
   const [gpsStatus, setGpsStatus] = useState<GpsStatus | null>(null);
-  const [gpsModalDismissed, setGpsModalDismissed] = useState<boolean>(false);
+  const [isGpsModalExplicitlyOpen, setIsGpsModalExplicitlyOpen] = useState<boolean>(false);
   const [isCheckingGps, setIsCheckingGps] = useState<boolean>(false);
 
   // Calorie & Runner Settings
@@ -194,7 +195,7 @@ export default function RunnerApp() {
   const realtimeChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   // Strict GPS Verification
-  const runStrictGpsVerification = async () => {
+  const runStrictGpsVerification = async (explicit: boolean = false) => {
     setIsCheckingGps(true);
     const status = await requestStrictGps();
     setGpsStatus(status);
@@ -202,6 +203,9 @@ export default function RunnerApp() {
 
     if (status.coords) {
       setStartPos(status.coords);
+      setIsGpsModalExplicitlyOpen(false);
+    } else if (explicit) {
+      setIsGpsModalExplicitlyOpen(true);
     }
   };
 
@@ -1714,7 +1718,7 @@ export default function RunnerApp() {
   };
 
   const showGpsLock =
-    gpsStatus && (!gpsStatus.hasPermission || !gpsStatus.isAccurate) && !gpsModalDismissed;
+    isGpsModalExplicitlyOpen && gpsStatus && (!gpsStatus.hasPermission || !gpsStatus.isAccurate);
 
   return (
     <div className="relative w-screen h-screen overflow-hidden flex flex-col bg-[#0A0E17] text-gray-100 font-sans safe-top">
@@ -1738,26 +1742,36 @@ export default function RunnerApp() {
         />
       </div>
 
-      {/* --- STRICT GPS LOCK SCREEN MODAL --- */}
+      {/* --- STRICT GPS LOCK SCREEN MODAL (AI-RULES v3 Compliant) --- */}
       {showGpsLock && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fade-in safe-bottom">
-          <div className="relative w-full max-w-sm sm:max-w-md bg-[#0E1420] border-2 border-rose-500/70 rounded-3xl p-5 sm:p-6 text-white shadow-2xl">
-            <div className="w-12 h-12 rounded-2xl bg-rose-500/10 border border-rose-500/40 flex items-center justify-center text-rose-400 mb-3 mx-auto">
-              <AlertTriangle className="w-6 h-6 animate-pulse" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-xl animate-fade-in safe-bottom">
+          <div className="relative w-full max-w-sm sm:max-w-md bg-[#08090C] border border-white/10 rounded-3xl p-5 sm:p-6 text-white shadow-2xl">
+            {/* Top-right close button */}
+            <button
+              type="button"
+              onClick={() => setIsGpsModalExplicitlyOpen(false)}
+              className="absolute top-4 right-4 p-2 text-gray-400 hover:text-white rounded-full transition"
+              aria-label="Закрыть"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="w-12 h-12 rounded-2xl bg-[#C6FF33]/10 border border-[#C6FF33]/30 flex items-center justify-center text-[#C6FF33] mb-3 mx-auto">
+              <Crosshair className="w-6 h-6 animate-pulse" />
             </div>
 
-            <h2 className="text-base sm:text-lg font-black text-center mb-1">
+            <h2 className="text-base sm:text-lg font-heading text-center mb-1 text-white">
               ТРЕБУЕТСЯ ТОЧНЫЙ GPS ДЛЯ БЕГА
             </h2>
-            <p className="text-[11px] sm:text-xs text-gray-400 text-center mb-4">
+            <p className="text-[11px] sm:text-xs text-gray-400 text-center mb-4 font-body">
               Точность геопозиции должна быть{' '}
-              <strong className="text-white">не хуже ±{GPS_ACCURACY_THRESHOLD_METERS} метров</strong>.
+              <strong className="text-white">не хуже ±{GPS_ACCURACY_THRESHOLD_METERS}&nbsp;метров</strong>
             </p>
 
-            <div className="bg-gray-900/80 border border-gray-800 rounded-2xl p-3.5 mb-4 text-xs space-y-2">
+            <div className="bg-[#12151F] border border-white/10 rounded-2xl p-3.5 mb-4 text-xs space-y-2">
               <div className="flex justify-between items-center">
-                <span className="text-gray-400">Статус:</span>
-                <span className="text-rose-400 font-bold">
+                <span className="text-gray-400 font-body">Статус:</span>
+                <span className="text-rose-400 font-medium">
                   {gpsStatus.permissionState === 'denied'
                     ? 'Заблокировано в браузере'
                     : gpsStatus.hasPermission
@@ -1766,40 +1780,44 @@ export default function RunnerApp() {
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-gray-400">Погрешность:</span>
-                <span className="font-mono font-bold text-amber-400">
+                <span className="text-gray-400 font-body">Погрешность:</span>
+                <span className="font-mono text-[#C6FF33]">
                   {gpsStatus.accuracy ? `±${gpsStatus.accuracy}м` : 'Не определена'}
                 </span>
               </div>
-              <div className="pt-2 border-t border-gray-800 text-[11px] text-gray-300 space-y-1">
-                <p className="font-semibold text-emerald-400">Как включить на телефоне:</p>
+              <div className="pt-2 border-t border-white/5 text-[11px] text-gray-300 space-y-1 font-body">
+                <p className="font-semibold text-[#C6FF33]">Как включить на телефоне:</p>
                 <p>1. В шторке телефона включите «Геолокация» и выберите «Высокая точность».</p>
-                <p>2. В браузере нажмите на значок 🔒/настройки слева от адреса и выберите «Разрешить».</p>
+                <p>2. В браузере нажмите на иконку настроек слева от адреса сайта и выберите «Разрешить».</p>
               </div>
             </div>
 
             <div className="space-y-2">
               <button
                 type="button"
-                onClick={runStrictGpsVerification}
+                onClick={() => runStrictGpsVerification(true)}
                 disabled={isCheckingGps}
-                className="w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs uppercase tracking-wider rounded-xl transition flex items-center justify-center gap-2 active:scale-98"
+                className="w-full py-3.5 bg-[#C6FF33] hover:bg-[#b0f020] text-black font-heading text-xs uppercase tracking-wider rounded-full transition flex items-center justify-center gap-2 active:scale-95 ease-signature"
               >
                 {isCheckingGps ? (
                   <RefreshCw className="w-4 h-4 animate-spin" />
                 ) : (
                   <Navigation2 className="w-4 h-4 fill-black" />
                 )}
-                <span>Повторить проверку GPS</span>
+                <span>Повторить поиск спутников GPS</span>
               </button>
 
               <button
                 type="button"
-                onClick={() => setGpsModalDismissed(true)}
-                className="w-full py-2.5 bg-gray-900 hover:bg-gray-800 border border-gray-800 text-xs font-semibold text-gray-400 hover:text-white rounded-xl transition"
+                onClick={() => setIsGpsModalExplicitlyOpen(false)}
+                className="w-full py-3 bg-[#12151F] hover:bg-[#1a1e2b] border border-white/10 text-xs font-heading tracking-wide text-gray-300 hover:text-white rounded-full transition active:scale-95 ease-signature"
               >
-                Продолжить в демо-режиме (ПК)
+                Продолжить без GPS (демо-режим)
               </button>
+
+              <span className="block text-[11px] text-gray-400 text-center font-body pt-1">
+                Для фиксации рекордов и дуэлей требуется реальный GPS
+              </span>
             </div>
           </div>
         </div>
@@ -1904,7 +1922,7 @@ export default function RunnerApp() {
               <span>Улицы</span>
             </button>
             <button
-              onClick={runStrictGpsVerification}
+              onClick={() => runStrictGpsVerification(true)}
               className="p-1.5 rounded-xl text-gray-300 hover:text-[#C6FF33] hover:bg-[#151515] transition flex items-center justify-center"
               title="Определить точный GPS"
             >
@@ -1977,7 +1995,7 @@ export default function RunnerApp() {
 
           {/* Floating GPS Target button */}
           <button
-            onClick={runStrictGpsVerification}
+            onClick={() => runStrictGpsVerification(true)}
             className="pointer-events-auto w-9 h-9 rounded-2xl bg-[#000000]/75 backdrop-blur-xl border border-white/10 flex items-center justify-center text-[#C6FF33] hover:border-[#C6FF33] shadow-2xl active:scale-95 transition"
             title="Мой точный GPS"
           >
