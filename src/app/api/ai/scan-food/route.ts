@@ -127,10 +127,18 @@ export async function POST(req: NextRequest) {
     const geminiKey = process.env.GEMINI_API_KEY;
 
     if (geminiKey) {
-      try {
-        const geminiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`;
+      const candidateModels = [
+        'gemini-3.5-flash',
+        'gemini-3.5-flash-lite',
+        'gemini-flash-latest',
+        'gemini-3.8-flash',
+      ];
 
-        const prompt = `Ты — профессиональный спортивный диетолог Rush Calory. Твоя задача:
+      for (const modelName of candidateModels) {
+        try {
+          const geminiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${geminiKey}`;
+
+          const prompt = `Ты — профессиональный спортивный диетолог Rush Calory. Твоя задача:
 1. Точно распознать блюдо на фото.
 2. Оценить примерный вес порции в граммах.
 3. Оценить общую калорийность (ккал) и БЖУ (белки, жиры, углеводы в граммах).
@@ -147,48 +155,49 @@ export async function POST(req: NextRequest) {
   "motivation": "Короткая бодрая фраза на русском для бегуна"
 }`;
 
-        const response = await fetch(geminiEndpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [
-              {
-                parts: [
-                  { text: prompt },
-                  {
-                    inlineData: {
-                      mimeType: mimeType,
-                      data: cleanBase64,
+          const response = await fetch(geminiEndpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [
+                {
+                  parts: [
+                    { text: prompt },
+                    {
+                      inlineData: {
+                        mimeType: mimeType,
+                        data: cleanBase64,
+                      },
                     },
-                  },
-                ],
+                  ],
+                },
+              ],
+              generationConfig: {
+                temperature: 0.2,
+                responseMimeType: 'application/json',
               },
-            ],
-            generationConfig: {
-              temperature: 0.2,
-              responseMimeType: 'application/json',
-            },
-          }),
-        });
+            }),
+          });
 
-        if (response.ok) {
-          const geminiData = await response.json();
-          const rawText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (rawText) {
-            const parsed = JSON.parse(rawText.trim());
-            const calories = Number(parsed.calories) || 500;
-            const result = buildResult(
-              parsed.dishName || 'Блюдо',
-              calories,
-              Number(parsed.weightGrams) || 300,
-              parsed.macros || { protein: 20, fat: 20, carbs: 50 },
-              parsed.motivation
-            );
-            return NextResponse.json({ success: true, result, source: 'gemini' });
+          if (response.ok) {
+            const geminiData = await response.json();
+            const rawText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (rawText) {
+              const parsed = JSON.parse(rawText.trim());
+              const calories = Number(parsed.calories) || 500;
+              const result = buildResult(
+                parsed.dishName || 'Блюдо',
+                calories,
+                Number(parsed.weightGrams) || 300,
+                parsed.macros || { protein: 20, fat: 20, carbs: 50 },
+                parsed.motivation
+              );
+              return NextResponse.json({ success: true, result, source: `gemini (${modelName})` });
+            }
           }
+        } catch (geminiError) {
+          console.warn(`Gemini vision model ${modelName} attempt failed:`, geminiError);
         }
-      } catch (geminiError) {
-        console.warn('Gemini vision API fallback engaged:', geminiError);
       }
     }
 
