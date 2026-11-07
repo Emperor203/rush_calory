@@ -34,10 +34,116 @@ export default function FoodScannerModal({
   const [burnMode, setBurnMode] = useState<'easy' | 'balanced' | 'full'>('balanced');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  // In-App Live Camera State
+  const [isLiveCameraActive, setIsLiveCameraActive] = useState<boolean>(false);
+  const [cameraLoading, setCameraLoading] = useState<boolean>(false);
+  const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment');
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const galleryInputRef = useRef<HTMLInputElement | null>(null);
+
   const multiplier = burnMode === 'easy' ? 0.45 : burnMode === 'balanced' ? 0.70 : 1.0;
   const targetCalories = scanResult ? Math.round(scanResult.calories * multiplier) : 350;
   const targetDistanceKm = Math.min(5.8, Math.max(1.5, Math.round((targetCalories / 110) * 10) / 10));
   const targetMinutes = Math.round(targetDistanceKm * 5.5);
+
+  const stopLiveCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+    setIsLiveCameraActive(false);
+    setCameraLoading(false);
+  };
+
+  const startLiveCamera = async (mode: 'environment' | 'user' = facingMode) => {
+    setErrorMsg(null);
+    setCameraLoading(true);
+
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    }
+
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('NOT_SUPPORTED');
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: { ideal: mode },
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
+        audio: false,
+      });
+
+      streamRef.current = stream;
+      setIsLiveCameraActive(true);
+      setFacingMode(mode);
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play().catch(() => {});
+      }
+    } catch (err: any) {
+      console.warn('Live camera error:', err);
+      setIsLiveCameraActive(false);
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        setErrorMsg('Доступ к камере заблокирован в настройках Telegram или телефона. Нажмите ниже, чтобы выбрать фото из галереи.');
+      } else {
+        // Automatically open gallery picker if camera stream fails
+        setErrorMsg('Прямой видеопоток недоступен в этом окне. Открываю выбор фото...');
+        if (galleryInputRef.current) {
+          galleryInputRef.current.click();
+        }
+      }
+    } finally {
+      setCameraLoading(false);
+    }
+  };
+
+  const toggleFacingMode = () => {
+    const nextMode = facingMode === 'environment' ? 'user' : 'environment';
+    startLiveCamera(nextMode);
+  };
+
+  const capturePhoto = () => {
+    if (!videoRef.current) return;
+    try {
+      const video = videoRef.current;
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth || 640;
+      canvas.height = video.videoHeight || 480;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const base64 = canvas.toDataURL('image/jpeg', 0.85);
+
+      stopLiveCamera();
+
+      setImagePreview(base64);
+      setScanResult(null);
+      setErrorMsg(null);
+      analyzeFood(base64, 'image/jpeg');
+    } catch (err) {
+      console.error('Snapshot capture error:', err);
+      setErrorMsg('Не удалось сделать снимок');
+    }
+  };
+
+  React.useEffect(() => {
+    return () => {
+      stopLiveCamera();
+    };
+  }, []);
+
+  React.useEffect(() => {
+    if (!isOpen) {
+      stopLiveCamera();
+    }
+  }, [isOpen]);
 
   React.useEffect(() => {
     if (isOpen && initialImage) {
@@ -105,6 +211,7 @@ export default function FoodScannerModal({
     setImagePreview(null);
     setScanResult(null);
     setErrorMsg(null);
+    stopLiveCamera();
   };
 
   return (
@@ -145,58 +252,123 @@ export default function FoodScannerModal({
         {/* Content Area */}
         <div className="py-4 space-y-4">
           {!imagePreview ? (
-            /* Upload & Camera Prompt */
-            <div className="flex flex-col gap-3">
-              {/* Primary Direct Camera Action via Overlay Input */}
-              <div className="relative overflow-hidden w-full py-5 px-4 rounded-2xl bg-[#C6FF33] hover:bg-[#b0f020] text-black font-heading font-black text-sm uppercase tracking-wider shadow-[0_0_25px_rgba(198,255,51,0.3)] transition flex items-center justify-center gap-3 active:scale-95 ease-signature group">
-                <div className="w-11 h-11 rounded-full bg-black/15 flex items-center justify-center text-black group-hover:scale-110 transition pointer-events-none">
-                  <Camera className="w-6 h-6" />
-                </div>
-                <div className="text-left pointer-events-none">
-                  <span className="block text-sm font-heading font-black text-black">
-                    Сфотографировать блюдо
-                  </span>
-                  <span className="text-[11px] font-body text-black/75">
-                    Нажмите для снимка на камеру
-                  </span>
-                </div>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileChange}
-                  className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-30"
+            isLiveCameraActive ? (
+              /* Live Camera Viewfinder */
+              <div className="relative w-full h-80 rounded-2xl overflow-hidden bg-black border border-[#C6FF33]/40 flex flex-col justify-between p-3 shadow-[0_0_30px_rgba(198,255,51,0.15)]">
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="absolute inset-0 w-full h-full object-cover"
                 />
-              </div>
 
-              {/* Secondary Gallery Action via Overlay Input */}
-              <div className="relative overflow-hidden w-full py-3.5 px-4 rounded-2xl border border-white/10 bg-[#12151F] hover:bg-[#1a1e2b] text-white transition flex items-center justify-center gap-2 active:scale-95 ease-signature">
-                <Upload className="w-4 h-4 text-gray-400 pointer-events-none" />
-                <span className="text-xs font-heading font-bold text-gray-300 pointer-events-none">
-                  Выбрать фото из галереи
-                </span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileChange}
-                  className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-30"
-                />
-              </div>
+                {/* Cyberpunk Crosshair & Reticle Overlay */}
+                <div className="absolute inset-6 pointer-events-none border border-white/20 rounded-xl">
+                  <div className="absolute -top-1 -left-1 w-4 h-4 border-t-2 border-l-2 border-[#C6FF33]" />
+                  <div className="absolute -top-1 -right-1 w-4 h-4 border-t-2 border-r-2 border-[#C6FF33]" />
+                  <div className="absolute -bottom-1 -left-1 w-4 h-4 border-b-2 border-l-2 border-[#C6FF33]" />
+                  <div className="absolute -bottom-1 -right-1 w-4 h-4 border-b-2 border-r-2 border-[#C6FF33]" />
+                </div>
 
-              <div className="grid grid-cols-3 gap-2 pt-1 text-center">
-                <div className="bg-[#12151F] border border-white/5 rounded-xl p-2.5">
-                  <span className="text-[11px] text-gray-400 block font-body">Точность</span>
-                  <span className="text-xs font-heading text-[#C6FF33] font-bold">±15 ккал</span>
+                {/* Top Controls Bar */}
+                <div className="relative z-10 flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md border border-white/10 text-[10px] font-heading font-bold text-[#C6FF33] uppercase tracking-wider">
+                    <span className="w-2 h-2 rounded-full bg-[#C6FF33] animate-ping" />
+                    <span>Камера активна</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={toggleFacingMode}
+                      className="p-2 rounded-full bg-black/60 backdrop-blur-md border border-white/10 text-white hover:text-[#C6FF33] transition"
+                      title="Переключить камеру"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={stopLiveCamera}
+                      className="p-2 rounded-full bg-black/60 backdrop-blur-md border border-white/10 text-white hover:text-rose-400 transition"
+                      title="Отмена"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
-                <div className="bg-[#12151F] border border-white/5 rounded-xl p-2.5">
-                  <span className="text-[11px] text-gray-400 block font-body">Анализ</span>
-                  <span className="text-xs font-heading text-white font-bold">1.2 сек</span>
-                </div>
-                <div className="bg-[#12151F] border border-white/5 rounded-xl p-2.5">
-                  <span className="text-[11px] text-gray-400 block font-body">Результат</span>
-                  <span className="text-xs font-heading text-purple-400 font-bold">Готовый трек</span>
+
+                {/* Bottom Shutter Controls */}
+                <div className="relative z-10 flex items-center justify-center pt-2">
+                  <button
+                    type="button"
+                    onClick={capturePhoto}
+                    className="flex items-center gap-2 px-6 py-3 rounded-full bg-[#C6FF33] text-black font-heading font-black text-sm uppercase tracking-wider shadow-[0_0_25px_rgba(198,255,51,0.5)] active:scale-95 transition"
+                  >
+                    <Camera className="w-5 h-5 fill-black" />
+                    <span>Сделать снимок</span>
+                  </button>
                 </div>
               </div>
-            </div>
+            ) : (
+              /* Prompt: Start Live Camera or Select File */
+              <div className="flex flex-col gap-3">
+                {errorMsg && (
+                  <div className="p-3 rounded-xl bg-amber-950/60 border border-amber-500/40 text-amber-200 text-xs text-center font-body">
+                    {errorMsg}
+                  </div>
+                )}
+
+                {/* Primary Action: Direct Live Camera */}
+                <button
+                  type="button"
+                  onClick={() => startLiveCamera('environment')}
+                  disabled={cameraLoading}
+                  className="w-full py-4 px-4 rounded-2xl bg-[#C6FF33] hover:bg-[#b0f020] text-black font-heading font-black text-sm uppercase tracking-wider shadow-[0_0_25px_rgba(198,255,51,0.3)] transition flex items-center justify-center gap-3 active:scale-95 ease-signature group"
+                >
+                  <div className="w-10 h-10 rounded-full bg-black/15 flex items-center justify-center text-black group-hover:scale-110 transition">
+                    <Camera className="w-5 h-5" />
+                  </div>
+                  <div className="text-left">
+                    <span className="block text-sm font-heading font-black text-black">
+                      {cameraLoading ? 'Запуск видоискателя...' : 'Включить камеру'}
+                    </span>
+                    <span className="text-[11px] font-body text-black/75">
+                      Прямой видоискатель в окне приложения
+                    </span>
+                  </div>
+                </button>
+
+                {/* Secondary Action: Gallery Picker */}
+                <div className="relative overflow-hidden w-full py-3.5 px-4 rounded-2xl border border-white/10 bg-[#12151F] hover:bg-[#1a1e2b] text-white transition flex items-center justify-center gap-2 active:scale-95 ease-signature cursor-pointer">
+                  <Upload className="w-4 h-4 text-gray-400 pointer-events-none" />
+                  <span className="text-xs font-heading font-bold text-gray-300 pointer-events-none">
+                    Выбрать фото из галереи
+                  </span>
+                  <input
+                    ref={galleryInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileChange}
+                    className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-30"
+                  />
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 pt-1 text-center">
+                  <div className="bg-[#12151F] border border-white/5 rounded-xl p-2.5">
+                    <span className="text-[11px] text-gray-400 block font-body">Точность</span>
+                    <span className="text-xs font-heading text-[#C6FF33] font-bold">±15 ккал</span>
+                  </div>
+                  <div className="bg-[#12151F] border border-white/5 rounded-xl p-2.5">
+                    <span className="text-[11px] text-gray-400 block font-body">Анализ</span>
+                    <span className="text-xs font-heading text-white font-bold">1.2 сек</span>
+                  </div>
+                  <div className="bg-[#12151F] border border-white/5 rounded-xl p-2.5">
+                    <span className="text-[11px] text-gray-400 block font-body">Результат</span>
+                    <span className="text-xs font-heading text-purple-400 font-bold">Готовый трек</span>
+                  </div>
+                </div>
+              </div>
+            )
           ) : (
             /* Image Preview & Scanning / Result */
             <div className="space-y-4">

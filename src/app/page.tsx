@@ -184,19 +184,6 @@ export default function RunnerApp() {
   const [isStoryModalOpen, setIsStoryModalOpen] = useState<boolean>(false);
   const [isHudCollapsed, setIsHudCollapsed] = useState<boolean>(false);
 
-  const handleDirectCameraCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const base64 = reader.result as string;
-      setScannedInitialImage({ base64, mimeType: file.type || 'image/jpeg' });
-      setIsFoodScannerOpen(true);
-    };
-    reader.readAsDataURL(file);
-    e.target.value = '';
-  };
-
   const openStreetPass = (tab: 'plans' | 'studio' = 'plans') => {
     setStreetPassTab(tab);
     setIsStreetPassModalOpen(true);
@@ -2063,17 +2050,18 @@ export default function RunnerApp() {
             <Crosshair className={`w-4 h-4 text-[#C6FF33] ${isCheckingGps ? 'animate-spin' : ''}`} />
           </button>
 
-          {/* Floating AI Camera Button (Direct Overlay Input) */}
-          <div className="relative overflow-hidden pointer-events-auto w-9 h-9 rounded-2xl bg-[#C6FF33] flex items-center justify-center text-black shadow-[0_0_20px_rgba(198,255,51,0.4)] active:scale-95 transition">
-            <Camera className="w-4 h-4 fill-black pointer-events-none" />
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleDirectCameraCapture}
-              className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-30"
-              title="Сфотографировать еду"
-            />
-          </div>
+          {/* Floating AI Camera Button */}
+          <button
+            type="button"
+            onClick={() => {
+              setScannedInitialImage(null);
+              setIsFoodScannerOpen(true);
+            }}
+            className="pointer-events-auto w-9 h-9 rounded-2xl bg-[#C6FF33] flex items-center justify-center text-black shadow-[0_0_20px_rgba(198,255,51,0.4)] active:scale-95 transition"
+            title="Сфотографировать еду"
+          >
+            <Camera className="w-4 h-4 fill-black" />
+          </button>
         </div>
       )}
 
@@ -2304,21 +2292,19 @@ export default function RunnerApp() {
                   </button>
                 )}
 
-                {/* Big AI Camera Button (Direct Overlay Input) */}
-                <div
-                  className="relative overflow-hidden h-11 px-3.5 bg-[#C6FF33] hover:bg-[#b0f020] text-black font-heading font-black text-xs uppercase tracking-wider rounded-full transition flex items-center gap-1.5 shadow-[0_0_15px_rgba(198,255,51,0.3)] active:scale-95 shrink-0 ease-signature cursor-pointer"
-                  title="Открыть камеру и распознать калории"
+                {/* Big AI Food Scanner Button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setScannedInitialImage(null);
+                    setIsFoodScannerOpen(true);
+                  }}
+                  className="h-11 px-3.5 bg-[#C6FF33] hover:bg-[#b0f020] text-black font-heading font-black text-xs uppercase tracking-wider rounded-full transition flex items-center gap-1.5 shadow-[0_0_15px_rgba(198,255,51,0.3)] active:scale-95 shrink-0 ease-signature cursor-pointer"
+                  title="Сфотографировать блюдо или выбрать из галереи"
                 >
-                  <Camera className="w-4 h-4 fill-black pointer-events-none" />
-                  <span className="pointer-events-none">Камера ИИ</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleDirectCameraCapture}
-                    className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-30"
-                    title="Сфотографировать еду"
-                  />
-                </div>
+                  <Camera className="w-4 h-4 fill-black" />
+                  <span>Сканер еды</span>
+                </button>
 
                 <button
                   type="button"
