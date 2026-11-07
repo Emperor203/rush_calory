@@ -180,9 +180,23 @@ export default function RunnerApp() {
   const [streetPassTab, setStreetPassTab] = useState<'plans' | 'studio'>('plans');
   const [isPvpPassBlockedOpen, setIsPvpPassBlockedOpen] = useState<boolean>(false);
   const [isFoodScannerOpen, setIsFoodScannerOpen] = useState<boolean>(false);
-  const [autoOpenCamera, setAutoOpenCamera] = useState<boolean>(false);
+  const [scannedInitialImage, setScannedInitialImage] = useState<{ base64: string; mimeType: string } | null>(null);
   const [isStoryModalOpen, setIsStoryModalOpen] = useState<boolean>(false);
   const [isHudCollapsed, setIsHudCollapsed] = useState<boolean>(false);
+  const mainCameraInputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleDirectCameraCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = reader.result as string;
+      setScannedInitialImage({ base64, mimeType: file.type || 'image/jpeg' });
+      setIsFoodScannerOpen(true);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
 
   const openStreetPass = (tab: 'plans' | 'studio' = 'plans') => {
     setStreetPassTab(tab);
@@ -1967,7 +1981,7 @@ export default function RunnerApp() {
           <button
             type="button"
             onClick={() => {
-              setAutoOpenCamera(true);
+              setScannedInitialImage(null);
               setIsFoodScannerOpen(true);
             }}
             className="pointer-events-auto hidden md:flex items-center gap-2 px-4 py-2 rounded-full bg-[#C6FF33] hover:bg-[#b0f020] text-black text-xs font-heading uppercase tracking-wider font-black shadow-[0_0_20px_rgba(198,255,51,0.35)] transition active:scale-95 ease-signature"
@@ -2051,12 +2065,9 @@ export default function RunnerApp() {
 
           {/* Floating AI Camera Button (Opens Phone Camera Directly) */}
           <button
-            onClick={() => {
-              setAutoOpenCamera(true);
-              setIsFoodScannerOpen(true);
-            }}
+            onClick={() => mainCameraInputRef.current?.click()}
             className="pointer-events-auto w-9 h-9 rounded-2xl bg-[#C6FF33] flex items-center justify-center text-black shadow-[0_0_20px_rgba(198,255,51,0.4)] active:scale-95 transition"
-            title="Сфотографировать еду"
+            title="Сфотографировать еду на камеру"
           >
             <Camera className="w-4 h-4 fill-black" />
           </button>
@@ -2290,13 +2301,10 @@ export default function RunnerApp() {
                   </button>
                 )}
 
-                {/* Big AI Camera Button */}
+                {/* Big AI Camera Button (Synchronous Native Camera Trigger) */}
                 <button
                   type="button"
-                  onClick={() => {
-                    setAutoOpenCamera(true);
-                    setIsFoodScannerOpen(true);
-                  }}
+                  onClick={() => mainCameraInputRef.current?.click()}
                   aria-label="ИИ-сканер еды"
                   className="h-11 px-3.5 bg-[#C6FF33] hover:bg-[#b0f020] text-black font-heading font-black text-xs uppercase tracking-wider rounded-full transition flex items-center gap-1.5 shadow-[0_0_15px_rgba(198,255,51,0.3)] active:scale-95 shrink-0 ease-signature"
                   title="Открыть камеру и распознать калории"
@@ -2332,7 +2340,7 @@ export default function RunnerApp() {
                   <button
                     type="button"
                     onClick={() => {
-                      setAutoOpenCamera(true);
+                      setScannedInitialImage(null);
                       setIsFoodScannerOpen(true);
                     }}
                     className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#C6FF33] hover:bg-[#b0f020] text-black text-[11px] font-heading uppercase tracking-wider font-black shadow-md transition active:scale-95 ease-signature"
@@ -2737,15 +2745,25 @@ export default function RunnerApp() {
         }}
       />
 
+      {/* Hidden Native Camera Input triggered directly by user gesture */}
+      <input
+        ref={mainCameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        onChange={handleDirectCameraCapture}
+        className="hidden"
+      />
+
       {/* AI Food Scanner Modal */}
       <FoodScannerModal
         isOpen={isFoodScannerOpen}
         onClose={() => {
           setIsFoodScannerOpen(false);
-          setAutoOpenCamera(false);
+          setScannedInitialImage(null);
         }}
         onApplyCaloriesAndRoute={handleApplyFoodScan}
-        autoOpenCamera={autoOpenCamera}
+        initialImage={scannedInitialImage}
       />
 
       {/* Telegram Stories Share Modal */}

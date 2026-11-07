@@ -19,14 +19,14 @@ interface FoodScannerModalProps {
   isOpen: boolean;
   onClose: () => void;
   onApplyCaloriesAndRoute: (calories: number) => void;
-  autoOpenCamera?: boolean;
+  initialImage?: { base64: string; mimeType: string } | null;
 }
 
 export default function FoodScannerModal({
   isOpen,
   onClose,
   onApplyCaloriesAndRoute,
-  autoOpenCamera = false,
+  initialImage = null,
 }: FoodScannerModalProps) {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
@@ -36,13 +36,13 @@ export default function FoodScannerModal({
   const galleryInputRef = useRef<HTMLInputElement | null>(null);
 
   React.useEffect(() => {
-    if (isOpen && autoOpenCamera && !imagePreview) {
-      const timer = setTimeout(() => {
-        cameraInputRef.current?.click();
-      }, 150);
-      return () => clearTimeout(timer);
+    if (isOpen && initialImage) {
+      setImagePreview(initialImage.base64);
+      setScanResult(null);
+      setErrorMsg(null);
+      analyzeFood(initialImage.base64, initialImage.mimeType);
     }
-  }, [isOpen, autoOpenCamera, imagePreview]);
+  }, [isOpen, initialImage]);
 
   if (!isOpen) return null;
 
