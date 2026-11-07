@@ -22,7 +22,9 @@ import {
   Calendar,
   Sparkles,
   Volume2,
+  Share2,
 } from 'lucide-react';
+import TelegramStoryModal from '@/components/stories/TelegramStoryModal';
 
 interface WorkoutSummaryModalProps {
   isOpen: boolean;
@@ -41,6 +43,8 @@ export default function WorkoutSummaryModal({
 }: WorkoutSummaryModalProps) {
   const [activeTab, setActiveTab] = useState<'summary' | 'history'>(initialTab);
   const [historyList, setHistoryList] = useState<CompletedWorkout[]>([]);
+  const [isStoryModalOpen, setIsStoryModalOpen] = useState<boolean>(false);
+  const [storyWorkout, setStoryWorkout] = useState<CompletedWorkout | null>(null);
 
   const totalCaloriesAll = historyList.reduce((acc, cur) => acc + (cur.caloriesBurned || 0), 0);
   const totalKmAll = historyList.reduce((acc, cur) => acc + (cur.distanceKm || 0), 0);
@@ -265,6 +269,19 @@ export default function WorkoutSummaryModal({
                       <span className="text-[#C6FF33] font-bold">{rankProgress.progressPercent}%</span>
                     </div>
                   </div>
+
+                  {/* Share to Telegram Stories CTA Button */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStoryWorkout(workout);
+                      setIsStoryModalOpen(true);
+                    }}
+                    className="w-full py-3.5 px-4 bg-gradient-to-r from-[#7D39EB] to-[#6025c0] hover:brightness-110 text-white font-heading text-xs uppercase tracking-wider rounded-full shadow-lg transition flex items-center justify-center gap-2 active:scale-95"
+                  >
+                    <Share2 className="w-4 h-4 text-[#C6FF33]" />
+                    <span>Создать карточку для Stories</span>
+                  </button>
                 </>
               ) : (
                 <div className="p-6 text-center text-gray-400 text-xs bg-[#121212] rounded-2xl border border-[#242424]">
@@ -381,12 +398,20 @@ export default function WorkoutSummaryModal({
           <button
             type="button"
             onClick={onClose}
-            className="w-full py-3.5 px-4 bg-[#C6FF33] hover:bg-[#b0f020] text-[#000000] font-black text-xs uppercase tracking-wider rounded-2xl shadow-xl transition active:scale-98 flex items-center justify-center gap-2"
+            className="w-full py-3.5 px-4 bg-[#C6FF33] hover:bg-[#b0f020] text-[#000000] font-black text-xs uppercase tracking-wider rounded-full shadow-xl transition active:scale-95 flex items-center justify-center gap-2"
           >
             <span>Отлично, вернуться на карту</span>
           </button>
         </div>
       </div>
+
+      {/* Telegram Stories Share Modal */}
+      <TelegramStoryModal
+        isOpen={isStoryModalOpen}
+        onClose={() => setIsStoryModalOpen(false)}
+        workout={storyWorkout || workout}
+        currentUser={currentUser}
+      />
     </div>
   );
 }

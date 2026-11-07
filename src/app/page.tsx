@@ -32,6 +32,8 @@ const PvpDuelSystem = dynamic(() => import('@/components/pvp/PvpDuelSystem'), { 
 const WorkoutSummaryModal = dynamic(() => import('@/components/history/WorkoutSummaryModal'), { ssr: false });
 const StreetPassModal = dynamic(() => import('@/components/streetpass/StreetPassModal'), { ssr: false });
 const PvpPassBlockedModal = dynamic(() => import('@/components/streetpass/PvpPassBlockedModal'), { ssr: false });
+const FoodScannerModal = dynamic(() => import('@/components/scanner/FoodScannerModal'), { ssr: false });
+const TelegramStoryModal = dynamic(() => import('@/components/stories/TelegramStoryModal'), { ssr: false });
 import {
   Flame,
   CloudRain,
@@ -61,6 +63,8 @@ import {
   Layers,
   Map as MapIcon,
   X,
+  Camera,
+  Share2,
 } from 'lucide-react';
 
 const PRESETS = [
@@ -174,6 +178,8 @@ export default function RunnerApp() {
   const [isStreetPassModalOpen, setIsStreetPassModalOpen] = useState<boolean>(false);
   const [streetPassTab, setStreetPassTab] = useState<'plans' | 'studio'>('plans');
   const [isPvpPassBlockedOpen, setIsPvpPassBlockedOpen] = useState<boolean>(false);
+  const [isFoodScannerOpen, setIsFoodScannerOpen] = useState<boolean>(false);
+  const [isStoryModalOpen, setIsStoryModalOpen] = useState<boolean>(false);
 
   const openStreetPass = (tab: 'plans' | 'studio' = 'plans') => {
     setStreetPassTab(tab);
@@ -1441,6 +1447,33 @@ export default function RunnerApp() {
     }
   };
 
+  const handleApplyFoodScan = async (scannedCalories: number) => {
+    setCalories(scannedCalories);
+    if (!googleUser) {
+      setIsAuthModalOpen(true);
+      return;
+    }
+    setIsGenerating(true);
+    try {
+      const dist = calculateTargetDistanceKm(scannedCalories, weightKg);
+      const generated = await generateLoopRoute(
+        startPos[0],
+        startPos[1],
+        dist,
+        weightKg,
+        pace,
+        bearingOffset,
+        preferParks
+      );
+      setRoute(generated);
+      setIsMobileExpanded(false);
+    } catch (e) {
+      console.error('Route generation error from food scan', e);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   const handleRotateDirection = () => {
     const nextOffset = (bearingOffset + 60) % 360;
     setBearingOffset(nextOffset);
@@ -1930,6 +1963,17 @@ export default function RunnerApp() {
             </button>
           </div>
 
+          {/* AI Food Scanner Header Button */}
+          <button
+            type="button"
+            onClick={() => setIsFoodScannerOpen(true)}
+            className="pointer-events-auto hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#12151F]/90 hover:bg-[#1a1e2b] border border-[#C6FF33]/40 text-[#C6FF33] text-xs font-heading uppercase tracking-wider font-bold shadow-lg transition active:scale-95"
+            title="ИИ-сканер еды по фото"
+          >
+            <Camera className="w-3.5 h-3.5 text-[#C6FF33]" />
+            <span>Сканер еды</span>
+          </button>
+
           {/* Street Pass VIP Button */}
           <button
             type="button"
@@ -2161,6 +2205,16 @@ export default function RunnerApp() {
 
                 <button
                   type="button"
+                  onClick={() => setIsFoodScannerOpen(true)}
+                  aria-label="ИИ-сканер еды"
+                  className="w-11 h-11 bg-[#12151F] hover:bg-[#1a1e2b] border border-[#C6FF33]/40 text-[#C6FF33] rounded-full transition flex items-center justify-center active:scale-95 shrink-0"
+                  title="ИИ-сканер еды по фото"
+                >
+                  <Camera className="w-4 h-4" />
+                </button>
+
+                <button
+                  type="button"
                   onClick={openWorkoutHistory}
                   aria-label="История пробежек"
                   className="w-11 h-11 bg-[#12151F] hover:bg-[#1a1e2b] border border-white/10 text-gray-300 rounded-full transition flex items-center justify-center active:scale-95 shrink-0"
@@ -2178,11 +2232,22 @@ export default function RunnerApp() {
           <div className={`${isMobileExpanded ? 'block' : 'hidden md:block'} space-y-2.5 pt-2 md:pt-0`}>
             {/* Quick Presets Carousel */}
             <div>
-              <div className="flex justify-between items-center mb-1">
-                <label className="text-[10px] font-bold text-gray-300 uppercase tracking-wide">
+              <div className="flex justify-between items-center mb-1.5">
+                <label className="text-[10px] font-heading font-bold text-gray-300 uppercase tracking-wide">
                   Что сжигаем?
                 </label>
-                <span className="text-[#C6FF33] font-mono text-xs font-bold">{calories} ккал</span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsFoodScannerOpen(true)}
+                    className="flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#C6FF33]/15 hover:bg-[#C6FF33]/25 border border-[#C6FF33]/40 text-[#C6FF33] text-[10px] font-heading uppercase tracking-wider font-bold transition active:scale-95"
+                    title="Сфотографировать еду и рассчитать калории"
+                  >
+                    <Camera className="w-3 h-3" />
+                    <span>ИИ-сканер</span>
+                  </button>
+                  <span className="text-[#C6FF33] font-mono text-xs font-bold">{calories} ккал</span>
+                </div>
               </div>
               <div className="grid grid-cols-3 gap-1">
                 {PRESETS.slice(0, 3).map((p) => (
@@ -2575,6 +2640,21 @@ export default function RunnerApp() {
         onUserUpdate={(updated) => {
           setGoogleUser(updated);
         }}
+      />
+
+      {/* AI Food Scanner Modal */}
+      <FoodScannerModal
+        isOpen={isFoodScannerOpen}
+        onClose={() => setIsFoodScannerOpen(false)}
+        onApplyCaloriesAndRoute={handleApplyFoodScan}
+      />
+
+      {/* Telegram Stories Share Modal */}
+      <TelegramStoryModal
+        isOpen={isStoryModalOpen}
+        onClose={() => setIsStoryModalOpen(false)}
+        workout={completedWorkout}
+        currentUser={googleUser}
       />
     </div>
   );
