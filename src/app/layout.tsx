@@ -35,9 +35,9 @@ export default function RootLayout({
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        {/* OBSION / AI-RULES v3: High-impact display font Unbounded + Oswald, clean body font Golos Text */}
+        {/* AI-RULES v3 §3 TYP-02: Pair #1 Oswald 400 (Display) + Golos Text 400 (Body). Exactly 2 weights. */}
         <link
-          href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;600;700;800&family=Oswald:wght@500;700&family=Unbounded:wght@400;600;700;900&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400&family=Oswald:wght@400&display=swap"
           rel="stylesheet"
         />
         {/* Preconnect & DNS-prefetch to speed up critical external APIs & CDN maps */}

@@ -57,15 +57,18 @@ import {
   Lock,
   Swords,
   History,
+  Moon,
+  Layers,
+  Map as MapIcon,
 } from 'lucide-react';
 
 const PRESETS = [
-  { label: 'Сникерс', kcal: 250, icon: '🍫' },
-  { label: 'Круассан', kcal: 350, icon: '🥐' },
-  { label: 'Бургер', kcal: 550, icon: '🍔' },
-  { label: 'Пицца (2к)', kcal: 720, icon: '🍕' },
-  { label: 'Донат', kcal: 300, icon: '🍩' },
-  { label: 'Кола (0.5)', kcal: 210, icon: '🥤' },
+  { label: 'Сникерс', kcal: 250, code: '250K' },
+  { label: 'Круассан', kcal: 350, code: '350K' },
+  { label: 'Бургер', kcal: 550, code: '550K' },
+  { label: 'Пицца', kcal: 720, code: '720K' },
+  { label: 'Донат', kcal: 300, code: '300K' },
+  { label: 'Кола (0.5)', kcal: 210, code: '210K' },
 ];
 
 const PACES = [
@@ -1811,11 +1814,11 @@ export default function RunnerApp() {
               <img src="/avatar.jpg" alt="Calorie Runner" className="w-full h-full object-cover" />
             </div>
             <div className="hidden sm:block">
-              <h1 className="text-xs sm:text-sm font-black tracking-wider text-white uppercase flex items-center gap-1">
-                CALORIE <span className="text-[#C6FF33]">RUNNER</span>
+              <h1 className="text-sm sm:text-base font-display text-white uppercase flex items-center gap-1 leading-none">
+                RUSH <span className="text-[#C6FF33]">CALORY</span>
               </h1>
-              <p className="text-[9px] text-gray-400 font-mono -mt-0.5">
-                {preferParks ? '🌲 Парковый режим' : 'Кольцевые маршруты'}
+              <p className="text-[10px] text-gray-400 font-body -mt-0.5">
+                {preferParks ? 'Парковый режим' : 'Кольцевые треки'}
               </p>
             </div>
           </div>
@@ -1872,32 +1875,32 @@ export default function RunnerApp() {
           <div className="hidden md:flex items-center gap-1.5 bg-[#000000]/75 backdrop-blur-xl border border-white/10 p-1.5 rounded-2xl shadow-2xl">
             <button
               onClick={() => setMapStyle('dark')}
-              className={`px-2.5 py-1 rounded-xl text-[11px] font-bold transition flex items-center gap-1 ${
+              className={`px-2.5 py-1 rounded-xl text-[11px] font-bold transition flex items-center gap-1.5 ${
                 mapStyle === 'dark' ? 'bg-[#C6FF33] text-black shadow' : 'text-gray-400 hover:text-white'
               }`}
               title="Тёмная карта"
             >
-              <span>🌙</span>
+              <Moon className="w-3.5 h-3.5" />
               <span>Тёмная</span>
             </button>
             <button
               onClick={() => setMapStyle('satellite')}
-              className={`px-2.5 py-1 rounded-xl text-[11px] font-bold transition flex items-center gap-1 ${
+              className={`px-2.5 py-1 rounded-xl text-[11px] font-bold transition flex items-center gap-1.5 ${
                 mapStyle === 'satellite' ? 'bg-[#C6FF33] text-black shadow' : 'text-gray-400 hover:text-white'
               }`}
               title="Спутник"
             >
-              <span>🛰</span>
+              <Layers className="w-3.5 h-3.5" />
               <span>Спутник</span>
             </button>
             <button
               onClick={() => setMapStyle('streets')}
-              className={`px-2.5 py-1 rounded-xl text-[11px] font-bold transition flex items-center gap-1 ${
+              className={`px-2.5 py-1 rounded-xl text-[11px] font-bold transition flex items-center gap-1.5 ${
                 mapStyle === 'streets' ? 'bg-[#C6FF33] text-black shadow' : 'text-gray-400 hover:text-white'
               }`}
               title="Улицы"
             >
-              <span>🗺</span>
+              <MapIcon className="w-3.5 h-3.5" />
               <span>Улицы</span>
             </button>
             <button
@@ -1950,7 +1953,7 @@ export default function RunnerApp() {
               }`}
               title="Тёмная карта"
             >
-              🌙
+              <Moon className="w-4 h-4" />
             </button>
             <button
               onClick={() => setMapStyle('satellite')}
@@ -1959,7 +1962,7 @@ export default function RunnerApp() {
               }`}
               title="Спутник"
             >
-              🛰
+              <Layers className="w-4 h-4" />
             </button>
             <button
               onClick={() => setMapStyle('streets')}
@@ -1968,7 +1971,7 @@ export default function RunnerApp() {
               }`}
               title="Улицы"
             >
-              🗺
+              <MapIcon className="w-4 h-4" />
             </button>
           </div>
 
@@ -2086,65 +2089,70 @@ export default function RunnerApp() {
           >
             <div className="w-10 h-1 bg-gray-600 rounded-full mb-1.5 active:bg-[#C6FF33] transition-colors"></div>
             <div className="w-full flex items-center justify-between text-xs">
-              <div className="flex items-center gap-1.5">
-                <span className="font-mono font-black text-[#7D39EB] text-sm">
-                  {calories} ккал
+              <div className="flex items-center gap-1.5 font-display">
+                <span className="text-[#7D39EB] text-sm tracking-tight font-normal">
+                  {calories}&nbsp;ккал
                 </span>
-                <span className="text-gray-500">•</span>
-                <span className="font-mono font-bold text-[#C6FF33] text-sm">
-                  {targetKm} км
+                <span className="text-gray-600">/</span>
+                <span className="text-[#C6FF33] text-sm tracking-tight font-normal">
+                  {targetKm}&nbsp;км
                 </span>
-                <span className="text-gray-500">•</span>
-                <span className="text-gray-400 text-xs">~{estimatedMinutes}м</span>
+                <span className="text-gray-600">/</span>
+                <span className="text-gray-400 font-body text-xs">~{estimatedMinutes}&nbsp;мин</span>
               </div>
               <button
                 type="button"
                 className="text-[11px] text-gray-400 flex items-center gap-0.5 hover:text-white"
               >
-                <span>{isMobileExpanded ? 'Свернуть' : 'Настройки'}</span>
+                <span>{isMobileExpanded ? 'Свернуть' : 'Параметры'}</span>
                 {isMobileExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
               </button>
             </div>
           </div>
 
-          {/* Primary Ultra-Compact Quick Bar for Mobile Peek Mode */}
+          {/* Primary Action Button (AI-RULES v3: CTA-01 Pill radius 999px, CTA-02 No border, CTA-03 Verb + Outcome, CTA-04 Reassurance) */}
           {!isMobileExpanded && (
-            <div className="md:hidden pt-0.5 flex items-center gap-2">
-              {!route ? (
-                <button
-                  type="button"
-                  onClick={() => handleGenerateRoute()}
-                  disabled={isGenerating}
-                  className="flex-1 py-2 bg-[#C6FF33] hover:bg-[#b0f020] text-[#000000] font-black text-xs uppercase tracking-wider rounded-xl shadow-lg transition flex items-center justify-center gap-1 active:scale-98"
-                >
-                  {isGenerating ? (
-                    <div className="w-3.5 h-3.5 border-2 border-black border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <>
-                      <Zap className="w-3 h-3 fill-black" />
-                      <span>Маршрут</span>
-                    </>
-                  )}
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={startTracking}
-                  className="flex-1 py-2 bg-[#7D39EB] hover:bg-[#6c28d9] text-[#FFFFFF] font-black text-xs uppercase tracking-wider rounded-xl shadow-lg transition flex items-center justify-center gap-1 active:scale-98"
-                >
-                  <Play className="w-3 h-3 fill-white" />
-                  <span>Старт ({route.distanceKm} км)</span>
-                </button>
-              )}
+            <div className="md:hidden pt-1 flex flex-col gap-1">
+              <div className="flex items-center gap-2">
+                {!route ? (
+                  <button
+                    type="button"
+                    onClick={() => handleGenerateRoute()}
+                    disabled={isGenerating}
+                    className="flex-1 py-3 px-4 bg-[#C6FF33] hover:bg-[#b0f020] text-black font-heading text-xs tracking-wider rounded-full shadow-lg transition flex items-center justify-center gap-1.5 active:scale-95 ease-signature"
+                  >
+                    {isGenerating ? (
+                      <div className="w-3.5 h-3.5 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <>
+                        <Zap className="w-3.5 h-3.5 fill-black" />
+                        <span>Построить круговой маршрут</span>
+                      </>
+                    )}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={startTracking}
+                    className="flex-1 py-3 px-4 bg-[#7D39EB] hover:bg-[#6c28d9] text-white font-heading text-xs tracking-wider rounded-full shadow-lg transition flex items-center justify-center gap-1.5 active:scale-95 ease-signature"
+                  >
+                    <Play className="w-3.5 h-3.5 fill-white" />
+                    <span>Начать забег на {route.distanceKm}&nbsp;км</span>
+                  </button>
+                )}
 
-              <button
-                type="button"
-                onClick={openWorkoutHistory}
-                aria-label="История пробежек"
-                className="p-2 bg-[#121212] hover:bg-[#1a1a1a] border border-[#242424] hover:border-[#7D39EB] text-gray-300 rounded-xl transition flex items-center justify-center active:scale-98"
-              >
-                <History className="w-4 h-4 text-[#C6FF33]" />
-              </button>
+                <button
+                  type="button"
+                  onClick={openWorkoutHistory}
+                  aria-label="История пробежек"
+                  className="w-11 h-11 bg-[#12151F] hover:bg-[#1a1e2b] border border-white/10 text-gray-300 rounded-full transition flex items-center justify-center active:scale-95 shrink-0"
+                >
+                  <History className="w-4 h-4 text-[#C6FF33]" />
+                </button>
+              </div>
+              <span className="text-[10px] text-gray-400 text-center font-body">
+                Замкнутый трек от&nbsp;вашего дома без&nbsp;перепадов
+              </span>
             </div>
           )}
 
@@ -2164,18 +2172,18 @@ export default function RunnerApp() {
                     key={p.label}
                     type="button"
                     onClick={() => setCalories(p.kcal)}
-                    className={`p-1.5 rounded-xl border text-left transition active:scale-95 ${
+                    className={`p-2 rounded-xl text-left transition active:scale-95 ease-signature ${
                       calories === p.kcal
-                        ? 'bg-[#7D39EB] border-[#7D39EB] text-white font-bold shadow-md shadow-purple-950/50'
-                        : 'bg-[#121212]/75 backdrop-blur-md border-white/10 text-gray-300 hover:border-gray-500'
+                        ? 'bg-[#7D39EB] text-white shadow-md'
+                        : 'bg-[#12151F] border border-white/10 text-gray-300 hover:border-gray-500'
                     }`}
                   >
-                    <div className="text-sm">{p.icon}</div>
-                    <div className="text-[10px] font-semibold truncate leading-tight mt-0.5">
+                    <div className="text-[11px] font-mono font-bold text-[#C6FF33]">{p.code}</div>
+                    <div className="text-[11px] font-medium truncate leading-tight mt-0.5">
                       {p.label}
                     </div>
                     <div className={`text-[9px] font-mono ${calories === p.kcal ? 'text-[#C6FF33]' : 'text-gray-400'}`}>
-                      ~{p.kcal}к
+                      ~{p.kcal}&nbsp;ккал
                     </div>
                   </button>
                 ))}
@@ -2196,21 +2204,21 @@ export default function RunnerApp() {
             </div>
 
             {/* Target Calculation Banner (Distance & Time) */}
-            <div className="flex p-2 bg-[#121212]/75 backdrop-blur-md border border-white/10 rounded-xl items-center justify-between">
+            <div className="flex p-2.5 bg-[#12151F] border border-white/10 rounded-2xl items-center justify-between">
               <div>
-                <span className="text-[8px] text-[#C6FF33] uppercase font-black tracking-wider flex items-center gap-1">
+                <span className="text-[9px] text-[#C6FF33] uppercase font-heading tracking-wider flex items-center gap-1">
                   <Sparkles className="w-2.5 h-2.5 text-[#C6FF33]" /> Дистанция
                 </span>
-                <div className="text-base font-black text-white font-mono leading-none mt-0.5">
-                  {targetKm} <span className="text-[10px] font-sans text-gray-400">км</span>
+                <div className="text-xl font-display font-normal text-white leading-none mt-1">
+                  {targetKm}&nbsp;<span className="text-[11px] font-body text-gray-400">км</span>
                 </div>
               </div>
               <div className="text-right">
-                <span className="text-[8px] text-[#7D39EB] uppercase font-black tracking-wider flex items-center justify-end gap-1">
+                <span className="text-[9px] text-[#7D39EB] uppercase font-heading tracking-wider flex items-center justify-end gap-1">
                   <Clock className="w-2.5 h-2.5 text-[#7D39EB]" /> Время
                 </span>
-                <div className="text-base font-bold text-white font-mono leading-none mt-0.5">
-                  ~{estimatedMinutes} <span className="text-[10px] font-sans text-gray-400">мин</span>
+                <div className="text-xl font-display font-normal text-white leading-none mt-1">
+                  ~{estimatedMinutes}&nbsp;<span className="text-[11px] font-body text-gray-400">мин</span>
                 </div>
               </div>
             </div>
@@ -2317,51 +2325,54 @@ export default function RunnerApp() {
               )}
             </div>
 
-            {/* Primary Action Buttons */}
-            <div className="space-y-1.5 pt-0.5">
+            {/* Primary Action Buttons (Desktop — AI-RULES v3 Pill CTA & Reassurance) */}
+            <div className="space-y-2 pt-1">
               <button
                 type="button"
                 onClick={() => handleGenerateRoute()}
                 disabled={isGenerating}
-                className="w-full py-2.5 bg-[#C6FF33] hover:bg-[#b0f020] text-[#000000] font-black text-xs uppercase tracking-wider rounded-xl shadow-lg transition flex items-center justify-center gap-1.5 disabled:opacity-50 active:scale-98"
+                className="w-full py-3.5 px-4 bg-[#C6FF33] hover:bg-[#b0f020] text-black font-heading text-xs tracking-wider rounded-full shadow-lg transition flex items-center justify-center gap-2 disabled:opacity-50 active:scale-95 ease-signature"
               >
                 {isGenerating ? (
-                  <div className="w-3.5 h-3.5 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                  <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
                 ) : (
                   <>
-                    <Zap className="w-3.5 h-3.5 fill-black" />
-                    <span>Сгенерировать маршрут</span>
+                    <Zap className="w-4 h-4 fill-black" />
+                    <span>Построить круговой маршрут</span>
                   </>
                 )}
               </button>
+              <span className="block text-[11px] text-gray-400 text-center font-body">
+                Замкнутый трек от&nbsp;вашего дома без&nbsp;перепадов
+              </span>
 
               {route && (
                 <>
                   <button
                     type="button"
                     onClick={startTracking}
-                    className="w-full py-2.5 bg-[#7D39EB] hover:bg-[#6c28d9] text-[#FFFFFF] font-black text-xs uppercase tracking-wider rounded-xl shadow-lg transition flex items-center justify-center gap-1.5 active:scale-98"
+                    className="w-full py-3.5 px-4 bg-[#7D39EB] hover:bg-[#6c28d9] text-white font-heading text-xs tracking-wider rounded-full shadow-lg transition flex items-center justify-center gap-2 active:scale-95 ease-signature"
                   >
-                    <Play className="w-3.5 h-3.5 fill-white" />
-                    <span>Старт пробежки</span>
+                    <Play className="w-4 h-4 fill-white" />
+                    <span>Начать забег на {route.distanceKm}&nbsp;км</span>
                   </button>
 
-                  <div className="flex gap-1.5">
+                  <div className="flex gap-2">
                     <button
                       type="button"
                       onClick={handleRotateDirection}
-                      className="flex-1 py-1.5 bg-[#121212] hover:bg-[#1a1a1a] border border-[#242424] rounded-lg text-[11px] font-bold text-white transition flex items-center justify-center gap-1"
+                      className="flex-1 py-2 bg-[#12151F] hover:bg-[#1a1e2b] border border-white/10 rounded-full text-[11px] font-heading font-normal text-white transition flex items-center justify-center gap-1.5"
                     >
-                      <RotateCw className="w-3 h-3 text-[#C6FF33]" />
+                      <RotateCw className="w-3.5 h-3.5 text-[#C6FF33]" />
                       <span>Другая петля</span>
                     </button>
 
                     <button
                       type="button"
                       onClick={handleDownloadGPX}
-                      className="py-1.5 px-2.5 bg-[#121212] hover:bg-[#1a1a1a] border border-[#242424] rounded-lg text-[11px] font-bold text-[#C6FF33] transition flex items-center justify-center gap-1"
+                      className="py-2 px-3.5 bg-[#12151F] hover:bg-[#1a1e2b] border border-white/10 rounded-full text-[11px] font-heading font-normal text-[#C6FF33] transition flex items-center justify-center gap-1"
                     >
-                      <Download className="w-3 h-3" />
+                      <Download className="w-3.5 h-3.5" />
                       <span>GPX</span>
                     </button>
                   </div>
@@ -2372,10 +2383,10 @@ export default function RunnerApp() {
               <button
                 type="button"
                 onClick={openWorkoutHistory}
-                className="w-full py-2 bg-[#121212] hover:bg-[#1a1a1a] border border-[#242424] hover:border-[#7D39EB] text-gray-300 hover:text-white rounded-xl text-[11px] font-bold transition flex items-center justify-center gap-1.5"
+                className="w-full py-2.5 bg-[#12151F] hover:bg-[#1a1e2b] border border-white/10 text-gray-300 hover:text-white rounded-full text-[11px] font-heading font-normal tracking-wide transition flex items-center justify-center gap-2"
               >
-                <History className="w-3 h-3 text-[#C6FF33]" />
-                <span>История пробежек</span>
+                <History className="w-3.5 h-3.5 text-[#C6FF33]" />
+                <span>История всех пробежек</span>
               </button>
             </div>
 

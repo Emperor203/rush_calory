@@ -9,8 +9,8 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        display: ['Unbounded', 'Oswald', 'sans-serif'],
-        body: ['"Golos Text"', '-apple-system', 'sans-serif'],
+        display: ['Oswald', 'sans-serif'],
+        body: ['"Golos Text"', 'sans-serif'],
       },
       colors: {
         rush: {

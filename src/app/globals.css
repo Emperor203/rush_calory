@@ -10,38 +10,94 @@
   --background-end-rgb: 17, 24, 39;
 }
 
+/* AI-RULES v3 §0 & §3 Typography & Tokens */
+:root {
+  --c-carbon: #08090C;
+  --c-cream:  #F5F4EF;
+  --c-lime:   #C6FF33;
+  --c-violet: #7D39EB;
+  
+  --op-high: 1.0;
+  --op-med:  0.75;
+  --op-low:  0.55;
+
+  --ease-signature: cubic-bezier(0.22, 1, 0.36, 1);
+  --rad-pill: 999px;
+  --rad-sharp: 0px;
+}
+
 body {
-  color: #FFFFFF;
-  background: #08090C;
-  font-family: 'Golos Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: var(--c-cream);
+  background: var(--c-carbon);
+  font-family: 'Golos Text', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 400;
   min-height: 100vh;
+  min-height: 100svh;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* OBSION & AI-RULES v3 Typography Classes */
+/* AI-RULES v3 §3 TYP-04: Display typography scaling laws */
 .font-display {
-  font-family: 'Unbounded', 'Oswald', sans-serif !important;
-  letter-spacing: -0.025em;
+  font-family: 'Oswald', sans-serif !important;
+  font-weight: 400;
+  line-height: 0.9;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+  hyphens: none;
 }
 
 .font-heading {
-  font-family: 'Oswald', 'Unbounded', sans-serif !important;
-  letter-spacing: 0.02em;
+  font-family: 'Oswald', sans-serif !important;
+  font-weight: 400;
+  line-height: 0.95;
+  letter-spacing: -0.025em;
   text-transform: uppercase;
+  text-wrap: balance;
+  hyphens: none;
+}
+
+.font-body {
+  font-family: 'Golos Text', sans-serif !important;
+  font-weight: 400;
+  line-height: 1.6;
+  text-wrap: pretty;
+}
+
+.micro-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  line-height: 1.8;
+}
+
+/* AI-RULES v3 §7 MOT-01/02/03: Staggered entrance with blur */
+.rise {
+  opacity: 0;
+  transform: translateY(20px);
+  filter: blur(10px);
+}
+
+.is-in .rise, .animate-rise {
+  opacity: 1;
+  transform: none;
+  filter: blur(0);
+  transition: opacity 800ms var(--ease-signature) var(--d, 0ms),
+              transform 800ms var(--ease-signature) var(--d, 0ms),
+              filter 800ms var(--ease-signature) var(--d, 0ms);
 }
 
 .ease-signature {
-  transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1) !important;
+  transition-timing-function: var(--ease-signature) !important;
 }
 
 .glow-lime {
-  box-shadow: 0 0 25px rgba(198, 255, 51, 0.4);
+  box-shadow: 0 0 25px rgba(198, 255, 51, 0.35);
 }
 
 .glow-violet {
-  box-shadow: 0 0 30px rgba(125, 57, 235, 0.45);
+  box-shadow: 0 0 30px rgba(125, 57, 235, 0.4);
 }
 
 /* Custom scrollbars */
