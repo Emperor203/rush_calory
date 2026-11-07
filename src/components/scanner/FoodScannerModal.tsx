@@ -87,9 +87,15 @@ export default function FoodScannerModal({
         videoRef.current.srcObject = stream;
         await videoRef.current.play().catch(() => {});
       }
+      try {
+        localStorage.setItem('runner_camera_allowed', 'true');
+      } catch (_) {}
     } catch (err: any) {
       console.warn('Live camera error:', err);
       setIsLiveCameraActive(false);
+      try {
+        localStorage.removeItem('runner_camera_allowed');
+      } catch (_) {}
       if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
         setErrorMsg('Доступ к камере заблокирован в настройках Telegram или телефона. Нажмите ниже, чтобы выбрать фото из галереи.');
       } else {
@@ -142,6 +148,11 @@ export default function FoodScannerModal({
   React.useEffect(() => {
     if (!isOpen) {
       stopLiveCamera();
+    } else if (!initialImage && !imagePreview) {
+      const previouslyAllowed = typeof window !== 'undefined' && localStorage.getItem('runner_camera_allowed') === 'true';
+      if (previouslyAllowed) {
+        startLiveCamera('environment');
+      }
     }
   }, [isOpen]);
 
