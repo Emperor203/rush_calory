@@ -19,18 +19,30 @@ interface FoodScannerModalProps {
   isOpen: boolean;
   onClose: () => void;
   onApplyCaloriesAndRoute: (calories: number) => void;
+  autoOpenCamera?: boolean;
 }
 
 export default function FoodScannerModal({
   isOpen,
   onClose,
   onApplyCaloriesAndRoute,
+  autoOpenCamera = false,
 }: FoodScannerModalProps) {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
   const [scanResult, setScanResult] = useState<FoodScanResult | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const cameraInputRef = useRef<HTMLInputElement | null>(null);
+  const galleryInputRef = useRef<HTMLInputElement | null>(null);
+
+  React.useEffect(() => {
+    if (isOpen && autoOpenCamera && !imagePreview) {
+      const timer = setTimeout(() => {
+        cameraInputRef.current?.click();
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, autoOpenCamera, imagePreview]);
 
   if (!isOpen) return null;
 
@@ -89,7 +101,8 @@ export default function FoodScannerModal({
     setImagePreview(null);
     setScanResult(null);
     setErrorMsg(null);
-    if (fileInputRef.current) fileInputRef.current.value = '';
+    if (cameraInputRef.current) cameraInputRef.current.value = '';
+    if (galleryInputRef.current) galleryInputRef.current.value = '';
   };
 
   return (
@@ -127,12 +140,21 @@ export default function FoodScannerModal({
           </button>
         </div>
 
-        {/* Hidden File Input */}
+        {/* Hidden Camera Input (Opens Native Camera Directly) */}
         <input
-          ref={fileInputRef}
+          ref={cameraInputRef}
           type="file"
           accept="image/*"
           capture="environment"
+          onChange={handleFileChange}
+          className="hidden"
+        />
+
+        {/* Hidden Gallery Input (Photo Library) */}
+        <input
+          ref={galleryInputRef}
+          type="file"
+          accept="image/*"
           onChange={handleFileChange}
           className="hidden"
         />
@@ -142,22 +164,35 @@ export default function FoodScannerModal({
           {!imagePreview ? (
             /* Upload & Camera Prompt */
             <div className="flex flex-col gap-3">
+              {/* Primary Direct Camera Action */}
               <button
                 type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="w-full h-44 rounded-2xl border-2 border-dashed border-[#C6FF33]/40 hover:border-[#C6FF33] bg-[#12151F]/60 hover:bg-[#12151F] transition flex flex-col items-center justify-center gap-3 p-4 group"
+                onClick={() => cameraInputRef.current?.click()}
+                className="w-full py-5 px-4 rounded-2xl bg-[#C6FF33] hover:bg-[#b0f020] text-black font-heading font-black text-sm uppercase tracking-wider shadow-[0_0_25px_rgba(198,255,51,0.3)] transition flex items-center justify-center gap-3 active:scale-95 ease-signature group"
               >
-                <div className="w-14 h-14 rounded-full bg-[#C6FF33]/15 flex items-center justify-center text-[#C6FF33] group-hover:scale-110 transition">
-                  <Camera className="w-7 h-7" />
+                <div className="w-11 h-11 rounded-full bg-black/15 flex items-center justify-center text-black group-hover:scale-110 transition">
+                  <Camera className="w-6 h-6" />
                 </div>
-                <div className="text-center">
-                  <span className="block text-sm font-heading font-bold text-white">
-                    Сфотографировать или загрузить блюдо
+                <div className="text-left">
+                  <span className="block text-sm font-heading font-black text-black">
+                    Сфотографировать блюдо
                   </span>
-                  <span className="text-xs text-gray-400 font-body">
-                    Камера телефона или галерея
+                  <span className="text-[11px] font-body text-black/75">
+                    Напрямую открывает камеру телефона
                   </span>
                 </div>
+              </button>
+
+              {/* Secondary Gallery Action */}
+              <button
+                type="button"
+                onClick={() => galleryInputRef.current?.click()}
+                className="w-full py-3.5 px-4 rounded-2xl border border-white/10 bg-[#12151F] hover:bg-[#1a1e2b] text-white transition flex items-center justify-center gap-2 active:scale-95 ease-signature"
+              >
+                <Upload className="w-4 h-4 text-gray-400" />
+                <span className="text-xs font-heading font-bold text-gray-300">
+                  Выбрать фото из галереи
+                </span>
               </button>
 
               <div className="grid grid-cols-3 gap-2 pt-1 text-center">

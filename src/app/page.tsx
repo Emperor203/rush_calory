@@ -180,6 +180,7 @@ export default function RunnerApp() {
   const [streetPassTab, setStreetPassTab] = useState<'plans' | 'studio'>('plans');
   const [isPvpPassBlockedOpen, setIsPvpPassBlockedOpen] = useState<boolean>(false);
   const [isFoodScannerOpen, setIsFoodScannerOpen] = useState<boolean>(false);
+  const [autoOpenCamera, setAutoOpenCamera] = useState<boolean>(false);
   const [isStoryModalOpen, setIsStoryModalOpen] = useState<boolean>(false);
   const [isHudCollapsed, setIsHudCollapsed] = useState<boolean>(false);
 
@@ -1962,14 +1963,17 @@ export default function RunnerApp() {
             </button>
           </div>
 
-          {/* AI Food Scanner Header Button */}
+          {/* AI Food Scanner Header Button — Big & Prominent */}
           <button
             type="button"
-            onClick={() => setIsFoodScannerOpen(true)}
-            className="pointer-events-auto hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#12151F]/90 hover:bg-[#1a1e2b] border border-[#C6FF33]/40 text-[#C6FF33] text-xs font-heading uppercase tracking-wider font-bold shadow-lg transition active:scale-95"
-            title="ИИ-сканер еды по фото"
+            onClick={() => {
+              setAutoOpenCamera(true);
+              setIsFoodScannerOpen(true);
+            }}
+            className="pointer-events-auto hidden md:flex items-center gap-2 px-4 py-2 rounded-full bg-[#C6FF33] hover:bg-[#b0f020] text-black text-xs font-heading uppercase tracking-wider font-black shadow-[0_0_20px_rgba(198,255,51,0.35)] transition active:scale-95 ease-signature"
+            title="Открыть камеру и распознать еду через ИИ"
           >
-            <Camera className="w-3.5 h-3.5 text-[#C6FF33]" />
+            <Camera className="w-4 h-4 fill-black" />
             <span>Сканер еды</span>
           </button>
 
@@ -2043,6 +2047,18 @@ export default function RunnerApp() {
             title="Мой точный GPS"
           >
             <Crosshair className={`w-4 h-4 text-[#C6FF33] ${isCheckingGps ? 'animate-spin' : ''}`} />
+          </button>
+
+          {/* Floating AI Camera Button (Opens Phone Camera Directly) */}
+          <button
+            onClick={() => {
+              setAutoOpenCamera(true);
+              setIsFoodScannerOpen(true);
+            }}
+            className="pointer-events-auto w-9 h-9 rounded-2xl bg-[#C6FF33] flex items-center justify-center text-black shadow-[0_0_20px_rgba(198,255,51,0.4)] active:scale-95 transition"
+            title="Сфотографировать еду"
+          >
+            <Camera className="w-4 h-4 fill-black" />
           </button>
         </div>
       )}
@@ -2274,14 +2290,19 @@ export default function RunnerApp() {
                   </button>
                 )}
 
+                {/* Big AI Camera Button */}
                 <button
                   type="button"
-                  onClick={() => setIsFoodScannerOpen(true)}
+                  onClick={() => {
+                    setAutoOpenCamera(true);
+                    setIsFoodScannerOpen(true);
+                  }}
                   aria-label="ИИ-сканер еды"
-                  className="w-11 h-11 bg-[#12151F] hover:bg-[#1a1e2b] border border-[#C6FF33]/40 text-[#C6FF33] rounded-full transition flex items-center justify-center active:scale-95 shrink-0"
-                  title="ИИ-сканер еды по фото"
+                  className="h-11 px-3.5 bg-[#C6FF33] hover:bg-[#b0f020] text-black font-heading font-black text-xs uppercase tracking-wider rounded-full transition flex items-center gap-1.5 shadow-[0_0_15px_rgba(198,255,51,0.3)] active:scale-95 shrink-0 ease-signature"
+                  title="Открыть камеру и распознать калории"
                 >
-                  <Camera className="w-4 h-4" />
+                  <Camera className="w-4 h-4 fill-black" />
+                  <span>Камера ИИ</span>
                 </button>
 
                 <button
@@ -2310,12 +2331,15 @@ export default function RunnerApp() {
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => setIsFoodScannerOpen(true)}
-                    className="flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#C6FF33]/15 hover:bg-[#C6FF33]/25 border border-[#C6FF33]/40 text-[#C6FF33] text-[10px] font-heading uppercase tracking-wider font-bold transition active:scale-95"
+                    onClick={() => {
+                      setAutoOpenCamera(true);
+                      setIsFoodScannerOpen(true);
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#C6FF33] hover:bg-[#b0f020] text-black text-[11px] font-heading uppercase tracking-wider font-black shadow-md transition active:scale-95 ease-signature"
                     title="Сфотографировать еду и рассчитать калории"
                   >
-                    <Camera className="w-3 h-3" />
-                    <span>ИИ-сканер</span>
+                    <Camera className="w-3.5 h-3.5 fill-black" />
+                    <span>Сканер еды</span>
                   </button>
                   <span className="text-[#C6FF33] font-mono text-xs font-bold">{calories} ккал</span>
                 </div>
@@ -2716,8 +2740,12 @@ export default function RunnerApp() {
       {/* AI Food Scanner Modal */}
       <FoodScannerModal
         isOpen={isFoodScannerOpen}
-        onClose={() => setIsFoodScannerOpen(false)}
+        onClose={() => {
+          setIsFoodScannerOpen(false);
+          setAutoOpenCamera(false);
+        }}
         onApplyCaloriesAndRoute={handleApplyFoodScan}
+        autoOpenCamera={autoOpenCamera}
       />
 
       {/* Telegram Stories Share Modal */}
