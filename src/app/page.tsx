@@ -50,6 +50,7 @@ import {
   ChevronUp,
   TreePine,
   Play,
+  Pause,
   Square,
   AlertTriangle,
   RefreshCw,
@@ -180,6 +181,7 @@ export default function RunnerApp() {
   const [isPvpPassBlockedOpen, setIsPvpPassBlockedOpen] = useState<boolean>(false);
   const [isFoodScannerOpen, setIsFoodScannerOpen] = useState<boolean>(false);
   const [isStoryModalOpen, setIsStoryModalOpen] = useState<boolean>(false);
+  const [isHudCollapsed, setIsHudCollapsed] = useState<boolean>(false);
 
   const openStreetPass = (tab: 'plans' | 'studio' = 'plans') => {
     setStreetPassTab(tab);
@@ -2048,89 +2050,161 @@ export default function RunnerApp() {
         </div>
       )}
 
-      {/* --- ACTIVE RUNNING HUD (Live Mode, Solo Run) --- */}
+      {/* --- ACTIVE RUNNING HUD (Live Mode, Solo Run — Collapsible) --- */}
       {isTrackingActive && !activeBattle ? (
-        <div className="absolute bottom-3 left-3 right-3 sm:bottom-6 sm:left-auto sm:right-6 sm:w-96 z-30 bg-[#000000]/80 backdrop-blur-2xl border-2 border-[#C6FF33] rounded-3xl p-4 sm:p-5 shadow-[0_0_50px_rgba(198,255,51,0.25)] space-y-3.5 safe-bottom animate-slide-up">
-          <div className="flex items-center justify-between border-b border-white/10 pb-2.5">
+        isHudCollapsed ? (
+          /* Collapsed Mini Floating HUD Pill */
+          <div className="absolute bottom-3 left-3 right-3 sm:bottom-6 sm:left-auto sm:right-6 sm:w-96 z-30 flex items-center justify-between bg-[#08090C]/90 backdrop-blur-2xl border-2 border-[#C6FF33] rounded-full px-4 py-2.5 shadow-[0_0_30px_rgba(198,255,51,0.25)] safe-bottom animate-slide-up">
             <div className="flex items-center gap-2">
               <span className="relative flex h-2.5 w-2.5">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#C6FF33] opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#C6FF33]"></span>
               </span>
-              <span className="text-[11px] font-black uppercase tracking-wider text-[#C6FF33]">
-                АКТИВНЫЙ БЕГ
+              <span className="font-mono text-xs font-bold text-white">
+                {formatTimer(elapsedSeconds)}
+              </span>
+              <span className="text-gray-500 font-mono">/</span>
+              <span className="font-heading text-xs font-bold text-[#C6FF33]">
+                {distanceTraversedKm}&nbsp;км
+              </span>
+              <span className="text-gray-500 font-mono">/</span>
+              <span className="font-heading text-xs text-purple-400">
+                {activeCaloriesBurned}&nbsp;ккал
               </span>
             </div>
-            <span className="font-mono text-xs sm:text-sm font-bold text-white bg-[#151515]/80 backdrop-blur-md px-2.5 py-0.5 rounded-lg border border-white/10">
-              ⏱ {formatTimer(elapsedSeconds)}
-            </span>
-          </div>
 
-          {/* Calorie Progress */}
-          <div>
-            <div className="flex justify-between items-baseline mb-1">
-              <span className="text-[11px] text-gray-400 font-semibold">Калории:</span>
-              <span className="font-mono text-xs sm:text-sm font-black text-[#C6FF33]">
-                {activeCaloriesBurned} / {calories} ккал ({caloriePercent}%)
-              </span>
-            </div>
-            <div className="w-full bg-[#151515] rounded-full h-2.5 overflow-hidden border border-[#333333]">
-              <div
-                className="h-full bg-[#7D39EB] rounded-full transition-all duration-500"
-                style={{ width: `${caloriePercent}%` }}
-              />
-            </div>
-            <div className="flex justify-between text-[10px] text-gray-400 mt-1">
-              <span>Осталось сжечь:</span>
-              <strong className="text-[#C6FF33] font-mono font-bold">-{remainingCalories} ккал</strong>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={stopTracking}
+                className="py-1 px-3 bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/60 text-rose-300 rounded-full text-[11px] font-heading font-bold transition flex items-center gap-1 active:scale-95"
+                title="Завершить забег"
+              >
+                <Square className="w-3 h-3 fill-rose-400" />
+                <span>Стоп</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsHudCollapsed(false)}
+                className="p-1.5 rounded-full bg-[#12151F] hover:bg-[#1a1e2b] border border-white/10 text-white transition flex items-center justify-center active:scale-95"
+                title="Развернуть карточку бега"
+                aria-label="Развернуть карточку"
+              >
+                <ChevronUp className="w-4 h-4 text-[#C6FF33]" />
+              </button>
             </div>
           </div>
+        ) : (
+          /* Full Expanded HUD Card */
+          <div className="absolute bottom-3 left-3 right-3 sm:bottom-6 sm:left-auto sm:right-6 sm:w-96 z-30 bg-[#08090C]/90 backdrop-blur-2xl border-2 border-[#C6FF33] rounded-3xl p-4 sm:p-5 shadow-[0_0_50px_rgba(198,255,51,0.25)] space-y-3.5 safe-bottom animate-slide-up">
+            <div className="flex items-center justify-between border-b border-white/10 pb-2.5">
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-2.5 w-2.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#C6FF33] opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#C6FF33]"></span>
+                </span>
+                <span className="text-[11px] font-black uppercase tracking-wider text-[#C6FF33] font-heading">
+                  АКТИВНЫЙ БЕГ
+                </span>
+              </div>
 
-          {/* Speed & Distance Cards */}
-          <div className="grid grid-cols-2 gap-2 text-center">
-            <div className="bg-[#111111]/70 backdrop-blur-md p-2.5 rounded-2xl border border-white/10">
-              <span className="text-[9px] uppercase font-bold text-gray-400 block flex items-center justify-center gap-1">
-                <Gauge className="w-3 h-3 text-[#7D39EB]" /> Скорость
-              </span>
-              <div className="text-lg sm:text-xl font-black text-[#C6FF33] font-mono mt-0.5">
-                {currentSpeedKmh} <span className="text-[11px] font-sans text-gray-400">км/ч</span>
+              <div className="flex items-center gap-1.5">
+                <span className="font-mono text-xs sm:text-sm font-bold text-white bg-[#151515]/80 backdrop-blur-md px-2.5 py-0.5 rounded-full border border-white/10 flex items-center gap-1">
+                  <Clock className="w-3.5 h-3.5 text-[#C6FF33]" />
+                  <span>{formatTimer(elapsedSeconds)}</span>
+                </span>
+
+                <button
+                  type="button"
+                  onClick={() => setIsHudCollapsed(true)}
+                  className="p-1 rounded-full text-gray-400 hover:text-white hover:bg-white/10 transition flex items-center justify-center"
+                  title="Скрыть панель (показать всю карту)"
+                  aria-label="Скрыть панель"
+                >
+                  <ChevronDown className="w-4 h-4 text-[#C6FF33]" />
+                </button>
               </div>
             </div>
 
-            <div className="bg-[#111111]/70 backdrop-blur-md p-2.5 rounded-2xl border border-white/10">
-              <span className="text-[9px] uppercase font-bold text-gray-400 block flex items-center justify-center gap-1">
-                <TrendingUp className="w-3 h-3 text-[#C6FF33]" /> Пройдено
-              </span>
-              <div className="text-lg sm:text-xl font-black text-white font-mono mt-0.5">
-                {distanceTraversedKm} / {route?.distanceKm || targetKm}{' '}
-                <span className="text-[11px] font-sans text-gray-400">км</span>
+            {/* Calorie Progress */}
+            <div>
+              <div className="flex justify-between items-baseline mb-1">
+                <span className="text-[11px] text-gray-400 font-semibold font-body">Калории:</span>
+                <span className="font-mono text-xs sm:text-sm font-black text-[#C6FF33]">
+                  {activeCaloriesBurned} / {calories} ккал ({caloriePercent}%)
+                </span>
+              </div>
+              <div className="w-full bg-[#151515] rounded-full h-2.5 overflow-hidden border border-[#333333]">
+                <div
+                  className="h-full bg-[#7D39EB] rounded-full transition-all duration-500"
+                  style={{ width: `${caloriePercent}%` }}
+                />
+              </div>
+              <div className="flex justify-between text-[10px] text-gray-400 mt-1 font-body">
+                <span>Осталось сжечь:</span>
+                <strong className="text-[#C6FF33] font-mono font-bold">
+                  {Math.max(0, calories - activeCaloriesBurned)} ккал
+                </strong>
               </div>
             </div>
-          </div>
 
-          {/* Action Buttons */}
-          <div className="flex gap-2 pt-1">
-            <button
-              type="button"
-              onClick={simulateMovementAlongRoute}
-              className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 ${
-                isSimulating
-                  ? 'bg-amber-500/20 text-amber-300 border border-amber-500/50 hover:bg-amber-500/30'
-                  : 'bg-[#000000]/70 hover:bg-[#151515] border border-[#7D39EB] text-white'
-              }`}
-            >
-              <span>{isSimulating ? '⏸ Пауза симулятора' : '🏃 Симулятор'}</span>
-            </button>
-            <button
-              type="button"
-              onClick={stopTracking}
-              className="py-2.5 px-4 bg-[#000000]/70 hover:bg-rose-950 border border-rose-500 text-rose-400 rounded-xl text-xs font-bold transition flex items-center gap-1"
-            >
-              <Square className="w-3.5 h-3.5" />
-              <span>Стоп</span>
-            </button>
+            {/* Speed & Distance Cards */}
+            <div className="grid grid-cols-2 gap-2 text-center">
+              <div className="bg-[#12151F] backdrop-blur-md p-2.5 rounded-2xl border border-white/10">
+                <span className="text-[9px] uppercase font-bold text-gray-400 block flex items-center justify-center gap-1 font-heading">
+                  <Gauge className="w-3 h-3 text-[#7D39EB]" /> Скорость
+                </span>
+                <div className="text-lg sm:text-xl font-black text-[#C6FF33] font-mono mt-0.5">
+                  {currentSpeedKmh} <span className="text-[11px] font-body text-gray-400">км/ч</span>
+                </div>
+              </div>
+
+              <div className="bg-[#12151F] backdrop-blur-md p-2.5 rounded-2xl border border-white/10">
+                <span className="text-[9px] uppercase font-bold text-gray-400 block flex items-center justify-center gap-1 font-heading">
+                  <TrendingUp className="w-3 h-3 text-[#C6FF33]" /> Пройдено
+                </span>
+                <div className="text-lg sm:text-xl font-black text-white font-mono mt-0.5">
+                  {distanceTraversedKm} / {route?.distanceKm || targetKm}{' '}
+                  <span className="text-[11px] font-body text-gray-400">км</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-2 pt-1">
+              <button
+                type="button"
+                onClick={simulateMovementAlongRoute}
+                className={`flex-1 py-3 rounded-full text-xs font-heading font-bold uppercase tracking-wider transition flex items-center justify-center gap-2 active:scale-95 ease-signature ${
+                  isSimulating
+                    ? 'bg-amber-500/20 text-amber-300 border border-amber-500/50 hover:bg-amber-500/30'
+                    : 'bg-[#12151F] hover:bg-[#1a1e2b] border border-[#7D39EB] text-white'
+                }`}
+              >
+                {isSimulating ? (
+                  <>
+                    <Pause className="w-3.5 h-3.5" />
+                    <span>Пауза симулятора</span>
+                  </>
+                ) : (
+                  <>
+                    <Play className="w-3.5 h-3.5 fill-[#C6FF33] text-[#C6FF33]" />
+                    <span>Симулятор</span>
+                  </>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={stopTracking}
+                className="py-3 px-5 bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/70 text-rose-300 rounded-full text-xs font-heading font-bold uppercase tracking-wider transition flex items-center gap-1.5 active:scale-95 ease-signature"
+              >
+                <Square className="w-3.5 h-3.5 fill-rose-400" />
+                <span>Стоп</span>
+              </button>
+            </div>
           </div>
-        </div>
+        )
       ) : !activeBattle && !activeRoom ? (
         /* --- MOBILE BOTTOM SHEET & DESKTOP SIDEBAR PANEL (MAP-FIRST COMPACT DOCK) --- */
         <div
