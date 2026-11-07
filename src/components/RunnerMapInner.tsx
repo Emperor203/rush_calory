@@ -160,7 +160,7 @@ export default function RunnerMapInner({
           liveRunnerPos={liveRunnerPos}
           isTrackingActive={isTrackingActive}
         />
-        {!isTrackingActive && <MapClickHandler onMapClick={onStartPosChange} />}
+        {/* Map Click Handler removed: start position is strictly locked to GPS/home address */}
 
         {/* Dynamic Tile Layer (100% Free, No API Key Required) */}
         {mapStyle === 'satellite' ? (
@@ -180,27 +180,18 @@ export default function RunnerMapInner({
           />
         )}
 
-        {/* Start / Finish Point (Draggable when not actively tracking) */}
+        {/* Start / Finish Point (Strictly locked to GPS/home address) */}
         <Marker
           position={startPos}
           icon={startIcon}
-          draggable={!isTrackingActive}
-          eventHandlers={{
-            dragend: (e) => {
-              const marker = e.target;
-              const position = marker.getLatLng();
-              onStartPosChange([position.lat, position.lng]);
-            },
-          }}
+          draggable={false}
         >
           <Popup>
             <div className="text-gray-900 font-bold text-xs p-1">
               🏁 Старт / Финиш маршрута
-              {!isTrackingActive && (
-                <div className="text-[10px] text-gray-500 font-normal mt-0.5">
-                  Перетащите маркер или кликните по карте, чтобы перенести старт
-                </div>
-              )}
+              <div className="text-[10px] text-gray-500 font-normal mt-0.5">
+                Зафиксировано по GPS вашего дома
+              </div>
             </div>
           </Popup>
         </Marker>

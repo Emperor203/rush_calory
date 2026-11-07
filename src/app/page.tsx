@@ -1761,11 +1761,8 @@ export default function RunnerApp() {
       <div className="absolute inset-0 z-0">
         <RunnerMap
           startPos={startPos}
-          onStartPosChange={(pos) => {
-            if (!isTrackingActive) {
-              setStartPos(pos);
-              if (route) setRoute(null);
-            }
+          onStartPosChange={() => {
+            // Strictly locked to GPS/home address; clicking map does not move start point
           }}
           route={route}
           mapStyle={mapStyle}
