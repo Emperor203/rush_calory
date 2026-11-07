@@ -155,6 +155,7 @@ export default function RunnerApp() {
 
   // Mobile Bottom Sheet Expand / Collapse State
   const [isMobileExpanded, setIsMobileExpanded] = useState<boolean>(false);
+  const [showSettings, setShowSettings] = useState<boolean>(false);
 
   // Active Live Tracking HUD State
   const [isTrackingActive, setIsTrackingActive] = useState<boolean>(false);
@@ -2066,13 +2067,13 @@ export default function RunnerApp() {
           </div>
         </div>
       ) : !activeBattle && !activeRoom ? (
-        /* --- MOBILE BOTTOM SHEET & DESKTOP SIDEBAR PANEL --- */
+        /* --- MOBILE BOTTOM SHEET & DESKTOP SIDEBAR PANEL (MAP-FIRST COMPACT DOCK) --- */
         <div
           onTouchStart={(e) => e.stopPropagation()}
-          className={`fixed bottom-0 left-0 right-0 md:absolute md:bottom-auto md:left-4 md:top-20 md:right-auto md:w-96 z-20 bg-[#000000]/80 backdrop-blur-2xl border-t md:border-2 border-white/10 rounded-t-3xl md:rounded-3xl shadow-[0_8px_32px_0_rgba(0,0,0,0.8)] bottom-sheet ${
+          className={`fixed bottom-0 left-0 right-0 md:absolute md:bottom-auto md:left-4 md:top-16 md:right-auto md:w-80 z-20 bg-[#000000]/85 backdrop-blur-2xl border-t md:border-2 border-white/10 rounded-t-3xl md:rounded-3xl shadow-[0_8px_32px_0_rgba(0,0,0,0.85)] bottom-sheet transition-all duration-300 ${
             isMobileExpanded
-              ? 'max-h-[85dvh] overflow-y-auto overscroll-contain p-4 sm:p-5 pb-4 md:pb-5'
-              : 'max-h-[220px] overflow-hidden md:overflow-y-auto md:max-h-[82vh] p-4 sm:p-5 pb-3 md:pb-5'
+              ? 'max-h-[85dvh] overflow-y-auto overscroll-contain p-4 pb-6 md:p-3.5'
+              : 'max-h-[96px] overflow-hidden p-2.5 px-3.5 pb-2 md:overflow-y-auto md:max-h-[85vh] md:p-3.5'
           }`}
         >
           {/* Mobile Drag Handle & Toggle Header */}
@@ -2081,11 +2082,11 @@ export default function RunnerApp() {
             onTouchStart={handleSheetHeaderTouchStart}
             onTouchMove={handleSheetHeaderTouchMove}
             onTouchEnd={handleSheetHeaderTouchEnd}
-            className="md:hidden flex flex-col items-center pb-2 cursor-pointer select-none touch-none active:opacity-90"
+            className="md:hidden flex flex-col items-center pb-1.5 cursor-pointer select-none touch-none active:opacity-90"
           >
-            <div className="w-12 h-1.5 bg-gray-600 rounded-full mb-2 active:bg-[#C6FF33] transition-colors"></div>
+            <div className="w-10 h-1 bg-gray-600 rounded-full mb-1.5 active:bg-[#C6FF33] transition-colors"></div>
             <div className="w-full flex items-center justify-between text-xs">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 <span className="font-mono font-black text-[#7D39EB] text-sm">
                   {calories} ккал
                 </span>
@@ -2094,34 +2095,34 @@ export default function RunnerApp() {
                   {targetKm} км
                 </span>
                 <span className="text-gray-500">•</span>
-                <span className="text-gray-300 text-xs">~{estimatedMinutes} мин</span>
+                <span className="text-gray-400 text-xs">~{estimatedMinutes}м</span>
               </div>
               <button
                 type="button"
                 className="text-[11px] text-gray-400 flex items-center gap-0.5 hover:text-white"
               >
-                <span>{isMobileExpanded ? 'Свернуть' : 'Параметры'}</span>
+                <span>{isMobileExpanded ? 'Свернуть' : 'Настройки'}</span>
                 {isMobileExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
               </button>
             </div>
           </div>
 
-          {/* Primary Quick CTA for Mobile Peek Mode (Only shown when collapsed to prevent duplicate buttons) */}
+          {/* Primary Ultra-Compact Quick Bar for Mobile Peek Mode */}
           {!isMobileExpanded && (
-            <div className="md:hidden pt-1 pb-2 space-y-2">
+            <div className="md:hidden pt-0.5 flex items-center gap-2">
               {!route ? (
                 <button
                   type="button"
                   onClick={() => handleGenerateRoute()}
                   disabled={isGenerating}
-                  className="w-full py-3 bg-[#C6FF33] hover:bg-[#b0f020] text-[#000000] font-black text-xs uppercase tracking-wider rounded-xl shadow-lg transition flex items-center justify-center gap-1.5 active:scale-98"
+                  className="flex-1 py-2 bg-[#C6FF33] hover:bg-[#b0f020] text-[#000000] font-black text-xs uppercase tracking-wider rounded-xl shadow-lg transition flex items-center justify-center gap-1 active:scale-98"
                 >
                   {isGenerating ? (
-                    <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                    <div className="w-3.5 h-3.5 border-2 border-black border-t-transparent rounded-full animate-spin" />
                   ) : (
                     <>
-                      <Zap className="w-3.5 h-3.5 fill-black" />
-                      <span>Сгенерировать круговой маршрут</span>
+                      <Zap className="w-3 h-3 fill-black" />
+                      <span>Маршрут</span>
                     </>
                   )}
                 </button>
@@ -2129,119 +2130,43 @@ export default function RunnerApp() {
                 <button
                   type="button"
                   onClick={startTracking}
-                  className="w-full py-3 bg-[#7D39EB] hover:bg-[#6c28d9] text-[#FFFFFF] font-black text-xs uppercase tracking-wider rounded-xl shadow-lg transition flex items-center justify-center gap-1.5 active:scale-98"
+                  className="flex-1 py-2 bg-[#7D39EB] hover:bg-[#6c28d9] text-[#FFFFFF] font-black text-xs uppercase tracking-wider rounded-xl shadow-lg transition flex items-center justify-center gap-1 active:scale-98"
                 >
-                  <Play className="w-3.5 h-3.5 fill-white" />
-                  <span>Начать пробежку ({route.distanceKm} км)</span>
+                  <Play className="w-3 h-3 fill-white" />
+                  <span>Старт ({route.distanceKm} км)</span>
                 </button>
               )}
 
-              {/* Quick History Button right on mobile peek */}
               <button
                 type="button"
                 onClick={openWorkoutHistory}
-                className="w-full py-2 bg-[#121212] hover:bg-[#1a1a1a] border border-[#242424] hover:border-[#7D39EB] text-gray-300 hover:text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 active:scale-98"
+                aria-label="История пробежек"
+                className="p-2 bg-[#121212] hover:bg-[#1a1a1a] border border-[#242424] hover:border-[#7D39EB] text-gray-300 rounded-xl transition flex items-center justify-center active:scale-98"
               >
-                <History className="w-3.5 h-3.5 text-[#C6FF33]" />
-                <span>История всех пробежек</span>
+                <History className="w-4 h-4 text-[#C6FF33]" />
               </button>
             </div>
           )}
 
-          {/* Full Expandable Controls (Always visible on Desktop, Expandable on Mobile) */}
-          <div className={`${isMobileExpanded ? 'block' : 'hidden md:block'} space-y-3.5 pt-2 md:pt-0`}>
-            {/* Live Weather Radar Widget */}
-            <div className="bg-[#121212]/75 backdrop-blur-md border border-white/10 rounded-2xl p-3 space-y-1.5 shadow-lg">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-[#FFFFFF] font-semibold flex items-center gap-1 text-[11px]">
-                  <CloudRain className="w-3.5 h-3.5 text-[#C6FF33]" />
-                  Погода
-                </span>
-                {weather && (
-                  <span
-                    className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
-                      weather.suitability === 'EXCELLENT'
-                        ? 'bg-[#C6FF33] text-[#000000]'
-                        : weather.suitability === 'GOOD'
-                        ? 'bg-[#7D39EB] text-[#FFFFFF]'
-                        : 'bg-[#222222] text-[#FFFFFF]'
-                    }`}
-                  >
-                    {weather.suitabilityText}
-                  </span>
-                )}
-              </div>
-
-              {weather && (
-                <div className="grid grid-cols-3 gap-1.5 pt-0.5 text-center">
-                  <div className="bg-[#000000]/60 p-1.5 rounded-xl border border-white/5">
-                    <span className="text-[9px] text-gray-400 block">Темп.</span>
-                    <strong className="text-xs font-bold text-white flex items-center justify-center gap-1 mt-0.5">
-                      <Cloud className="w-3.5 h-3.5 text-[#C6FF33] shrink-0" />
-                      <span>{weather.temperature > 0 ? `+${weather.temperature}` : weather.temperature}°C</span>
-                    </strong>
-                  </div>
-                  <div className="bg-[#000000]/60 p-1.5 rounded-xl border border-white/5">
-                    <span className="text-[9px] text-gray-400 block">Ветер</span>
-                    <strong className="text-xs font-bold text-[#FFFFFF]">
-                      {weather.windSpeed} км/ч
-                    </strong>
-                  </div>
-                  <div className="bg-[#000000]/60 p-1.5 rounded-xl border border-white/5">
-                    <span className="text-[9px] text-gray-400 block">Дождь</span>
-                    <strong className="text-xs font-bold text-[#C6FF33]">
-                      {weather.rainProbabilityNext2h}%
-                    </strong>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Park / Nature Filter Toggle */}
-            <div className="bg-[#121212]/75 backdrop-blur-md border border-white/10 rounded-2xl p-2.5 flex items-center justify-between shadow-lg">
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-[#000000]/60 border border-white/5 flex items-center justify-center text-[#C6FF33]">
-                  <TreePine className="w-3.5 h-3.5" />
-                </div>
-                <div>
-                  <span className="text-xs font-bold text-white block">Через парки и зелёные зоны</span>
-                  <span className="text-[10px] text-gray-400 block">
-                    Приоритет пешеходных дорожек
-                  </span>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  const next = !preferParks;
-                  setPreferParks(next);
-                  if (route) handleGenerateRoute(bearingOffset, next);
-                }}
-                className={`w-10 h-5 flex items-center rounded-full p-0.5 transition duration-300 ${
-                  preferParks ? 'bg-[#C6FF33] justify-end' : 'bg-[#242424] justify-start'
-                }`}
-              >
-                <div className="bg-black w-4 h-4 rounded-full shadow-md" />
-              </button>
-            </div>
-
-            {/* Food Presets Grid */}
+          {/* Full Expandable Controls (Desktop & Mobile Expanded) */}
+          <div className={`${isMobileExpanded ? 'block' : 'hidden md:block'} space-y-2.5 pt-2 md:pt-0`}>
+            {/* Quick Presets Carousel */}
             <div>
-              <div className="flex justify-between items-center mb-1.5">
-                <label className="text-[11px] font-bold text-gray-300 uppercase tracking-wide">
+              <div className="flex justify-between items-center mb-1">
+                <label className="text-[10px] font-bold text-gray-300 uppercase tracking-wide">
                   Что сжигаем?
                 </label>
                 <span className="text-[#C6FF33] font-mono text-xs font-bold">{calories} ккал</span>
               </div>
-              <div className="grid grid-cols-3 gap-1.5">
-                {PRESETS.map((p) => (
+              <div className="grid grid-cols-3 gap-1">
+                {PRESETS.slice(0, 3).map((p) => (
                   <button
                     key={p.label}
                     type="button"
                     onClick={() => setCalories(p.kcal)}
-                    className={`p-2 rounded-xl border text-left transition active:scale-95 ${
+                    className={`p-1.5 rounded-xl border text-left transition active:scale-95 ${
                       calories === p.kcal
-                        ? 'bg-[#7D39EB] border-[#7D39EB] text-white font-bold shadow-lg shadow-purple-950/50'
+                        ? 'bg-[#7D39EB] border-[#7D39EB] text-white font-bold shadow-md shadow-purple-950/50'
                         : 'bg-[#121212]/75 backdrop-blur-md border-white/10 text-gray-300 hover:border-gray-500'
                     }`}
                   >
@@ -2257,8 +2182,8 @@ export default function RunnerApp() {
               </div>
             </div>
 
-            {/* Slider */}
-            <div className="space-y-1">
+            {/* Calorie Slider */}
+            <div className="space-y-0.5">
               <input
                 type="range"
                 min={100}
@@ -2266,78 +2191,146 @@ export default function RunnerApp() {
                 step={25}
                 value={calories}
                 onChange={(e) => setCalories(parseInt(e.target.value, 10))}
-                className="w-full accent-[#7D39EB] cursor-pointer h-2"
+                className="w-full accent-[#7D39EB] cursor-pointer h-1.5"
               />
             </div>
 
-            {/* Weight & Pace */}
-            <div className="grid grid-cols-2 gap-2">
+            {/* Target Calculation Banner (Distance & Time) */}
+            <div className="flex p-2 bg-[#121212]/75 backdrop-blur-md border border-white/10 rounded-xl items-center justify-between">
               <div>
-                <label className="block text-[10px] text-gray-400 font-semibold mb-1">
-                  Вес (кг)
-                </label>
-                <input
-                  type="number"
-                  min={40}
-                  max={160}
-                  value={weightKg}
-                  onChange={(e) => handleWeightChange(parseFloat(e.target.value) || 70)}
-                  className="w-full bg-[#121212]/75 backdrop-blur-md border border-white/10 rounded-xl px-2.5 py-1.5 text-xs font-mono font-bold text-white focus:outline-none focus:border-[#7D39EB]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[10px] text-gray-400 font-semibold mb-1">
-                  Темп бега
-                </label>
-                <select
-                  value={pace}
-                  onChange={(e) => setPace(parseFloat(e.target.value))}
-                  className="w-full bg-[#121212]/75 backdrop-blur-md border border-white/10 rounded-xl px-2 py-1.5 text-xs font-semibold text-white focus:outline-none focus:border-[#7D39EB]"
-                >
-                  {PACES.map((pc) => (
-                    <option key={pc.minPerKm} value={pc.minPerKm}>
-                      {pc.label} ({pc.display})
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* Target Calculation Banner (Visible on Desktop) */}
-            <div className="hidden md:flex p-3 bg-[#121212]/75 backdrop-blur-md border border-white/10 rounded-2xl items-center justify-between shadow-lg">
-              <div>
-                <span className="text-[9px] text-[#C6FF33] uppercase font-black tracking-wider flex items-center gap-1">
-                  <Sparkles className="w-3 h-3 text-[#C6FF33]" /> Дистанция
+                <span className="text-[8px] text-[#C6FF33] uppercase font-black tracking-wider flex items-center gap-1">
+                  <Sparkles className="w-2.5 h-2.5 text-[#C6FF33]" /> Дистанция
                 </span>
-                <div className="text-xl font-black text-white font-mono">
-                  {targetKm} <span className="text-xs font-sans text-gray-400">км</span>
+                <div className="text-base font-black text-white font-mono leading-none mt-0.5">
+                  {targetKm} <span className="text-[10px] font-sans text-gray-400">км</span>
                 </div>
               </div>
               <div className="text-right">
-                <span className="text-[9px] text-[#7D39EB] uppercase font-black tracking-wider flex items-center justify-end gap-1">
-                  <Clock className="w-3 h-3 text-[#7D39EB]" /> Время
+                <span className="text-[8px] text-[#7D39EB] uppercase font-black tracking-wider flex items-center justify-end gap-1">
+                  <Clock className="w-2.5 h-2.5 text-[#7D39EB]" /> Время
                 </span>
-                <div className="text-lg font-bold text-white font-mono">
-                  ~{estimatedMinutes} <span className="text-xs font-sans text-gray-400">мин</span>
+                <div className="text-base font-bold text-white font-mono leading-none mt-0.5">
+                  ~{estimatedMinutes} <span className="text-[10px] font-sans text-gray-400">мин</span>
                 </div>
               </div>
             </div>
 
-            {/* Desktop Actions */}
-            <div className="space-y-2 pt-1">
+            {/* Secondary Settings Accordion (Weather, Parks, Weight, Pace) to keep map free */}
+            <div>
+              <button
+                type="button"
+                onClick={() => setShowSettings(!showSettings)}
+                className="w-full py-1 text-[10px] text-gray-400 hover:text-white flex items-center justify-between border-t border-white/5 pt-1.5"
+              >
+                <span className="flex items-center gap-1">
+                  <CloudRain className="w-3 h-3 text-[#C6FF33]" />
+                  <span>Параметры и погода</span>
+                </span>
+                {showSettings ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+              </button>
+
+              {showSettings && (
+                <div className="space-y-2 pt-1.5">
+                  {/* Weather Radar Widget */}
+                  {weather && (
+                    <div className="bg-[#121212]/75 backdrop-blur-md border border-white/10 rounded-xl p-2 space-y-1">
+                      <div className="flex items-center justify-between text-[10px]">
+                        <span className="text-gray-300 font-semibold flex items-center gap-1">
+                          <Cloud className="w-3 h-3 text-[#C6FF33]" />
+                          Погода сейчас
+                        </span>
+                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-[#C6FF33] text-black">
+                          {weather.suitabilityText}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-3 gap-1 pt-0.5 text-center text-[10px]">
+                        <div className="bg-[#000000]/60 p-1 rounded-lg">
+                          <span className="text-[8px] text-gray-400 block">Темп.</span>
+                          <strong className="text-white font-mono">{weather.temperature > 0 ? `+${weather.temperature}` : weather.temperature}°C</strong>
+                        </div>
+                        <div className="bg-[#000000]/60 p-1 rounded-lg">
+                          <span className="text-[8px] text-gray-400 block">Ветер</span>
+                          <strong className="text-white font-mono">{weather.windSpeed} км/ч</strong>
+                        </div>
+                        <div className="bg-[#000000]/60 p-1 rounded-lg">
+                          <span className="text-[8px] text-gray-400 block">Дождь</span>
+                          <strong className="text-[#C6FF33] font-mono">{weather.rainProbabilityNext2h}%</strong>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Park / Nature Filter Toggle */}
+                  <div className="bg-[#121212]/75 backdrop-blur-md border border-white/10 rounded-xl p-2 flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <TreePine className="w-3.5 h-3.5 text-[#C6FF33]" />
+                      <span className="text-[11px] font-bold text-white">Через парки</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const next = !preferParks;
+                        setPreferParks(next);
+                        if (route) handleGenerateRoute(bearingOffset, next);
+                      }}
+                      className={`w-8 h-4 flex items-center rounded-full p-0.5 transition duration-300 ${
+                        preferParks ? 'bg-[#C6FF33] justify-end' : 'bg-[#242424] justify-start'
+                      }`}
+                    >
+                      <div className="bg-black w-3 h-3 rounded-full" />
+                    </button>
+                  </div>
+
+                  {/* Weight & Pace */}
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <div>
+                      <label className="block text-[9px] text-gray-400 font-semibold mb-0.5">
+                        Вес (кг)
+                      </label>
+                      <input
+                        type="number"
+                        min={40}
+                        max={160}
+                        value={weightKg}
+                        onChange={(e) => handleWeightChange(parseFloat(e.target.value) || 70)}
+                        className="w-full bg-[#121212]/75 backdrop-blur-md border border-white/10 rounded-lg px-2 py-1 text-xs font-mono font-bold text-white focus:outline-none focus:border-[#7D39EB]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[9px] text-gray-400 font-semibold mb-0.5">
+                        Темп
+                      </label>
+                      <select
+                        value={pace}
+                        onChange={(e) => setPace(parseFloat(e.target.value))}
+                        className="w-full bg-[#121212]/75 backdrop-blur-md border border-white/10 rounded-lg px-1.5 py-1 text-xs font-semibold text-white focus:outline-none focus:border-[#7D39EB]"
+                      >
+                        {PACES.map((pc) => (
+                          <option key={pc.minPerKm} value={pc.minPerKm}>
+                            {pc.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Primary Action Buttons */}
+            <div className="space-y-1.5 pt-0.5">
               <button
                 type="button"
                 onClick={() => handleGenerateRoute()}
                 disabled={isGenerating}
-                className="w-full py-3.5 bg-[#C6FF33] hover:bg-[#b0f020] text-[#000000] font-black text-xs uppercase tracking-wider rounded-xl shadow-lg transition flex items-center justify-center gap-2 disabled:opacity-50 active:scale-98"
+                className="w-full py-2.5 bg-[#C6FF33] hover:bg-[#b0f020] text-[#000000] font-black text-xs uppercase tracking-wider rounded-xl shadow-lg transition flex items-center justify-center gap-1.5 disabled:opacity-50 active:scale-98"
               >
                 {isGenerating ? (
-                  <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                  <div className="w-3.5 h-3.5 border-2 border-black border-t-transparent rounded-full animate-spin" />
                 ) : (
                   <>
-                    <Zap className="w-4 h-4 fill-black" />
-                    <span>Сгенерировать круговой маршрут</span>
+                    <Zap className="w-3.5 h-3.5 fill-black" />
+                    <span>Сгенерировать маршрут</span>
                   </>
                 )}
               </button>
@@ -2347,54 +2340,54 @@ export default function RunnerApp() {
                   <button
                     type="button"
                     onClick={startTracking}
-                    className="w-full py-3 bg-[#7D39EB] hover:bg-[#6c28d9] text-[#FFFFFF] font-black text-xs uppercase tracking-wider rounded-xl shadow-lg transition flex items-center justify-center gap-2 active:scale-98"
+                    className="w-full py-2.5 bg-[#7D39EB] hover:bg-[#6c28d9] text-[#FFFFFF] font-black text-xs uppercase tracking-wider rounded-xl shadow-lg transition flex items-center justify-center gap-1.5 active:scale-98"
                   >
-                    <Play className="w-4 h-4 fill-white" />
-                    <span>Начать пробежку (GPS Live)</span>
+                    <Play className="w-3.5 h-3.5 fill-white" />
+                    <span>Старт пробежки</span>
                   </button>
 
-                  <div className="flex gap-2">
+                  <div className="flex gap-1.5">
                     <button
                       type="button"
                       onClick={handleRotateDirection}
-                      className="flex-1 py-2 bg-[#121212] hover:bg-[#1a1a1a] border border-[#242424] rounded-xl text-xs font-bold text-white transition flex items-center justify-center gap-1.5"
+                      className="flex-1 py-1.5 bg-[#121212] hover:bg-[#1a1a1a] border border-[#242424] rounded-lg text-[11px] font-bold text-white transition flex items-center justify-center gap-1"
                     >
-                      <RotateCw className="w-3.5 h-3.5 text-[#C6FF33]" />
+                      <RotateCw className="w-3 h-3 text-[#C6FF33]" />
                       <span>Другая петля</span>
                     </button>
 
                     <button
                       type="button"
                       onClick={handleDownloadGPX}
-                      className="py-2 px-3 bg-[#121212] hover:bg-[#1a1a1a] border border-[#242424] rounded-xl text-xs font-bold text-[#C6FF33] transition flex items-center justify-center gap-1"
+                      className="py-1.5 px-2.5 bg-[#121212] hover:bg-[#1a1a1a] border border-[#242424] rounded-lg text-[11px] font-bold text-[#C6FF33] transition flex items-center justify-center gap-1"
                     >
-                      <Download className="w-3.5 h-3.5" />
+                      <Download className="w-3 h-3" />
                       <span>GPX</span>
                     </button>
                   </div>
                 </>
               )}
 
-              {/* History Button on Desktop */}
+              {/* History Button */}
               <button
                 type="button"
                 onClick={openWorkoutHistory}
-                className="w-full py-2.5 bg-[#121212] hover:bg-[#1a1a1a] border border-[#242424] hover:border-[#7D39EB] text-gray-300 hover:text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-2"
+                className="w-full py-2 bg-[#121212] hover:bg-[#1a1a1a] border border-[#242424] hover:border-[#7D39EB] text-gray-300 hover:text-white rounded-xl text-[11px] font-bold transition flex items-center justify-center gap-1.5"
               >
-                <History className="w-3.5 h-3.5 text-[#C6FF33]" />
-                <span>История всех пробежек</span>
+                <History className="w-3 h-3 text-[#C6FF33]" />
+                <span>История пробежек</span>
               </button>
             </div>
 
             {/* Route Details Card */}
             {route && (
-              <div className="pt-2 border-t border-[#242424] space-y-1.5">
+              <div className="pt-1.5 border-t border-[#242424] space-y-1">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold text-white flex items-center gap-1 text-[11px]">
-                    <TrendingUp className="w-3.5 h-3.5 text-[#C6FF33]" />
-                    Фактический трек:
+                  <span className="font-bold text-white flex items-center gap-1 text-[10px]">
+                    <TrendingUp className="w-3 h-3 text-[#C6FF33]" />
+                    Трек:
                   </span>
-                  <span className="font-mono font-bold text-[#C6FF33] text-xs">
+                  <span className="font-mono font-bold text-[#C6FF33] text-[11px]">
                     {route.distanceKm} км • {route.durationMinutes} мин
                   </span>
                 </div>
@@ -2404,16 +2397,16 @@ export default function RunnerApp() {
                     <button
                       type="button"
                       onClick={() => setShowSteps(!showSteps)}
-                      className="w-full text-[10px] text-gray-400 hover:text-white flex items-center justify-between py-1"
+                      className="w-full text-[9px] text-gray-400 hover:text-white flex items-center justify-between py-0.5"
                     >
-                      <span>Навигационные шаги ({route.steps.length})</span>
-                      {showSteps ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3 text-gray-400" />}
+                      <span>Шаги ({route.steps.length})</span>
+                      {showSteps ? <ChevronUp className="w-2.5 h-2.5" /> : <ChevronDown className="w-2.5 h-2.5 text-gray-400" />}
                     </button>
 
                     {showSteps && (
-                      <div className="space-y-1 max-h-32 overflow-y-auto pr-1 text-[10px] text-gray-300 pt-0.5">
+                      <div className="space-y-1 max-h-28 overflow-y-auto pr-1 text-[9px] text-gray-300 pt-0.5">
                         {route.steps.map((st, i) => (
-                          <div key={i} className="flex items-start justify-between gap-1.5 p-1 rounded-lg bg-[#000000] border border-[#242424]">
+                          <div key={i} className="flex items-start justify-between gap-1 p-1 rounded-md bg-[#000000] border border-[#242424]">
                             <span className="truncate">{st.instruction}</span>
                             <span className="text-gray-500 font-mono shrink-0">{st.distanceMeters}м</span>
                           </div>

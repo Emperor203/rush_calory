@@ -12,10 +12,36 @@
 
 body {
   color: #FFFFFF;
-  background: #000000;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  background: #08090C;
+  font-family: 'Golos Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   min-height: 100vh;
   overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* OBSION & AI-RULES v3 Typography Classes */
+.font-display {
+  font-family: 'Unbounded', 'Oswald', sans-serif !important;
+  letter-spacing: -0.025em;
+}
+
+.font-heading {
+  font-family: 'Oswald', 'Unbounded', sans-serif !important;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.ease-signature {
+  transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1) !important;
+}
+
+.glow-lime {
+  box-shadow: 0 0 25px rgba(198, 255, 51, 0.4);
+}
+
+.glow-violet {
+  box-shadow: 0 0 30px rgba(125, 57, 235, 0.45);
 }
 
 /* Custom scrollbars */

@@ -33,6 +33,13 @@ export default function RootLayout({
   return (
     <html lang="ru">
       <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        {/* OBSION / AI-RULES v3: High-impact display font Unbounded + Oswald, clean body font Golos Text */}
+        <link
+          href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;600;700;800&family=Oswald:wght@500;700&family=Unbounded:wght@400;600;700;900&display=swap"
+          rel="stylesheet"
+        />
         {/* Preconnect & DNS-prefetch to speed up critical external APIs & CDN maps */}
         <link rel="preconnect" href="https://hbzoiltldxlbjwskfebw.supabase.co" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://hbzoiltldxlbjwskfebw.supabase.co" />
