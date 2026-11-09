@@ -50,7 +50,8 @@ function MapViewController({
 
   useEffect(() => {
     if (isTrackingActive && liveRunnerPos) {
-      map.panTo(liveRunnerPos, { animate: true });
+      // Follow the athlete smoothly without animation queue conflicts
+      map.panTo(liveRunnerPos, { animate: false });
     } else if (route && route.coordinates.length > 0) {
       const bounds = L.latLngBounds(route.coordinates);
       map.fitBounds(bounds, { padding: [60, 60], maxZoom: 16 });
@@ -89,24 +90,36 @@ export default function RunnerMapInner({
   );
   const trailColor = currentUser?.neonTrailColor || '#C6FF33';
 
-  // Custom Runner Start/Finish Pin Icon with Current User Avatar (Pure Lime & Black)
+  // Custom Runner Start/Finish Pin Icon
   const startIcon = useMemo(
     () =>
       L.divIcon({
         className: 'custom-start-marker',
         html: `
           <div class="relative flex flex-col items-center">
-            <div class="absolute -top-7 px-2.5 py-0.5 rounded-full ${isPassActive ? 'bg-[#C6FF33] text-[#000000] border-2 border-[#7D39EB]' : 'bg-[#000000] border-2 border-[#C6FF33] text-[#C6FF33]'} text-[10px] font-black tracking-wide whitespace-nowrap shadow-xl flex items-center gap-1 z-20 font-mono">
-              <span>${isPassActive ? '⚡' : '🏁'}</span>
-              <span>${currentUser?.name ? `ВЫ (${currentUser.name})` : 'Старт'}${isPassActive ? ' // PASS' : ''}</span>
+            <div class="absolute -top-7 px-2.5 py-0.5 rounded-full ${
+              isTrackingActive
+                ? 'bg-[#18181B] border border-white/30 text-white font-mono'
+                : isPassActive
+                ? 'bg-[#C6FF33] text-[#000000] border-2 border-[#7D39EB]'
+                : 'bg-[#000000] border-2 border-[#C6FF33] text-[#C6FF33]'
+            } text-[10px] font-black tracking-wide whitespace-nowrap shadow-xl flex items-center gap-1 z-20 font-mono">
+              <span>🏁</span>
+              <span>${isTrackingActive ? 'СТАРТ' : currentUser?.name ? `ВЫ (${currentUser.name})` : 'Старт'}${!isTrackingActive && isPassActive ? ' // PASS' : ''}</span>
             </div>
             <div class="relative">
-              <div class="absolute -inset-1.5 rounded-full ${isPassActive ? 'bg-[#7D39EB]' : 'bg-[#C6FF33]'} opacity-70 animate-ping"></div>
-              <div class="w-10 h-10 rounded-full overflow-hidden border-2 ${isPassActive ? 'border-[#C6FF33] ring-4 ring-[#7D39EB]' : 'border-[#C6FF33] ring-2 ring-[#C6FF33]/50'} bg-[#000000] shadow-2xl flex items-center justify-center">
+              ${!isTrackingActive ? `<div class="absolute -inset-1.5 rounded-full ${isPassActive ? 'bg-[#7D39EB]' : 'bg-[#C6FF33]'} opacity-70 animate-ping"></div>` : ''}
+              <div class="w-10 h-10 rounded-full overflow-hidden border-2 ${
+                isTrackingActive
+                  ? 'border-white/40 bg-[#12151F]'
+                  : isPassActive
+                  ? 'border-[#C6FF33] ring-4 ring-[#7D39EB] bg-[#000000]'
+                  : 'border-[#C6FF33] ring-2 ring-[#C6FF33]/50 bg-[#000000]'
+              } shadow-2xl flex items-center justify-center">
                 ${
-                  currentUser?.avatar
+                  !isTrackingActive && currentUser?.avatar
                     ? `<img src="${currentUser.avatar}" class="w-full h-full object-cover" />`
-                    : `<span class="text-xs font-black text-[#C6FF33]">🏁</span>`
+                    : `<span class="text-sm">🏁</span>`
                 }
               </div>
             </div>
@@ -115,7 +128,7 @@ export default function RunnerMapInner({
         iconSize: [40, 40],
         iconAnchor: [20, 20],
       }),
-    [currentUser, isPassActive],
+    [currentUser, isPassActive, isTrackingActive],
   );
 
   // Active Live Runner Location Beacon Icon with Current User Avatar (Pure Lime with Black text)

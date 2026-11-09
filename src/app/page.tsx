@@ -198,6 +198,7 @@ export default function RunnerApp() {
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const simIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const simIndexRef = useRef<number>(0);
+  const isSimulationModeRef = useRef<boolean>(false);
   const [isSimulating, setIsSimulating] = useState<boolean>(false);
   const touchStartYRef = useRef<number | null>(null);
   const hasMovedRef = useRef<boolean>(false);
@@ -1492,7 +1493,13 @@ export default function RunnerApp() {
     }
     if (!route && !activeBattle) return;
 
-    const initialPos = liveRunnerPos || startPos;
+    // If route exists, start strictly at the route's initial waypoint!
+    const routeStart = route && route.coordinates.length > 0 ? route.coordinates[0] : null;
+    const initialPos = routeStart || liveRunnerPos || startPos;
+    if (routeStart) {
+      setStartPos(routeStart);
+    }
+    isSimulationModeRef.current = false;
     setIsTrackingActive(true);
     setElapsedSeconds(0);
     setDistanceTraversedKm(0);
@@ -1512,6 +1519,9 @@ export default function RunnerApp() {
     if (navigator.geolocation) {
       watchIdRef.current = navigator.geolocation.watchPosition(
         (pos) => {
+          // If simulation is running or simulation mode was triggered, ignore all browser GPS events!
+          if (isSimulationModeRef.current || simIntervalRef.current) return;
+
           const newPos: [number, number] = [pos.coords.latitude, pos.coords.longitude];
           const speed = pos.coords.speed ? Math.round(pos.coords.speed * 3.6 * 10) / 10 : 9.5;
 
@@ -1626,6 +1636,7 @@ export default function RunnerApp() {
       clearInterval(simIntervalRef.current);
       simIntervalRef.current = null;
     }
+    isSimulationModeRef.current = false;
     simIndexRef.current = 0;
     setIsSimulating(false);
   };
@@ -1641,6 +1652,13 @@ export default function RunnerApp() {
       return;
     }
 
+    // Lock simulation mode and permanently clear GPS watcher during simulation
+    isSimulationModeRef.current = true;
+    if (watchIdRef.current !== null && navigator.geolocation) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+      watchIdRef.current = null;
+    }
+
     setIsSimulating(true);
     setCurrentSpeedKmh(11.5);
 
@@ -1648,34 +1666,46 @@ export default function RunnerApp() {
     if (route && route.coordinates.length >= 2) {
       const coords = route.coordinates;
       const totalPoints = coords.length;
+
+      // When starting from the beginning, snap directly to start of route
+      if (simIndexRef.current === 0) {
+        setLiveRunnerPos(coords[0]);
+        setTraversedCoords([coords[0]]);
+        setDistanceTraversedKm(0);
+      }
+
       // Step size ensures smooth animation that completes in reasonable time (~20-30s)
       const step = Math.max(1, Math.floor(totalPoints / 75));
-      const intervalMs = 380;
+      const intervalMs = 350;
 
       simIntervalRef.current = setInterval(() => {
         const prevIdx = simIndexRef.current;
         const nextIdx = Math.min(prevIdx + step, totalPoints - 1);
         simIndexRef.current = nextIdx;
 
-        const p1 = coords[prevIdx];
         const p2 = coords[nextIdx];
-        const segmentMeters = haversineDistance(p1[0], p1[1], p2[0], p2[1]);
-        const addKm = segmentMeters / 1000;
+
+        // Slice ALL intermediate road vertices between prevIdx and nextIdx
+        // so the runner strictly follows the curves of the road without cutting corners or buildings!
+        const intermediateSlice = coords.slice(prevIdx + 1, nextIdx + 1);
 
         setLiveRunnerPos(p2);
-        setTraversedCoords((prev) => [...prev, p2]);
+        setTraversedCoords((prev) => [...prev, ...intermediateSlice]);
 
         const isFinish = nextIdx >= totalPoints - 1;
 
-        setDistanceTraversedKm((d) => {
-          if (isFinish) return route.distanceKm;
-          return Math.round((d + addKm) * 100) / 100;
-        });
+        // Accurate proportional distance along the route
+        const progressRatio = nextIdx / (totalPoints - 1);
+        const currentKm = isFinish
+          ? route.distanceKm
+          : Math.round(route.distanceKm * progressRatio * 100) / 100;
+
+        setDistanceTraversedKm(currentKm);
 
         if (activeBattle && activeBattle.status === 'active') {
-          setPvpTraversedKm((d) => {
+          setPvpTraversedKm(() => {
             if (isFinish) return Math.max(route.distanceKm, activeBattle.targetKm);
-            return Math.round((d + addKm) * 100) / 100;
+            return Math.min(currentKm, activeBattle.targetKm);
           });
         }
 
@@ -1685,6 +1715,7 @@ export default function RunnerApp() {
             clearInterval(simIntervalRef.current);
             simIntervalRef.current = null;
           }
+          simIndexRef.current = 0;
           setIsSimulating(false);
           setCurrentSpeedKmh(0);
         }
