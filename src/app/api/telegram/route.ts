@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
-  buildBatteryStreakWidgetHtml,
-  getDefaultWidgetState,
-  parseWidgetState,
-  applyWidgetAction,
+  buildWeatherStreakWidgetHtml,
+  getDefaultWeatherStreakState,
+  parseWeatherWidgetState,
+  applyWeatherWidgetAction,
 } from '@/lib/telegramWidget';
+import { fetchLiveWeather, WeatherData } from '@/lib/weather';
 
 const TELEGRAM_API = 'https://api.telegram.org';
 
@@ -12,18 +13,27 @@ function getBotToken(): string {
   return process.env.TELEGRAM_BOT_TOKEN || '';
 }
 
-async function sendBatteryWidget(chatId: number | string, appUrl: string) {
-  const initialState = getDefaultWidgetState();
+async function getSafeLiveWeather(): Promise<WeatherData | null> {
+  try {
+    return await fetchLiveWeather(41.2995, 69.2401);
+  } catch {
+    return null;
+  }
+}
+
+async function sendWeatherWidget(chatId: number | string, appUrl: string) {
+  const liveWeather = await getSafeLiveWeather();
+  const initialState = getDefaultWeatherStreakState(liveWeather, 'Ташкент');
   const res = await sendTelegramRequest('sendWidget', {
     chat_id: chatId,
-    html: buildBatteryStreakWidgetHtml(),
+    html: buildWeatherStreakWidgetHtml(),
     chat_data: JSON.stringify(initialState),
     allow_queries: true,
     reply_markup: {
       inline_keyboard: [
         [
           {
-            text: '🏃 Сжечь калории на карте',
+            text: '🏃 Выйти на пробежку',
             web_app: { url: appUrl },
             style: 'success',
           },
@@ -32,19 +42,22 @@ async function sendBatteryWidget(chatId: number | string, appUrl: string) {
     },
   });
 
-  // Fallback if client or DC doesn't accept sendWidget yet
+  // Fallback if client or DC doesn't support sendWidget yet
   if (!res?.ok) {
+    const tSign = initialState.temp > 0 ? `+${initialState.temp}` : `${initialState.temp}`;
     await sendTelegramRequest('sendMessage', {
       chat_id: chatId,
       text:
-        `🔋 *БАТАРЕЙКА ДНЯ И СТРИК НЕДЕЛИ*\n\n` +
-        `Заряжено: *${initialState.kcal} ккал* (~${Math.min(5.8, Math.max(1.2, Math.round((initialState.kcal / 110) * 10) / 10)).toFixed(1)} км)\n` +
-        `🔥 Текущий стрик: *${initialState.streak} дн.*\n\n` +
-        `*(Примечание Telegram: ваш клиент пока не активировал HTML-виджеты Bot API 10.4, открываю интерактивную версию кнопки 👇)*`,
+        `🔥 *ОГОНЁК ЗА ВХОД НАЧИСЛЕН! (Стрик: ${initialState.streak} дн.)*\n\n` +
+        `🌤️ *Погода сейчас (${initialState.city}):*\n` +
+        `• Температура: *${tSign}°C* (ощущается ${initialState.feelsLike}°C)\n` +
+        `• Условия: *${initialState.condition}*\n` +
+        `• Ветер: *${initialState.windSpeed} км/ч* | Дождь: *${initialState.rainProb}%*\n\n` +
+        `💬 *Совет:* ${initialState.suitabilityText}`,
       parse_mode: 'Markdown',
       reply_markup: {
         inline_keyboard: [
-          [{ text: '⚡ Открыть интерактивную Батарейку', web_app: { url: `${appUrl}/widget` }, style: 'primary' }],
+          [{ text: '🔥 Открыть интерактивный виджет Погоды & Стрика', web_app: { url: `${appUrl}/widget` }, style: 'primary' }],
           [{ text: '🏃 Запустить Rush Calory', web_app: { url: appUrl }, style: 'success' }],
         ],
       },
@@ -114,7 +127,7 @@ export async function GET(req: NextRequest) {
     const setCommandsRes = await sendTelegramRequest('setMyCommands', {
       commands: [
         { command: 'start', description: 'Запустить Rush Calory & ИИ-Сканер' },
-        { command: 'widget', description: '🔋 Батарейка дня и Стрик недели' },
+        { command: 'widget', description: '🔥 Погода и Стрик (Огонёк дня)' },
         { command: 'duel', description: 'Создать PvP дуэль наперегонки' },
         { command: 'ranks', description: 'Ранги атлетов и Лиги' },
         { command: 'help', description: 'Как играть и правила игры' },
@@ -180,8 +193,9 @@ export async function POST(req: NextRequest) {
     const chatId = wq.message?.chat?.id;
     const messageId = wq.message?.message_id;
     const currentRaw = wq.message?.widget?.chat_data || null;
-    const currentState = parseWidgetState(currentRaw);
-    const nextState = applyWidgetAction(currentState, action);
+    const currentState = parseWeatherWidgetState(currentRaw);
+    const freshWeather = action === 'refresh' ? await getSafeLiveWeather() : null;
+    const nextState = applyWeatherWidgetAction(currentState, action, freshWeather);
     const nextRaw = JSON.stringify(nextState);
 
     if (chatId && messageId) {
@@ -346,7 +360,7 @@ export async function POST(req: NextRequest) {
         },
       });
     } else if (data === 'open_battery_widget') {
-      await sendBatteryWidget(chatId, appUrl);
+      await sendWeatherWidget(chatId, appUrl);
     }
 
     return NextResponse.json({ ok: true });
@@ -359,8 +373,8 @@ export async function POST(req: NextRequest) {
     const fromUser = update.message.from;
     const firstName = fromUser?.first_name || 'Атлет';
 
-    if (text.startsWith('/widget') || text.startsWith('/streak')) {
-      await sendBatteryWidget(chatId, appUrl);
+    if (text.startsWith('/widget') || text.startsWith('/streak') || text.startsWith('/weather')) {
+      await sendWeatherWidget(chatId, appUrl);
     } else if (text.startsWith('/start')) {
       const welcomeText =
         `⚡ *Привет, ${firstName}! Добро пожаловать в Rush Calory MMO!*\n\n` +
@@ -386,7 +400,7 @@ export async function POST(req: NextRequest) {
             ],
             [
               {
-                text: '🔋 Батарейка дня и Стрик (Виджет)',
+                text: '🔥 Погода и Стрик (Огонёк дня)',
                 callback_data: 'open_battery_widget',
                 style: 'primary',
               },
