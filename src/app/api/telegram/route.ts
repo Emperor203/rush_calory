@@ -1,56 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import {
-  buildStreakResultsWidgetHtml,
-  getDefaultStreakResultsState,
-  parseStreakResultsState,
-  applyStreakResultsAction,
-} from '@/lib/telegramWidget';
 
 const TELEGRAM_API = 'https://api.telegram.org';
 
 function getBotToken(): string {
   return process.env.TELEGRAM_BOT_TOKEN || '';
-}
-
-async function sendStreakResultsWidget(chatId: number | string, appUrl: string) {
-  const initialState = getDefaultStreakResultsState();
-  const res = await sendTelegramRequest('sendWidget', {
-    chat_id: chatId,
-    html: buildStreakResultsWidgetHtml(),
-    chat_data: JSON.stringify(initialState),
-    allow_queries: true,
-    reply_markup: {
-      inline_keyboard: [
-        [
-          {
-            text: '🏃 Выйти на пробежку',
-            web_app: { url: appUrl },
-            style: 'success',
-          },
-        ],
-      ],
-    },
-  });
-
-  // Fallback if client or DC doesn't support sendWidget yet
-  if (!res?.ok) {
-    await sendTelegramRequest('sendMessage', {
-      chat_id: chatId,
-      text:
-        `🔥 *СТРИК И МОИ РЕЗУЛЬТАТЫ*\n\n` +
-        `• Огонёк за вход: *🔥 ${initialState.streak} дн. подряд*\n` +
-        `• Открывай карточку своих реальных забегов, ранга, калорий и рекордов прямо ниже! 👇`,
-      parse_mode: 'Markdown',
-      reply_markup: {
-        inline_keyboard: [
-          [{ text: '🔥 Открыть Стрик и Результаты', web_app: { url: `${appUrl}/widget` }, style: 'primary' }],
-          [{ text: '🏃 Запустить Rush Calory', web_app: { url: appUrl }, style: 'success' }],
-        ],
-      },
-    });
-  }
-
-  return res;
 }
 
 function getAppUrl(req: NextRequest): string {
@@ -99,7 +52,7 @@ export async function GET(req: NextRequest) {
     const webhookRes = await sendTelegramRequest('setWebhook', {
       url: webhookUrl,
       drop_pending_updates: true,
-      allowed_updates: ['message', 'callback_query', 'inline_query', 'widget_query', 'pre_checkout_query'],
+      allowed_updates: ['message', 'callback_query', 'inline_query'],
     });
 
     const menuButtonRes = await sendTelegramRequest('setChatMenuButton', {
@@ -113,7 +66,6 @@ export async function GET(req: NextRequest) {
     const setCommandsRes = await sendTelegramRequest('setMyCommands', {
       commands: [
         { command: 'start', description: 'Запустить Rush Calory & ИИ-Сканер' },
-        { command: 'widget', description: '🔥 Стрик и Мои результаты' },
         { command: 'duel', description: 'Создать PvP дуэль наперегонки' },
         { command: 'ranks', description: 'Ранги атлетов и Лиги' },
         { command: 'help', description: 'Как играть и правила игры' },
@@ -168,34 +120,6 @@ export async function POST(req: NextRequest) {
       pre_checkout_query_id: update.pre_checkout_query.id,
       ok: true,
     });
-    return NextResponse.json({ ok: true });
-  }
-
-  // 1.5 Handle Telegram In-Message Widget Query (Bot API 10.4)
-  if (update.widget_query) {
-    const wq = update.widget_query;
-    const queryId = wq.id;
-    const action = String(wq.data || '');
-    const chatId = wq.message?.chat?.id;
-    const messageId = wq.message?.message_id;
-    const currentRaw = wq.message?.widget?.chat_data || null;
-    const currentState = parseStreakResultsState(currentRaw);
-    const nextState = applyStreakResultsAction(currentState, action);
-    const nextRaw = JSON.stringify(nextState);
-
-    if (chatId && messageId) {
-      await sendTelegramRequest('editMessageWidgetData', {
-        chat_id: chatId,
-        message_id: messageId,
-        chat_data: nextRaw,
-      });
-    }
-
-    await sendTelegramRequest('answerWidgetQuery', {
-      widget_query_id: queryId,
-      result: nextRaw.slice(0, 1024),
-    });
-
     return NextResponse.json({ ok: true });
   }
 
@@ -344,8 +268,6 @@ export async function POST(req: NextRequest) {
           ],
         },
       });
-    } else if (data === 'open_battery_widget') {
-      await sendStreakResultsWidget(chatId, appUrl);
     }
 
     return NextResponse.json({ ok: true });
@@ -358,9 +280,7 @@ export async function POST(req: NextRequest) {
     const fromUser = update.message.from;
     const firstName = fromUser?.first_name || 'Атлет';
 
-    if (text.startsWith('/widget') || text.startsWith('/streak') || text.startsWith('/results')) {
-      await sendStreakResultsWidget(chatId, appUrl);
-    } else if (text.startsWith('/start')) {
+    if (text.startsWith('/start')) {
       const welcomeText =
         `⚡ *Привет, ${firstName}! Добро пожаловать в Rush Calory MMO!*\n\n` +
         `Твой город теперь — живая спортивная арена:\n\n` +
@@ -381,13 +301,6 @@ export async function POST(req: NextRequest) {
                 text: '🏃 Запустить Rush Calory',
                 web_app: { url: appUrl },
                 style: 'success',
-              },
-            ],
-            [
-              {
-                text: '🔥 Стрик и Мои результаты',
-                callback_data: 'open_battery_widget',
-                style: 'primary',
               },
             ],
             [

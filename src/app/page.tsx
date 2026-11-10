@@ -20,16 +20,11 @@ import {
 import { GoogleUser, getSavedGoogleUser, saveGoogleUser, getTelegramWebUser } from '@/lib/auth';
 import { supabase, LiveOnlineRunner } from '@/lib/supabase';
 import { PvpBattle, PvpInvitePayload, PvpRoom, PvpRoomRunner } from '@/lib/pvp';
-import { CompletedWorkout, saveCompletedWorkout, getWorkoutHistory } from '@/lib/history';
+import { CompletedWorkout, saveCompletedWorkout } from '@/lib/history';
 import UserProfileButton from '@/components/auth/UserProfileButton';
 import { isStreetPassActive } from '@/lib/streetpass';
 import { calculateUserRank } from '@/lib/ranks';
 import { playRankUpSound } from '@/lib/sounds';
-import {
-  StreakResultsWidgetState,
-  getDefaultStreakResultsState,
-  getTodayWeekdayIndex,
-} from '@/lib/telegramWidget';
 
 // Lazy-loaded on-demand components (Reduces initial JS bundle size significantly)
 const GoogleAuthModal = dynamic(() => import('@/components/auth/GoogleAuthModal'), { ssr: false });
@@ -39,7 +34,6 @@ const StreetPassModal = dynamic(() => import('@/components/streetpass/StreetPass
 const PvpPassBlockedModal = dynamic(() => import('@/components/streetpass/PvpPassBlockedModal'), { ssr: false });
 const FoodScannerModal = dynamic(() => import('@/components/scanner/FoodScannerModal'), { ssr: false });
 const TelegramStoryModal = dynamic(() => import('@/components/stories/TelegramStoryModal'), { ssr: false });
-const RushCoinsModal = dynamic(() => import('@/components/wallet/RushCoinsModal'), { ssr: false });
 import {
   Flame,
   CloudRain,
@@ -189,49 +183,6 @@ export default function RunnerApp() {
   const [scannedInitialImage, setScannedInitialImage] = useState<{ base64: string; mimeType: string } | null>(null);
   const [isStoryModalOpen, setIsStoryModalOpen] = useState<boolean>(false);
   const [isHudCollapsed, setIsHudCollapsed] = useState<boolean>(false);
-  const [isCoinsModalOpen, setIsCoinsModalOpen] = useState<boolean>(false);
-  const [coinsWidgetState, setCoinsWidgetState] = useState<StreakResultsWidgetState>(() =>
-    getDefaultStreakResultsState(),
-  );
-  const [flameToast, setFlameToast] = useState<string | null>(null);
-
-  useEffect(() => {
-    const todayStr = new Date().toISOString().slice(0, 10);
-    const todayIdx = getTodayWeekdayIndex();
-    try {
-      const savedRaw = localStorage.getItem('rush_streak_results_v1');
-      let loaded: StreakResultsWidgetState = savedRaw
-        ? JSON.parse(savedRaw)
-        : getDefaultStreakResultsState();
-      if (!Array.isArray(loaded.days) || loaded.days.length !== 7) {
-        loaded = getDefaultStreakResultsState();
-      }
-      loaded.todayIdx = todayIdx;
-      const lastFlameDate = localStorage.getItem('rush_last_flame_date_v2');
-      if (lastFlameDate !== todayStr) {
-        loaded.days[todayIdx] = true;
-        loaded.streak = Math.max(1, loaded.days.filter(Boolean).length);
-        loaded.note = `🔥 Огонёк за вход зажжён! Стрик: ${loaded.streak} дн.`;
-        localStorage.setItem('rush_last_flame_date_v2', todayStr);
-        setFlameToast(`🔥 Огонёк за сегодняшний вход зажжён! Стрик: ${loaded.streak} дн.`);
-        setTimeout(() => setFlameToast(null), 5000);
-      }
-      // Sync real workout stats from history & user profile
-      const workouts = getWorkoutHistory();
-      const user = getSavedGoogleUser();
-      const histKm = workouts.reduce((s, w) => s + (w.distanceKm || 0), 0);
-      const histKcal = workouts.reduce((s, w) => s + (w.caloriesBurned || 0), 0);
-      const bestKm = workouts.reduce((m, w) => Math.max(m, w.distanceKm || 0), 0);
-
-      loaded.totalKm = Math.round(Math.max(user?.totalKmRun || 0, histKm) * 10) / 10;
-      loaded.totalKcal = Math.max(user?.totalCaloriesBurned || 0, histKcal);
-      loaded.runsCount = Math.max(user?.completedRunsCount || 0, workouts.length);
-      loaded.bestKm = Math.round(bestKm * 10) / 10;
-
-      localStorage.setItem('rush_streak_results_v1', JSON.stringify(loaded));
-      setCoinsWidgetState(loaded);
-    } catch {}
-  }, []);
 
   const openStreetPass = (tab: 'plans' | 'studio' = 'plans') => {
     setStreetPassTab(tab);
@@ -1621,31 +1572,6 @@ export default function RunnerApp() {
       setHistoryModalTab('summary');
       setIsWorkoutSummaryOpen(true);
 
-      // Update Streak & Real Athlete Results HUD
-      const todayIdx = getTodayWeekdayIndex();
-      setCoinsWidgetState((prev) => {
-        const nextDays = [...(prev.days || [false, false, false, false, false, false, false])];
-        nextDays[todayIdx] = true;
-        const nextStreak = Math.max(1, nextDays.filter(Boolean).length);
-        const updated: StreakResultsWidgetState = {
-          ...prev,
-          streak: nextStreak,
-          days: nextDays,
-          todayIdx,
-          totalKm: Math.round(((prev.totalKm || 0) + workoutRecord.distanceKm) * 10) / 10,
-          totalKcal: (prev.totalKcal || 0) + workoutRecord.caloriesBurned,
-          runsCount: (prev.runsCount || 0) + 1,
-          bestKm: Math.round(Math.max(prev.bestKm || 0, workoutRecord.distanceKm) * 10) / 10,
-          note: `🏁 Записано: +${workoutRecord.distanceKm} км (${workoutRecord.caloriesBurned} ккал)`,
-        };
-        try {
-          localStorage.setItem('rush_streak_results_v1', JSON.stringify(updated));
-        } catch {}
-        return updated;
-      });
-      setFlameToast(`🔥 Пробежка записана в результаты: +${workoutRecord.distanceKm} км • ${workoutRecord.caloriesBurned} ккал!`);
-      setTimeout(() => setFlameToast(null), 5000);
-
       // Check if this run caused a Rank Up (level up like in Steam)!
       const prevKm = googleUser?.totalKmRun || 0;
       const newKm = prevKm + workoutRecord.distanceKm;
@@ -2023,21 +1949,6 @@ export default function RunnerApp() {
           >
             <History className="w-3.5 h-3.5 text-[#C6FF33]" />
             <span className="hidden md:inline">История</span>
-          </button>
-
-          {/* Daily Flame Streak & Athlete Results Pill */}
-          <button
-            type="button"
-            onClick={() => setIsCoinsModalOpen(true)}
-            className="pointer-events-auto flex items-center gap-1.5 bg-[#000000]/80 hover:bg-[#12151F] backdrop-blur-xl border border-orange-500/50 hover:border-[#C6FF33] px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-2xl shadow-xl transition active:scale-95"
-            title="Мой Стрик огоньков и Результаты"
-          >
-            <span className="text-xs font-heading font-black text-orange-400">
-              🔥{coinsWidgetState.streak}
-            </span>
-            <span className="font-mono font-bold text-[11px] text-[#C6FF33]">
-              {(coinsWidgetState.totalKm || 0).toFixed(1)} км
-            </span>
           </button>
         </div>
 
@@ -2896,24 +2807,6 @@ export default function RunnerApp() {
         workout={completedWorkout}
         currentUser={googleUser}
       />
-
-      {/* Daily Flame Streak & Real Results Modal */}
-      <RushCoinsModal
-        isOpen={isCoinsModalOpen}
-        onClose={() => setIsCoinsModalOpen(false)}
-        state={coinsWidgetState}
-        onOpenFullHistory={openWorkoutHistory}
-      />
-
-      {/* Auto-Flame / Coin Reward Toast */}
-      {flameToast && (
-        <div
-          onClick={() => setFlameToast(null)}
-          className="fixed top-16 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-full bg-[#12151F]/95 border border-orange-500/60 text-xs font-heading font-bold text-orange-200 shadow-[0_0_25px_rgba(255,107,0,0.4)] animate-fade-in whitespace-nowrap cursor-pointer"
-        >
-          {flameToast}
-        </div>
-      )}
     </div>
   );
 }
