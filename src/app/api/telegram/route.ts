@@ -58,14 +58,14 @@ export async function GET(req: NextRequest) {
     const menuButtonRes = await sendTelegramRequest('setChatMenuButton', {
       menu_button: {
         type: 'web_app',
-        text: '🏃 Бежать (Calorie Runner)',
+        text: '🏃 Бежать (Rush Calory)',
         web_app: { url: appUrl },
       },
     });
 
     const setCommandsRes = await sendTelegramRequest('setMyCommands', {
       commands: [
-        { command: 'start', description: 'Запустить Calorie Runner & главное меню' },
+        { command: 'start', description: 'Запустить Rush Calory & ИИ-Сканер' },
         { command: 'duel', description: 'Создать PvP дуэль наперегонки' },
         { command: 'ranks', description: 'Ранги атлетов и Лиги' },
         { command: 'help', description: 'Как играть и правила игры' },
@@ -148,7 +148,7 @@ export async function POST(req: NextRequest) {
       parse_mode: 'Markdown',
       reply_markup: {
         inline_keyboard: [
-          [{ text: '🏃 Открыть Calorie Runner', web_app: { url: appUrl } }],
+          [{ text: '🏃 Открыть Rush Calory', web_app: { url: appUrl }, style: 'success' }],
         ],
       },
     });
@@ -173,7 +173,7 @@ export async function POST(req: NextRequest) {
           description: `Брось вызов друзьям: кто первым набежит ${targetKm} км!`,
           thumb_url: 'https://rush-calory.vercel.app/avatar.jpg',
           input_message_content: {
-            message_text: `⚔️ *ВЫЗОВ НА ДУЭЛЬ В CALORIE RUNNER!*\n\n🏃 Дистанция: *${targetKm} км*\n🏁 Кто первым набежит дистанцию — забирает титул чемпиона и победный гимн!\n\nПринимай вызов и побеждай на карте города! 👇`,
+            message_text: `⚔️ *ВЫЗОВ НА ДУЭЛЬ В RUSH CALORY!*\n\n🏃 Дистанция: *${targetKm} км*\n🏁 Кто первым набежит дистанцию — забирает титул чемпиона и победный гимн!\n\nПринимай вызов и побеждай на карте города! 👇`,
             parse_mode: 'Markdown',
           },
           reply_markup: {
@@ -182,6 +182,7 @@ export async function POST(req: NextRequest) {
                 {
                   text: `⚔️ Принять бой (${targetKm} км)`,
                   web_app: { url: `${appUrl}?pvp=true&targetKm=${targetKm}` },
+                  style: 'danger',
                 },
               ],
             ],
@@ -204,7 +205,7 @@ export async function POST(req: NextRequest) {
 
     if (data === 'ranks') {
       const ranksText =
-        `👑 *ЛИГИ И РАНГИ АТЛЕТОВ В CALORIE RUNNER*\n\n` +
+        `👑 *ЛИГИ И РАНГИ АТЛЕТОВ В RUSH CALORY*\n\n` +
         `Каждый сожжённый калорий и километр повышают твой ранг:\n\n` +
         `🪵 *Wood Athlete* — Новичок (0 - 500 ккал)\n` +
         `🥉 *Bronze Runner* — 500 - 1,500 ккал\n` +
@@ -220,17 +221,17 @@ export async function POST(req: NextRequest) {
         parse_mode: 'Markdown',
         reply_markup: {
           inline_keyboard: [
-            [{ text: '🏃 Открыть приложение', web_app: { url: appUrl } }],
+            [{ text: '🏃 Открыть приложение', web_app: { url: appUrl }, style: 'success' }],
           ],
         },
       });
     } else if (data === 'help') {
       const helpText =
-        `ℹ️ *КАК ИГРАТЬ В CALORIE RUNNER*\n\n` +
-        `1️⃣ *Сжигай калории*: Выбери еду (круассан 🥐, бургер 🍔, пицца 🍕) или задай ккал — приложение построит замкнутый кольцевой маршрут нужной длины.\n\n` +
+        `ℹ️ *КАК ИГРАТЬ В RUSH CALORY*\n\n` +
+        `1️⃣ *ИИ-Сканер еды*: Сфотографируй пиццу, бургер или плов — Gemini 3.5 оценит калории и построит идеальный кольцевой трек от дома (45% / 70% / 100%).\n\n` +
         `2️⃣ *Беги по карте*: Твой аватар, скорость и живой след отображаются на карте в реальном времени.\n\n` +
         `3️⃣ *PvP Дуэли*: Создай комнату, установи дистанцию (напр. 1 км), поделись 4-значным кодом с другом и бегите наперегонки. Кто первым набежит цель — забирает кубок 🏆!\n\n` +
-        `4️⃣ *Street Pass*: Открывает студию гимнов и неоновые следы бега!`;
+        `4️⃣ *Stories & Street Pass*: Генерируй неоновую карточку 9:16 для Telegram Stories и включай победный гимн!`;
 
       await sendTelegramRequest('sendMessage', {
         chat_id: chatId,
@@ -238,7 +239,7 @@ export async function POST(req: NextRequest) {
         parse_mode: 'Markdown',
         reply_markup: {
           inline_keyboard: [
-            [{ text: '🏃 Начать забег', web_app: { url: appUrl } }],
+            [{ text: '🏃 Начать забег', web_app: { url: appUrl }, style: 'success' }],
           ],
         },
       });
@@ -254,15 +255,15 @@ export async function POST(req: NextRequest) {
         reply_markup: {
           inline_keyboard: [
             [
-              { text: '⚡ Спринт 0.5 км', web_app: { url: `${appUrl}?pvp=true&km=0.5` } },
-              { text: '🏃 Классика 1.0 км', web_app: { url: `${appUrl}?pvp=true&km=1.0` } },
+              { text: '⚡ Спринт 0.5 км', web_app: { url: `${appUrl}?pvp=true&km=0.5` }, style: 'primary' },
+              { text: '🏃 Классика 1.0 км', web_app: { url: `${appUrl}?pvp=true&km=1.0` }, style: 'success' },
             ],
             [
-              { text: '🔥 Драйв 2.0 км', web_app: { url: `${appUrl}?pvp=true&km=2.0` } },
-              { text: '⚡ Марафон 5.0 км', web_app: { url: `${appUrl}?pvp=true&km=5.0` } },
+              { text: '🔥 Драйв 2.0 км', web_app: { url: `${appUrl}?pvp=true&km=2.0` }, style: 'danger' },
+              { text: '⚡ Марафон 5.0 км', web_app: { url: `${appUrl}?pvp=true&km=5.0` }, style: 'danger' },
             ],
             [
-              { text: '👥 Вызвать друга в чате', switch_inline_query: '1.0' },
+              { text: '👥 Вызвать друга в чате', switch_inline_query: '1.0', style: 'primary' },
             ],
           ],
         },
@@ -281,13 +282,13 @@ export async function POST(req: NextRequest) {
 
     if (text.startsWith('/start')) {
       const welcomeText =
-        `⚡ *Привет, ${firstName}! Добро пожаловать в Calorie Runner MMO!*\n\n` +
+        `⚡ *Привет, ${firstName}! Добро пожаловать в Rush Calory MMO!*\n\n` +
         `Твой город теперь — живая спортивная арена:\n\n` +
+        `📸 *ИИ-Сканер еды (Gemini 3.5)*: сфоткай блюдо и сожги его по умному маршруту от дома\n` +
         `🏃 *Реальные бегуны на карте*: видь атлетов рядом с тобой в прямом эфире\n` +
-        `🥐 *Калории в маршруты*: превращай съеденную еду в кольцевые треки\n` +
         `⚔️ *PvP Дуэли в реальном времени*: соревнуйся наперегонки на 0.5, 1, 2 или 5 км\n` +
-        `🎵 *MVP-Гимны и Неоновые Следы*: побеждай и включай свой гимн на финише!\n\n` +
-        `Нажимай кнопку ниже, чтобы начать! 👇`;
+        `🎵 *Stories и Неоновые Следы*: побеждай и делись карточками 9:16!\n\n` +
+        `Нажимай зелёную кнопку ниже, чтобы начать! 👇`;
 
       await sendTelegramRequest('sendMessage', {
         chat_id: chatId,
@@ -297,24 +298,28 @@ export async function POST(req: NextRequest) {
           inline_keyboard: [
             [
               {
-                text: '🏃 Запустить Calorie Runner',
+                text: '🏃 Запустить Rush Calory',
                 web_app: { url: appUrl },
+                style: 'success',
               },
             ],
             [
               {
                 text: '⚔️ PvP Дуэль (Комната)',
                 web_app: { url: `${appUrl}?pvp=true` },
+                style: 'danger',
               },
               {
                 text: '👥 Вызвать друга в чате',
                 switch_inline_query: '1.0',
+                style: 'primary',
               },
             ],
             [
               {
                 text: '👑 Лиги и Ранги',
                 callback_data: 'ranks',
+                style: 'primary',
               },
               {
                 text: 'ℹ️ Как играть',
@@ -337,22 +342,22 @@ export async function POST(req: NextRequest) {
         reply_markup: {
           inline_keyboard: [
             [
-              { text: '⚡ Спринт 0.5 км', web_app: { url: `${appUrl}?pvp=true&km=0.5` } },
-              { text: '🏃 Стандарт 1.0 км', web_app: { url: `${appUrl}?pvp=true&km=1.0` } },
+              { text: '⚡ Спринт 0.5 км', web_app: { url: `${appUrl}?pvp=true&km=0.5` }, style: 'primary' },
+              { text: '🏃 Стандарт 1.0 км', web_app: { url: `${appUrl}?pvp=true&km=1.0` }, style: 'success' },
             ],
             [
-              { text: '🔥 Драйв 2.0 км', web_app: { url: `${appUrl}?pvp=true&km=2.0` } },
-              { text: '⚡ Про 5.0 км', web_app: { url: `${appUrl}?pvp=true&km=5.0` } },
+              { text: '🔥 Драйв 2.0 км', web_app: { url: `${appUrl}?pvp=true&km=2.0` }, style: 'danger' },
+              { text: '⚡ Про 5.0 км', web_app: { url: `${appUrl}?pvp=true&km=5.0` }, style: 'danger' },
             ],
             [
-              { text: '👥 Вызвать друга в чате', switch_inline_query: '1.0' },
+              { text: '👥 Вызвать друга в чате', switch_inline_query: '1.0', style: 'primary' },
             ],
           ],
         },
       });
     } else if (text.startsWith('/ranks')) {
       const ranksText =
-        `👑 *ЛИГИ И РАНГИ АТЛЕТОВ В CALORIE RUNNER*\n\n` +
+        `👑 *ЛИГИ И РАНГИ АТЛЕТОВ В RUSH CALORY*\n\n` +
         `🪵 *Wood Athlete* — Новичок (0 - 500 ккал)\n` +
         `🥉 *Bronze Runner* — 500 - 1,500 ккал\n` +
         `🥈 *Silver Pacer* — 1,500 - 3,500 ккал\n` +
@@ -366,14 +371,14 @@ export async function POST(req: NextRequest) {
         parse_mode: 'Markdown',
         reply_markup: {
           inline_keyboard: [
-            [{ text: '🏃 Открыть приложение', web_app: { url: appUrl } }],
+            [{ text: '🏃 Открыть приложение', web_app: { url: appUrl }, style: 'success' }],
           ],
         },
       });
     } else if (text.startsWith('/help')) {
       const helpText =
-        `ℹ️ *КАК ИГРАТЬ В CALORIE RUNNER*\n\n` +
-        `1️⃣ *Сжигай калории*: Выбери еду (круассан, бургер) ➔ построй кольцевой трек.\n` +
+        `ℹ️ *КАК ИГРАТЬ В RUSH CALORY*\n\n` +
+        `1️⃣ *ИИ-Сканер еды*: Сфотографируй блюдо ➔ получи калории и кольцевой трек от дома.\n` +
         `2️⃣ *Беги*: Твой аватар и скорость отображаются на живой карте.\n` +
         `3️⃣ *PvP*: Создай комнату, зови друга по коду и побеждай наперегонки!`;
 
@@ -383,7 +388,7 @@ export async function POST(req: NextRequest) {
         parse_mode: 'Markdown',
         reply_markup: {
           inline_keyboard: [
-            [{ text: '🏃 Начать забег', web_app: { url: appUrl } }],
+            [{ text: '🏃 Начать забег', web_app: { url: appUrl }, style: 'success' }],
           ],
         },
       });
@@ -391,10 +396,10 @@ export async function POST(req: NextRequest) {
       // Default echo reply
       await sendTelegramRequest('sendMessage', {
         chat_id: chatId,
-        text: `🏃 Нажми кнопку ниже, чтобы запустить Calorie Runner!`,
+        text: `🏃 Нажми кнопку ниже, чтобы запустить Rush Calory!`,
         reply_markup: {
           inline_keyboard: [
-            [{ text: '🏃 Запустить Calorie Runner', web_app: { url: appUrl } }],
+            [{ text: '🏃 Запустить Rush Calory', web_app: { url: appUrl }, style: 'success' }],
           ],
         },
       });
