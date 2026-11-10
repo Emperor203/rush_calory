@@ -1,18 +1,21 @@
 import zlib from 'zlib';
-import { WeatherData } from './weather';
 
-export interface WeatherStreakState {
-  temp: number;
-  feelsLike: number;
-  windSpeed: number;
-  rainProb: number;
-  condition: string;
-  suitabilityText: string;
-  city: string;
+export interface CoinsStreakWidgetState {
+  /** Total earned RUSH coins */
+  coins: number;
+  /** Daily flame streak count (consecutive days) */
   streak: number;
+  /** 7-element boolean array for Mon..Sun */
   days: boolean[];
+  /** Current day index (0=Mon .. 6=Sun) */
   todayIdx: number;
-  flameClaimedToday: boolean;
+  /** Whether today's daily login coin bonus was claimed */
+  dailyClaimed: boolean;
+  /** Streak Freeze shields owned */
+  freezes: number;
+  /** Total km farmed this week */
+  weekKm: number;
+  /** Status line in HUD */
   note?: string;
 }
 
@@ -21,82 +24,97 @@ export function getTodayWeekdayIndex(): number {
   return jsDay === 0 ? 6 : jsDay - 1;
 }
 
-export function getDefaultWeatherStreakState(weather?: WeatherData | null, city = 'Ташкент'): WeatherStreakState {
+export function getMultiplier(streak: number): number {
+  if (streak >= 7) return 3.0;
+  if (streak >= 5) return 2.0;
+  if (streak >= 3) return 1.5;
+  return 1.0;
+}
+
+export function getDefaultCoinsStreakState(): CoinsStreakWidgetState {
   const todayIdx = getTodayWeekdayIndex();
   const days = [false, false, false, false, false, false, false];
-
   // Auto-light today's flame upon entering!
   for (let i = Math.max(0, todayIdx - 2); i <= todayIdx; i++) {
     days[i] = true;
   }
+  const streak = Math.max(1, days.filter(Boolean).length);
+  const mult = getMultiplier(streak);
+  const dailyBonus = Math.round(25 * mult);
 
   return {
-    temp: weather ? weather.temperature : 18,
-    feelsLike: weather ? weather.feelsLike : 17,
-    windSpeed: weather ? weather.windSpeed : 9,
-    rainProb: weather ? weather.rainProbabilityNext2h : 5,
-    condition: weather ? weather.conditionText : 'Ясно',
-    suitabilityText: weather ? weather.suitabilityText : 'Идеальные условия для бега',
-    city,
-    streak: Math.max(1, days.filter(Boolean).length),
+    coins: 120 + dailyBonus,
+    streak,
     days,
     todayIdx,
-    flameClaimedToday: true,
-    note: '🔥 Огонёк за вход начислен!',
+    dailyClaimed: true,
+    freezes: 0,
+    weekKm: 4.5,
+    note: `🔥 Огонёк за вход! +${dailyBonus} 🪙 (множитель x${mult})`,
   };
 }
 
-export function parseWeatherWidgetState(raw?: string | null): WeatherStreakState {
-  if (!raw) return getDefaultWeatherStreakState();
+export function parseCoinsWidgetState(raw?: string | null): CoinsStreakWidgetState {
+  if (!raw) return getDefaultCoinsStreakState();
   try {
     const p = JSON.parse(raw);
-    const def = getDefaultWeatherStreakState();
+    const def = getDefaultCoinsStreakState();
     return {
-      temp: typeof p.temp === 'number' ? p.temp : def.temp,
-      feelsLike: typeof p.feelsLike === 'number' ? p.feelsLike : def.feelsLike,
-      windSpeed: typeof p.windSpeed === 'number' ? p.windSpeed : def.windSpeed,
-      rainProb: typeof p.rainProb === 'number' ? p.rainProb : def.rainProb,
-      condition: typeof p.condition === 'string' ? p.condition : def.condition,
-      suitabilityText: typeof p.suitabilityText === 'string' ? p.suitabilityText : def.suitabilityText,
-      city: typeof p.city === 'string' ? p.city : def.city,
-      streak: typeof p.streak === 'number' ? p.streak : def.streak,
+      coins: typeof p.coins === 'number' ? Math.max(0, p.coins) : def.coins,
+      streak: typeof p.streak === 'number' ? Math.max(1, p.streak) : def.streak,
       days: Array.isArray(p.days) && p.days.length === 7 ? p.days : def.days,
       todayIdx: typeof p.todayIdx === 'number' ? p.todayIdx : def.todayIdx,
-      flameClaimedToday: typeof p.flameClaimedToday === 'boolean' ? p.flameClaimedToday : true,
+      dailyClaimed: typeof p.dailyClaimed === 'boolean' ? p.dailyClaimed : true,
+      freezes: typeof p.freezes === 'number' ? p.freezes : 0,
+      weekKm: typeof p.weekKm === 'number' ? p.weekKm : def.weekKm,
       note: typeof p.note === 'string' ? p.note : def.note,
     };
   } catch {
-    return getDefaultWeatherStreakState();
+    return getDefaultCoinsStreakState();
   }
 }
 
-export function applyWeatherWidgetAction(
-  state: WeatherStreakState,
-  action: string,
-  freshWeather?: WeatherData | null,
-): WeatherStreakState {
-  const next: WeatherStreakState = {
+export function applyCoinsWidgetAction(state: CoinsStreakWidgetState, action: string): CoinsStreakWidgetState {
+  const next: CoinsStreakWidgetState = {
     ...state,
     days: [...state.days],
   };
 
-  if (action === 'claim') {
-    if (!next.days[next.todayIdx]) {
-      next.days[next.todayIdx] = true;
-      next.streak = next.days.filter(Boolean).length;
+  if (!next.days[next.todayIdx]) {
+    next.days[next.todayIdx] = true;
+    next.streak = Math.max(1, next.days.filter(Boolean).length);
+  }
+  const mult = getMultiplier(next.streak);
+
+  if (action === 'run1km') {
+    const earned = Math.round(50 * mult);
+    next.coins += earned;
+    next.weekKm = Math.round((next.weekKm + 1.0) * 10) / 10;
+    next.note = `🏃 +1 км! Начислено +${earned} 🪙 (x${mult})`;
+  } else if (action === 'daily') {
+    if (!next.dailyClaimed) {
+      const bonus = Math.round(25 * mult);
+      next.coins += bonus;
+      next.dailyClaimed = true;
+      next.note = `🔥 Ежедневный бонус +${bonus} 🪙 получен!`;
+    } else {
+      next.note = `🔥 Огонёк горит! Множитель x${mult} активен`;
     }
-    next.flameClaimedToday = true;
-    next.note = `🔥 Огонёк активен! Стрик: ${next.streak} дн.`;
-  } else if (action === 'refresh') {
-    if (freshWeather) {
-      next.temp = freshWeather.temperature;
-      next.feelsLike = freshWeather.feelsLike;
-      next.windSpeed = freshWeather.windSpeed;
-      next.rainProb = freshWeather.rainProbabilityNext2h;
-      next.condition = freshWeather.conditionText;
-      next.suitabilityText = freshWeather.suitabilityText;
+  } else if (action === 'buy_freeze') {
+    if (next.coins >= 150) {
+      next.coins -= 150;
+      next.freezes = (next.freezes || 0) + 1;
+      next.note = `❄️ Заморозка стрика куплена! (В запасе: ${next.freezes})`;
+    } else {
+      next.note = `Нужно ещё ${150 - next.coins} 🪙 для Заморозки`;
     }
-    next.note = '🌤️ Погода обновлена только что';
+  } else if (action === 'buy_pass') {
+    if (next.coins >= 300) {
+      next.coins -= 300;
+      next.note = '👑 Street Pass на 3 дня активирован!';
+    } else {
+      next.note = `Нужно ещё ${300 - next.coins} 🪙 для Street Pass`;
+    }
   }
 
   return next;
@@ -104,10 +122,10 @@ export function applyWeatherWidgetAction(
 
 /**
  * Generates ultra-compact self-contained HTML for Telegram Bot API 10.4 In-Message Widget:
- * Weather for Running + Daily Flame Streak (automatically gives flame on open).
+ * Move-to-Earn RUSH Coins Wallet + Daily Flame Streak Multiplier + In-Message Shop.
  * Guaranteed < 4 KB when compressed with zlib level 9.
  */
-export function buildWeatherStreakWidgetHtml(): string {
+export function buildCoinsStreakWidgetHtml(): string {
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -115,90 +133,83 @@ export function buildWeatherStreakWidgetHtml(): string {
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;-webkit-tap-highlight-color:transparent}
-body{background:#08090C;color:#fff;padding:14px;border-radius:16px;border:1px solid rgba(198,255,51,.28);overflow:hidden}
-.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
-.brand{font-size:11px;font-weight:900;letter-spacing:1.2px;color:#C6FF33;text-transform:uppercase;display:flex;align-items:center;gap:6px}
+body{background:#08090C;color:#fff;padding:13px;border-radius:16px;border:1px solid rgba(198,255,51,.3);overflow:hidden}
+.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.brand{font-size:10px;font-weight:900;letter-spacing:1.1px;color:#C6FF33;text-transform:uppercase;display:flex;align-items:center;gap:5px}
 .dot{width:7px;height:7px;border-radius:50%;background:#FF6B00;box-shadow:0 0 8px #FF6B00}
-.streak{background:rgba(255,107,0,.18);border:1px solid rgba(255,107,0,.55);color:#FED7AA;font-size:11px;font-weight:800;padding:4px 10px;border-radius:999px;display:flex;align-items:center;gap:4px}
-.streak b{color:#FF8C00;font-size:12px}
-.days{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-bottom:12px}
-.day{background:#12151F;border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:6px 2px;text-align:center;transition:.2s}
-.day span{display:block;font-size:9px;color:#8E95A5;font-weight:700;margin-bottom:3px}
-.day i{display:inline-flex;width:20px;height:20px;border-radius:50%;align-items:center;justify-content:center;font-style:normal;font-size:11px;background:#1A1F2E;color:#555}
-.day.on{border-color:rgba(255,140,0,.55);background:rgba(255,107,0,.12)}
+.mult{background:rgba(255,107,0,.2);border:1px solid rgba(255,107,0,.6);color:#FED7AA;font-size:10px;font-weight:900;padding:3px 9px;border-radius:999px}
+.mult b{color:#C6FF33}
+.wallet{background:linear-gradient(135deg,#12151F,#1A142D);border:1px solid rgba(125,57,235,.45);border-radius:14px;padding:11px 12px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center}
+.bal-lbl{font-size:9px;color:#A78BFA;font-weight:800;letter-spacing:.8px;text-transform:uppercase;margin-bottom:2px}
+.bal{font-size:28px;font-weight:900;color:#fff;line-height:1;display:flex;align-items:center;gap:5px}
+.bal small{font-size:12px;color:#C6FF33;font-weight:900}
+.rate{text-align:right}
+.rate b{display:block;font-size:13px;font-weight:900;color:#C6FF33}
+.rate span{font-size:9px;color:#9CA3AF}
+.days{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:10px}
+.day{background:#12151F;border:1px solid rgba(255,255,255,.08);border-radius:9px;padding:5px 2px;text-align:center}
+.day span{display:block;font-size:8px;color:#8E95A5;font-weight:700;margin-bottom:2px}
+.day i{display:inline-flex;width:18px;height:18px;border-radius:50%;align-items:center;justify-content:center;font-style:normal;font-size:10px;background:#1A1F2E;color:#555}
+.day.on{border-color:rgba(255,140,0,.55);background:rgba(255,107,0,.14)}
 .day.on span{color:#FDBA74}
-.day.on i{background:linear-gradient(135deg,#FF8C00,#FF3D00);color:#fff;box-shadow:0 0 10px rgba(255,107,0,.45)}
-.day.cur{border-color:#C6FF33;box-shadow:0 0 10px rgba(198,255,51,.3)}
-.w-box{background:#12151F;border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:12px;margin-bottom:10px}
-.w-main{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
-.temp{font-size:32px;font-weight:900;line-height:1;color:#fff;display:flex;align-items:center;gap:6px}
-.cond{text-align:right}
-.cond b{display:block;font-size:13px;font-weight:800;color:#C6FF33}
-.cond span{font-size:10px;color:#8E95A5}
-.w-meta{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding-top:8px;border-top:1px solid rgba(255,255,255,.06);text-align:center}
-.w-meta div span{display:block;font-size:9px;color:#8E95A5}
-.w-meta div b{font-size:11px;color:#fff}
-.suit{margin-top:8px;padding:7px 10px;border-radius:10px;background:rgba(198,255,51,.1);border:1px solid rgba(198,255,51,.25);color:#C6FF33;font-size:11px;font-weight:700;text-align:center}
-.note{font-size:10px;color:#FDBA74;text-align:center;margin-bottom:10px;font-weight:600}
+.day.on i{background:linear-gradient(135deg,#FF8C00,#FF3D00);color:#fff;box-shadow:0 0 8px rgba(255,107,0,.45)}
+.day.cur{border-color:#C6FF33}
+.shop{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:9px}
+.rew{background:#12151F;border:1px solid rgba(255,255,255,.08);border-radius:11px;padding:7px 8px;text-align:left;cursor:pointer;color:#fff}
+.rew:active{transform:scale(.96)}
+.rew b{display:block;font-size:10px;font-weight:800;color:#fff}
+.rew span{font-size:9px;color:#C6FF33;font-weight:700}
+.note{font-size:10px;color:#FDBA74;text-align:center;margin-bottom:9px;font-weight:700}
 .btns{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-button{border:none;border-radius:999px;padding:9px 8px;font-size:11px;font-weight:800;cursor:pointer;transition:transform .1s}
-button:active{transform:scale(.95)}
-.b-flame{background:linear-gradient(135deg,#FF8C00,#FF4500);color:#fff;box-shadow:0 0 12px rgba(255,107,0,.35)}
-.b-ref{background:#1A1F2E;color:#C6FF33;border:1px solid rgba(198,255,51,.35)}
+.btn{border:none;border-radius:999px;padding:9px 6px;font-size:11px;font-weight:900;cursor:pointer}
+.btn:active{transform:scale(.95)}
+.b-run{background:#C6FF33;color:#08090C}
+.b-fl{background:linear-gradient(135deg,#FF8C00,#FF4500);color:#fff}
 </style>
 </head>
 <body>
 <div class="top">
-  <div class="brand"><span class="dot"></span>ПОГОДА &amp; СТРИК</div>
-  <div class="streak">🔥 <b id="st">1</b> ДН</div>
+  <div class="brand"><span class="dot"></span>RUSH COINS &amp; СТРИК</div>
+  <div class="mult">🔥 <span id="st">3</span> ДН • <b id="mt">x1.5</b></div>
+</div>
+<div class="wallet">
+  <div>
+    <div class="bal-lbl">МОЙ БАЛАНС</div>
+    <div class="bal">🪙 <span id="cn">158</span> <small>RUSH</small></div>
+  </div>
+  <div class="rate">
+    <b id="rt">+75 🪙 / км</b>
+    <span id="wk">За неделю: 4.5 км</span>
+  </div>
 </div>
 <div class="days" id="days"></div>
-<div class="w-box">
-  <div class="w-main">
-    <div class="temp"><span id="ico">☀️</span><span id="tp">+18°</span></div>
-    <div class="cond"><b id="cd">Ясно</b><span id="ct">Ташкент</span></div>
-  </div>
-  <div class="w-meta">
-    <div><span>Ощущается</span><b id="fl">+17°</b></div>
-    <div><span>Ветер</span><b id="wd">9 км/ч</b></div>
-    <div><span>Дождь</span><b id="rn">5%</b></div>
-  </div>
-  <div class="suit" id="su">Идеальные условия для бега</div>
+<div class="shop">
+  <button class="rew" onclick="act('buy_freeze')"><b>❄️ Заморозка (<span id="fz">0</span>)</b><span>Цена: 150 🪙</span></button>
+  <button class="rew" onclick="act('buy_pass')"><b>👑 Street Pass 3 дн</b><span>Цена: 300 🪙</span></button>
 </div>
 <div class="note" id="nt">🔥 Огонёк за вход начислен!</div>
 <div class="btns">
-  <button class="b-flame" onclick="act('claim')" id="fbtn">🔥 Огонёк получен</button>
-  <button class="b-ref" onclick="act('refresh')">🔄 Обновить погоду</button>
+  <button class="btn b-fl" onclick="act('daily')">🔥 Мой огонёк</button>
+  <button class="btn b-run" onclick="act('run1km')">🏃 Фарм +1 км</button>
 </div>
 <script>
 const L=['ПН','ВТ','СР','ЧТ','ПТ','СБ','ВС'];
-let S={temp:18,feelsLike:17,windSpeed:9,rainProb:5,condition:'Ясно',suitabilityText:'Идеальные условия для бега',city:'Ташкент',streak:1,days:[1,0,0,0,0,0,0],todayIdx:0,flameClaimedToday:true,note:'🔥 Огонёк за вход начислен!'};
-function parse(r){try{if(r){const p=JSON.parse(r);if(p&&typeof p.temp==='number')S=p;}}catch(e){}}
-function iconFor(c,rn){
-  const s=(c||'').toLowerCase();
-  if(s.includes('гроз'))return '⛈️';
-  if(s.includes('дожд')||s.includes('морос')||rn>=50)return '🌧️';
-  if(s.includes('снег'))return '❄️';
-  if(s.includes('облач')||s.includes('пасмур')||s.includes('туман'))return '⛅';
-  return '☀️';
-}
+let S={coins:158,streak:3,days:[1,1,1,0,0,0,0],todayIdx:2,dailyClaimed:true,freezes:0,weekKm:4.5,note:'🔥 Огонёк зажжён!'};
+function mult(s){return s>=7?3:s>=5?2:s>=3?1.5:1;}
+function parse(r){try{if(r){const p=JSON.parse(r);if(p&&typeof p.coins==='number')S=p;}}catch(e){}}
 function render(){
   if(S.days&&typeof S.todayIdx==='number'&&!S.days[S.todayIdx]){
     S.days[S.todayIdx]=true;
-    S.flameClaimedToday=true;
     S.streak=Math.max(1,S.days.filter(Boolean).length);
-    S.note='🔥 Огонёк за сегодняшний вход зажжён!';
   }
-  document.getElementById('tp').textContent=(S.temp>0?'+':'')+S.temp+'°';
-  document.getElementById('fl').textContent=(S.feelsLike>0?'+':'')+S.feelsLike+'°';
-  document.getElementById('wd').textContent=S.windSpeed+' км/ч';
-  document.getElementById('rn').textContent=S.rainProb+'%';
-  document.getElementById('cd').textContent=S.condition||'Ясно';
-  document.getElementById('ct').textContent=S.city||'Локация';
-  document.getElementById('su').textContent=S.suitabilityText||'Отлично для бега';
-  document.getElementById('ico').textContent=iconFor(S.condition,S.rainProb);
+  const m=mult(S.streak||1);
+  document.getElementById('cn').textContent=S.coins;
   document.getElementById('st').textContent=S.streak||1;
-  document.getElementById('nt').textContent=S.note||'🔥 Огонёк за вход начислен!';
+  document.getElementById('mt').textContent='x'+m;
+  document.getElementById('rt').textContent='+'+Math.round(50*m)+' 🪙 / км';
+  document.getElementById('wk').textContent='За неделю: '+(S.weekKm||0)+' км';
+  document.getElementById('fz').textContent=S.freezes||0;
+  document.getElementById('nt').textContent=S.note||'Бегай каждый день и копи монеты!';
   const d=document.getElementById('days');
   d.innerHTML='';
   L.forEach((lbl,i)=>{
@@ -211,13 +222,18 @@ function render(){
   });
 }
 function act(a){
-  if(a==='claim'){
-    if(S.days)S.days[S.todayIdx]=true;
-    S.flameClaimedToday=true;
-    S.streak=Math.max(1,(S.days||[]).filter(Boolean).length);
-    S.note='🔥 Огонёк активен! Стрик: '+S.streak+' дн.';
-  }else if(a==='refresh'){
-    S.note='⏳ Обновляю погоду...';
+  const m=mult(S.streak||1);
+  if(a==='run1km'){
+    const e=Math.round(50*m);S.coins+=e;S.weekKm=Math.round(((S.weekKm||0)+1)*10)/10;
+    S.note='🏃 +1 км! Заработано +'+e+' 🪙 (x'+m+')';
+  }else if(a==='buy_freeze'){
+    if(S.coins>=150){S.coins-=150;S.freezes=(S.freezes||0)+1;S.note='❄️ Заморозка куплена!';}
+    else{S.note='Нужно ещё '+(150-S.coins)+' 🪙 для Заморозки';}
+  }else if(a==='buy_pass'){
+    if(S.coins>=300){S.coins-=300;S.note='👑 Street Pass на 3 дня активирован!';}
+    else{S.note='Нужно ещё '+(300-S.coins)+' 🪙 для Street Pass';}
+  }else if(a==='daily'){
+    S.note='🔥 Огонёк горит! Множитель фарма x'+m;
   }
   render();
   if(typeof TelegramWidget!=='undefined'&&TelegramWidget.request){
