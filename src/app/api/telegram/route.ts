@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
-  buildCoinsStreakWidgetHtml,
-  getDefaultCoinsStreakState,
-  parseCoinsWidgetState,
-  applyCoinsWidgetAction,
-  getMultiplier,
+  buildStreakResultsWidgetHtml,
+  getDefaultStreakResultsState,
+  parseStreakResultsState,
+  applyStreakResultsAction,
 } from '@/lib/telegramWidget';
 
 const TELEGRAM_API = 'https://api.telegram.org';
@@ -13,18 +12,18 @@ function getBotToken(): string {
   return process.env.TELEGRAM_BOT_TOKEN || '';
 }
 
-async function sendCoinsWidget(chatId: number | string, appUrl: string) {
-  const initialState = getDefaultCoinsStreakState();
+async function sendStreakResultsWidget(chatId: number | string, appUrl: string) {
+  const initialState = getDefaultStreakResultsState();
   const res = await sendTelegramRequest('sendWidget', {
     chat_id: chatId,
-    html: buildCoinsStreakWidgetHtml(),
+    html: buildStreakResultsWidgetHtml(),
     chat_data: JSON.stringify(initialState),
     allow_queries: true,
     reply_markup: {
       inline_keyboard: [
         [
           {
-            text: '🏃 Выйти на пробежку (+Монеты)',
+            text: '🏃 Выйти на пробежку',
             web_app: { url: appUrl },
             style: 'success',
           },
@@ -35,18 +34,16 @@ async function sendCoinsWidget(chatId: number | string, appUrl: string) {
 
   // Fallback if client or DC doesn't support sendWidget yet
   if (!res?.ok) {
-    const mult = getMultiplier(initialState.streak);
     await sendTelegramRequest('sendMessage', {
       chat_id: chatId,
       text:
-        `🪙 *КОШЕЛЁК RUSH И ОГОНЁК ДНЯ!*\n\n` +
-        `• Баланс: *${initialState.coins} RUSH 🪙*\n` +
-        `• Стрик: *🔥 ${initialState.streak} дн.* (Множитель *x${mult}* = +${Math.round(50 * mult)} 🪙/км)\n\n` +
-        `Открывай интерактивный кошелёк и покупай ❄️ Заморозку или 👑 Street Pass на 3 дня за монеты! 👇`,
+        `🔥 *СТРИК И МОИ РЕЗУЛЬТАТЫ*\n\n` +
+        `• Огонёк за вход: *🔥 ${initialState.streak} дн. подряд*\n` +
+        `• Открывай карточку своих реальных забегов, ранга, калорий и рекордов прямо ниже! 👇`,
       parse_mode: 'Markdown',
       reply_markup: {
         inline_keyboard: [
-          [{ text: '🪙 Открыть Кошелёк & Стрик 🔥', web_app: { url: `${appUrl}/widget` }, style: 'primary' }],
+          [{ text: '🔥 Открыть Стрик и Результаты', web_app: { url: `${appUrl}/widget` }, style: 'primary' }],
           [{ text: '🏃 Запустить Rush Calory', web_app: { url: appUrl }, style: 'success' }],
         ],
       },
@@ -116,7 +113,7 @@ export async function GET(req: NextRequest) {
     const setCommandsRes = await sendTelegramRequest('setMyCommands', {
       commands: [
         { command: 'start', description: 'Запустить Rush Calory & ИИ-Сканер' },
-        { command: 'widget', description: '🪙 Кошелёк RUSH и Стрик 🔥' },
+        { command: 'widget', description: '🔥 Стрик и Мои результаты' },
         { command: 'duel', description: 'Создать PvP дуэль наперегонки' },
         { command: 'ranks', description: 'Ранги атлетов и Лиги' },
         { command: 'help', description: 'Как играть и правила игры' },
@@ -182,8 +179,8 @@ export async function POST(req: NextRequest) {
     const chatId = wq.message?.chat?.id;
     const messageId = wq.message?.message_id;
     const currentRaw = wq.message?.widget?.chat_data || null;
-    const currentState = parseCoinsWidgetState(currentRaw);
-    const nextState = applyCoinsWidgetAction(currentState, action);
+    const currentState = parseStreakResultsState(currentRaw);
+    const nextState = applyStreakResultsAction(currentState, action);
     const nextRaw = JSON.stringify(nextState);
 
     if (chatId && messageId) {
@@ -348,7 +345,7 @@ export async function POST(req: NextRequest) {
         },
       });
     } else if (data === 'open_battery_widget') {
-      await sendCoinsWidget(chatId, appUrl);
+      await sendStreakResultsWidget(chatId, appUrl);
     }
 
     return NextResponse.json({ ok: true });
@@ -361,8 +358,8 @@ export async function POST(req: NextRequest) {
     const fromUser = update.message.from;
     const firstName = fromUser?.first_name || 'Атлет';
 
-    if (text.startsWith('/widget') || text.startsWith('/streak') || text.startsWith('/coins')) {
-      await sendCoinsWidget(chatId, appUrl);
+    if (text.startsWith('/widget') || text.startsWith('/streak') || text.startsWith('/results')) {
+      await sendStreakResultsWidget(chatId, appUrl);
     } else if (text.startsWith('/start')) {
       const welcomeText =
         `⚡ *Привет, ${firstName}! Добро пожаловать в Rush Calory MMO!*\n\n` +
@@ -388,7 +385,7 @@ export async function POST(req: NextRequest) {
             ],
             [
               {
-                text: '🪙 Кошелёк RUSH & Стрик 🔥',
+                text: '🔥 Стрик и Мои результаты',
                 callback_data: 'open_battery_widget',
                 style: 'primary',
               },
