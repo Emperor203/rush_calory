@@ -25,6 +25,13 @@ import UserProfileButton from '@/components/auth/UserProfileButton';
 import { isStreetPassActive } from '@/lib/streetpass';
 import { calculateUserRank } from '@/lib/ranks';
 import { playRankUpSound } from '@/lib/sounds';
+import {
+  CoinsStreakWidgetState,
+  getDefaultCoinsStreakState,
+  getMultiplier,
+  getTodayWeekdayIndex,
+  applyCoinsWidgetAction,
+} from '@/lib/telegramWidget';
 
 // Lazy-loaded on-demand components (Reduces initial JS bundle size significantly)
 const GoogleAuthModal = dynamic(() => import('@/components/auth/GoogleAuthModal'), { ssr: false });
@@ -34,6 +41,7 @@ const StreetPassModal = dynamic(() => import('@/components/streetpass/StreetPass
 const PvpPassBlockedModal = dynamic(() => import('@/components/streetpass/PvpPassBlockedModal'), { ssr: false });
 const FoodScannerModal = dynamic(() => import('@/components/scanner/FoodScannerModal'), { ssr: false });
 const TelegramStoryModal = dynamic(() => import('@/components/stories/TelegramStoryModal'), { ssr: false });
+const RushCoinsModal = dynamic(() => import('@/components/wallet/RushCoinsModal'), { ssr: false });
 import {
   Flame,
   CloudRain,
@@ -66,6 +74,7 @@ import {
   X,
   Camera,
   Share2,
+  Coins,
 } from 'lucide-react';
 
 const PRESETS = [
@@ -183,6 +192,66 @@ export default function RunnerApp() {
   const [scannedInitialImage, setScannedInitialImage] = useState<{ base64: string; mimeType: string } | null>(null);
   const [isStoryModalOpen, setIsStoryModalOpen] = useState<boolean>(false);
   const [isHudCollapsed, setIsHudCollapsed] = useState<boolean>(false);
+  const [isCoinsModalOpen, setIsCoinsModalOpen] = useState<boolean>(false);
+  const [coinsWidgetState, setCoinsWidgetState] = useState<CoinsStreakWidgetState>(() =>
+    getDefaultCoinsStreakState(),
+  );
+  const [flameToast, setFlameToast] = useState<string | null>(null);
+
+  useEffect(() => {
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const todayIdx = getTodayWeekdayIndex();
+    try {
+      const savedRaw = localStorage.getItem('rush_coins_widget_v1');
+      let loaded: CoinsStreakWidgetState = savedRaw
+        ? JSON.parse(savedRaw)
+        : getDefaultCoinsStreakState();
+      if (!Array.isArray(loaded.days) || loaded.days.length !== 7) {
+        loaded = getDefaultCoinsStreakState();
+      }
+      loaded.todayIdx = todayIdx;
+      const lastFlameDate = localStorage.getItem('rush_last_flame_date_v2');
+      if (lastFlameDate !== todayStr) {
+        loaded.days[todayIdx] = true;
+        loaded.streak = Math.max(1, loaded.days.filter(Boolean).length);
+        const mult = getMultiplier(loaded.streak);
+        const bonus = Math.round(25 * mult);
+        loaded.coins = (loaded.coins || 0) + bonus;
+        loaded.dailyClaimed = true;
+        loaded.note = `🔥 Огонёк за вход! +${bonus} 🪙 (множитель x${mult})`;
+        localStorage.setItem('rush_last_flame_date_v2', todayStr);
+        localStorage.setItem('rush_coins_widget_v1', JSON.stringify(loaded));
+        setFlameToast(`🔥 Огонёк зажжён! +${bonus} RUSH 🪙 (стрик ${loaded.streak} дн • x${mult})`);
+        setTimeout(() => setFlameToast(null), 5000);
+      }
+      setCoinsWidgetState(loaded);
+    } catch {}
+  }, []);
+
+  const handleCoinsAction = (action: 'buy_freeze' | 'buy_pass' | 'daily') => {
+    const next = applyCoinsWidgetAction(coinsWidgetState, action);
+    if (action === 'buy_pass' && coinsWidgetState.coins >= 300) {
+      if (googleUser) {
+        const currentExp =
+          googleUser.streetPassExpiresAt && googleUser.streetPassExpiresAt > Date.now()
+            ? googleUser.streetPassExpiresAt
+            : Date.now();
+        const updatedUser: GoogleUser = {
+          ...googleUser,
+          hasStreetPass: true,
+          streetPassPlan: 'trial',
+          streetPassExpiresAt: currentExp + 3 * 86400000,
+        };
+        setGoogleUser(updatedUser);
+        saveGoogleUser(updatedUser);
+        next.note = '👑 Street Pass +3 дня активирован в вашем профиле!';
+      }
+    }
+    setCoinsWidgetState(next);
+    try {
+      localStorage.setItem('rush_coins_widget_v1', JSON.stringify(next));
+    } catch {}
+  };
 
   const openStreetPass = (tab: 'plans' | 'studio' = 'plans') => {
     setStreetPassTab(tab);
@@ -1572,6 +1641,31 @@ export default function RunnerApp() {
       setHistoryModalTab('summary');
       setIsWorkoutSummaryOpen(true);
 
+      // Award Move-to-Earn RUSH coins synced with Widget & Streak Multiplier!
+      const mult = getMultiplier(coinsWidgetState.streak || 1);
+      const earnedCoins = Math.max(15, Math.round(workoutRecord.distanceKm * 50 * mult));
+      const todayIdx = getTodayWeekdayIndex();
+      setCoinsWidgetState((prev) => {
+        const nextDays = [...(prev.days || [false, false, false, false, false, false, false])];
+        nextDays[todayIdx] = true;
+        const nextStreak = Math.max(1, nextDays.filter(Boolean).length);
+        const updated: CoinsStreakWidgetState = {
+          ...prev,
+          coins: (prev.coins || 0) + earnedCoins,
+          streak: nextStreak,
+          days: nextDays,
+          todayIdx,
+          weekKm: Math.round(((prev.weekKm || 0) + workoutRecord.distanceKm) * 10) / 10,
+          note: `🏃 Пробежка ${workoutRecord.distanceKm} км! +${earnedCoins} 🪙 (x${mult})`,
+        };
+        try {
+          localStorage.setItem('rush_coins_widget_v1', JSON.stringify(updated));
+        } catch {}
+        return updated;
+      });
+      setFlameToast(`🪙 За пробежку начислено +${earnedCoins} RUSH (множитель x${mult})!`);
+      setTimeout(() => setFlameToast(null), 5000);
+
       // Check if this run caused a Rank Up (level up like in Steam)!
       const prevKm = googleUser?.totalKmRun || 0;
       const newKm = prevKm + workoutRecord.distanceKm;
@@ -1949,6 +2043,20 @@ export default function RunnerApp() {
           >
             <History className="w-3.5 h-3.5 text-[#C6FF33]" />
             <span className="hidden md:inline">История</span>
+          </button>
+
+          {/* Move-to-Earn RUSH Coins & Flame Streak Pill */}
+          <button
+            type="button"
+            onClick={() => setIsCoinsModalOpen(true)}
+            className="pointer-events-auto flex items-center gap-1 bg-[#000000]/80 hover:bg-[#12151F] backdrop-blur-xl border border-orange-500/50 hover:border-[#C6FF33] px-2 py-1.5 sm:px-3 sm:py-2 rounded-2xl shadow-xl transition active:scale-95"
+            title="Кошелёк RUSH и Стрик огоньков (Move-to-Earn)"
+          >
+            <Coins className="w-3.5 h-3.5 text-[#C6FF33] shrink-0" />
+            <span className="font-mono font-black text-xs text-white">{coinsWidgetState.coins}</span>
+            <span className="text-[11px] font-heading font-black text-orange-400">
+              🔥{coinsWidgetState.streak}
+            </span>
           </button>
         </div>
 
@@ -2807,6 +2915,24 @@ export default function RunnerApp() {
         workout={completedWorkout}
         currentUser={googleUser}
       />
+
+      {/* Move-to-Earn RUSH Coins & Flame Streak Modal */}
+      <RushCoinsModal
+        isOpen={isCoinsModalOpen}
+        onClose={() => setIsCoinsModalOpen(false)}
+        state={coinsWidgetState}
+        onAction={handleCoinsAction}
+      />
+
+      {/* Auto-Flame / Coin Reward Toast */}
+      {flameToast && (
+        <div
+          onClick={() => setFlameToast(null)}
+          className="fixed top-16 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-full bg-[#12151F]/95 border border-orange-500/60 text-xs font-heading font-bold text-orange-200 shadow-[0_0_25px_rgba(255,107,0,0.4)] animate-fade-in whitespace-nowrap cursor-pointer"
+        >
+          {flameToast}
+        </div>
+      )}
     </div>
   );
 }
