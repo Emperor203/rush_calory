@@ -55,6 +55,8 @@ export default function GoogleAuthModal({
   const [clientId, setClientId] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isTelegramInputOpen, setIsTelegramInputOpen] = useState<boolean>(false);
+  const [customTelegramName, setCustomTelegramName] = useState<string>('');
 
   useEffect(() => {
     const existing = getStoredGoogleClientId();
@@ -172,7 +174,25 @@ export default function GoogleAuthModal({
             onClick={() => {
               if (typeof window !== 'undefined') {
                 const tg = (window as any).Telegram?.WebApp;
-                const tgUser = tg?.initDataUnsafe?.user;
+                let tgUser = tg?.initDataUnsafe?.user;
+
+                // Also try to parse tgWebAppData from URL params if available
+                if (!tgUser && window.location) {
+                  try {
+                    const hash = window.location.hash.slice(1);
+                    const search = window.location.search.slice(1);
+                    const params = new URLSearchParams(hash || search);
+                    const tgWebAppData = params.get('tgWebAppData');
+                    if (tgWebAppData) {
+                      const dataParams = new URLSearchParams(tgWebAppData);
+                      const userJson = dataParams.get('user');
+                      if (userJson) {
+                        tgUser = JSON.parse(decodeURIComponent(userJson));
+                      }
+                    }
+                  } catch (e) {}
+                }
+
                 if (tgUser && tgUser.id) {
                   const fullName = [tgUser.first_name, tgUser.last_name].filter(Boolean).join(' ') || 'Telegram Athlete';
                   const user: GoogleUser = {
@@ -199,32 +219,8 @@ export default function GoogleAuthModal({
                   return;
                 }
 
-                // If opened in browser without Telegram WebApp context
-                const nickname = prompt('Введите ваш Telegram @username или имя атлета:');
-                if (nickname && nickname.trim()) {
-                  const cleanName = nickname.trim().replace(/^@/, '');
-                  const user: GoogleUser = {
-                    id: `tg-${Date.now()}`,
-                    name: cleanName,
-                    email: `@${cleanName}`,
-                    avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(cleanName)}`,
-                    weightKg: currentUserWeight,
-                    totalCaloriesBurned: 0,
-                    totalKmRun: 0,
-                    completedRunsCount: 0,
-                    joinedAt: new Date().toISOString(),
-                    hasStreetPass: false,
-                    streetPassPlan: null,
-                    streetPassExpiresAt: null,
-                    neonTrailColor: '#00F5FF',
-                    mvpAnthemName: 'Cyberpunk Phonk (Neon Drift)',
-                    mvpAnthemUrl: '/sounds/anthem-drift.mp3',
-                    telegramUsername: cleanName,
-                  };
-                  saveGoogleUser(user);
-                  onUserLogin(user);
-                  onClose();
-                }
+                // If opened in APK or standalone browser without WebApp context, show inline input
+                setIsTelegramInputOpen(true);
               }
             }}
             className="w-full py-3 px-4 bg-[#24A1DE] hover:bg-[#1f93cc] text-white font-black text-xs rounded-2xl shadow-lg transition flex items-center justify-center gap-2.5 active:scale-98"
@@ -232,6 +228,82 @@ export default function GoogleAuthModal({
             <span className="text-base">✈️</span>
             <span>Войти через Telegram</span>
           </button>
+
+          {/* Inline Telegram input for APK / External Browser */}
+          {isTelegramInputOpen && (
+            <div className="p-3 bg-[#121212] border border-[#24A1DE]/40 rounded-2xl space-y-2.5 animate-slide-up">
+              <label className="text-[11px] text-gray-300 block font-semibold">
+                Введите ваш Telegram @username или имя:
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="@username"
+                  value={customTelegramName}
+                  onChange={(e) => setCustomTelegramName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && customTelegramName.trim()) {
+                      const clean = customTelegramName.trim().replace(/^@/, '');
+                      const user: GoogleUser = {
+                        id: `tg-${Date.now()}`,
+                        name: clean,
+                        email: `@${clean}`,
+                        avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(clean)}`,
+                        weightKg: currentUserWeight,
+                        totalCaloriesBurned: 0,
+                        totalKmRun: 0,
+                        completedRunsCount: 0,
+                        joinedAt: new Date().toISOString(),
+                        hasStreetPass: false,
+                        streetPassPlan: null,
+                        streetPassExpiresAt: null,
+                        neonTrailColor: '#00F5FF',
+                        mvpAnthemName: 'Cyberpunk Phonk (Neon Drift)',
+                        mvpAnthemUrl: '/sounds/anthem-drift.mp3',
+                        telegramUsername: clean,
+                      };
+                      saveGoogleUser(user);
+                      onUserLogin(user);
+                      onClose();
+                    }
+                  }}
+                  className="flex-1 bg-black/60 border border-white/20 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#24A1DE]"
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!customTelegramName.trim()) return;
+                    const clean = customTelegramName.trim().replace(/^@/, '');
+                    const user: GoogleUser = {
+                      id: `tg-${Date.now()}`,
+                      name: clean,
+                      email: `@${clean}`,
+                      avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(clean)}`,
+                      weightKg: currentUserWeight,
+                      totalCaloriesBurned: 0,
+                      totalKmRun: 0,
+                      completedRunsCount: 0,
+                      joinedAt: new Date().toISOString(),
+                      hasStreetPass: false,
+                      streetPassPlan: null,
+                      streetPassExpiresAt: null,
+                      neonTrailColor: '#00F5FF',
+                      mvpAnthemName: 'Cyberpunk Phonk (Neon Drift)',
+                      mvpAnthemUrl: '/sounds/anthem-drift.mp3',
+                      telegramUsername: clean,
+                    };
+                    saveGoogleUser(user);
+                    onUserLogin(user);
+                    onClose();
+                  }}
+                  className="px-4 py-2 bg-[#24A1DE] hover:bg-[#1f93cc] text-white font-bold text-xs rounded-xl transition active:scale-95 shrink-0"
+                >
+                  Войти
+                </button>
+              </div>
+            </div>
+          )}
 
           <p className="text-[11px] text-gray-400 text-center leading-relaxed">
             Откроется защищённое окно{' '}

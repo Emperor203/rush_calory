@@ -23,6 +23,7 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: 'cover',
+  themeColor: '#08090C',
 };
 
 export default function RootLayout({
@@ -31,8 +32,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="ru">
+    <html lang="ru" className="bg-[#08090C] h-full">
       <head>
+        <meta name="theme-color" content="#08090C" />
+        <meta name="background-color" content="#08090C" />
+        <meta name="mobile-web-app-capable" content="yes" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         {/* AI-RULES v3 §3 TYP-02: Pair #1 Oswald 400 (Display) + Golos Text 400 (Body). Exactly 2 weights. */}
@@ -56,7 +60,7 @@ export default function RootLayout({
           strategy="beforeInteractive"
         />
       </head>
-      <body className="bg-[#000000] text-white min-h-screen overflow-x-hidden">
+      <body className="bg-[#08090C] text-white h-full w-full overflow-hidden select-none m-0 p-0">
         {children}
       </body>
     </html>

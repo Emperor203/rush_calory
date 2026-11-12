@@ -21,16 +21,37 @@ const STORAGE_KEY = 'runner_google_user';
 const CLIENT_ID_KEY = 'google_client_id';
 
 /**
- * Extracts logged-in Telegram user if opened inside Telegram WebApp
+ * Extracts logged-in Telegram user if opened inside Telegram WebApp or from query params
  */
 export function getTelegramWebUser(weightKg = 70): GoogleUser | null {
   if (typeof window === 'undefined') return null;
+
+  // 1. Direct Telegram WebApp SDK object
   const tg = (window as any).Telegram?.WebApp;
-  const tgUser = tg?.initDataUnsafe?.user;
+  let tgUser = tg?.initDataUnsafe?.user;
+
+  // 2. Parse from tgWebAppData / URL query string if not yet populated in initDataUnsafe
+  if (!tgUser && typeof window.location !== 'undefined') {
+    try {
+      const hash = window.location.hash.slice(1);
+      const search = window.location.search.slice(1);
+      const params = new URLSearchParams(hash || search);
+      const tgWebAppData = params.get('tgWebAppData');
+      if (tgWebAppData) {
+        const dataParams = new URLSearchParams(tgWebAppData);
+        const userJson = dataParams.get('user');
+        if (userJson) {
+          tgUser = JSON.parse(decodeURIComponent(userJson));
+        }
+      }
+    } catch (e) {
+      // ignore param parse errors
+    }
+  }
+
   if (!tgUser || !tgUser.id) return null;
 
   const fullName = [tgUser.first_name, tgUser.last_name].filter(Boolean).join(' ') || 'Telegram Athlete';
-  const welcomeExpiry = Date.now() + 30 * 24 * 60 * 60 * 1000; // 30 days Street Pass trial for Telegram athletes
 
   return {
     id: `tg-${tgUser.id}`,

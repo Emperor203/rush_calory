@@ -256,14 +256,18 @@ export default function RunnerApp() {
   useEffect(() => {
     // 1. Telegram WebApp Integration & Auto-Login
     let savedUser = getSavedGoogleUser();
-    if (typeof window !== 'undefined' && (window as any).Telegram?.WebApp) {
-      const tg = (window as any).Telegram.WebApp;
-      try {
-        tg.ready();
-        tg.expand();
-        tg.setHeaderColor?.('#000000');
-        tg.setBackgroundColor?.('#000000');
-      } catch (e) {}
+    
+    // Check if opened inside Telegram WebApp or has Telegram initData
+    if (typeof window !== 'undefined') {
+      const tg = (window as any).Telegram?.WebApp;
+      if (tg) {
+        try {
+          tg.ready();
+          tg.expand();
+          tg.setHeaderColor?.('#08090C');
+          tg.setBackgroundColor?.('#08090C');
+        } catch (e) {}
+      }
 
       // If opening in Telegram and not logged in yet, auto-login with Telegram profile!
       if (!savedUser) {
@@ -1789,7 +1793,7 @@ export default function RunnerApp() {
     isGpsModalExplicitlyOpen && gpsStatus && (!gpsStatus.hasPermission || !gpsStatus.isAccurate);
 
   return (
-    <div className="relative w-screen h-screen overflow-hidden flex flex-col bg-[#0A0E17] text-gray-100 font-sans safe-top">
+    <div className="relative w-screen h-screen overflow-hidden flex flex-col bg-[#08090C] text-gray-100 font-sans">
       {/* Fullscreen Map Canvas */}
       <div className="absolute inset-0 z-0">
         <RunnerMap
@@ -1889,7 +1893,7 @@ export default function RunnerApp() {
       )}
 
       {/* --- TOP HEADER (Adaptive Mobile & Desktop) --- */}
-      <header className="absolute top-2 sm:top-4 left-3 right-3 sm:left-4 sm:right-4 z-40 flex items-center justify-between pointer-events-none">
+      <header className="absolute top-2 sm:top-4 left-3 right-3 sm:left-4 sm:right-4 z-40 flex items-center justify-between pointer-events-none safe-top">
         <div className="flex items-center gap-1.5 sm:gap-2">
           {/* Brand Chip */}
           <div className="pointer-events-auto flex items-center gap-1.5 sm:gap-2 bg-[#000000]/75 backdrop-blur-xl border border-white/10 p-1.5 sm:px-4 sm:py-2 rounded-2xl shadow-2xl">
@@ -2255,10 +2259,10 @@ export default function RunnerApp() {
         /* --- MOBILE BOTTOM SHEET & DESKTOP SIDEBAR PANEL (MAP-FIRST COMPACT DOCK) --- */
         <div
           onTouchStart={(e) => e.stopPropagation()}
-          className={`fixed bottom-0 left-0 right-0 md:absolute md:bottom-auto md:left-4 md:top-16 md:right-auto md:w-80 z-20 bg-[#000000]/85 backdrop-blur-2xl border-t md:border-2 border-white/10 rounded-t-3xl md:rounded-3xl shadow-[0_8px_32px_0_rgba(0,0,0,0.85)] bottom-sheet transition-all duration-300 ${
+          className={`fixed bottom-0 left-0 right-0 md:absolute md:bottom-auto md:left-4 md:top-16 md:right-auto md:w-80 z-20 bg-[#08090C]/90 backdrop-blur-2xl border-t md:border-2 border-white/10 rounded-t-3xl md:rounded-3xl shadow-[0_8px_32px_0_rgba(0,0,0,0.85)] bottom-sheet transition-all duration-300 safe-bottom ${
             isMobileExpanded
               ? 'max-h-[85dvh] overflow-y-auto overscroll-contain p-4 pb-6 md:p-3.5'
-              : 'max-h-[96px] overflow-hidden p-2.5 px-3.5 pb-2 md:overflow-y-auto md:max-h-[85vh] md:p-3.5'
+              : 'max-h-[110px] overflow-hidden p-2.5 px-3.5 pb-2 md:overflow-y-auto md:max-h-[85vh] md:p-3.5'
           }`}
         >
           {/* Mobile Drag Handle & Toggle Header */}

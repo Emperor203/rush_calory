@@ -31,9 +31,12 @@ body {
   background: var(--c-carbon);
   font-family: 'Golos Text', -apple-system, BlinkMacSystemFont, sans-serif;
   font-weight: 400;
+  height: 100%;
   min-height: 100vh;
+  min-height: 100dvh;
   min-height: 100svh;
-  overflow-x: hidden;
+  overflow: hidden;
+  overscroll-behavior: none;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -126,11 +129,11 @@ body {
 
 /* Safe area insets for mobile notches / home bars */
 .safe-bottom {
-  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
 }
 
 .safe-top {
-  padding-top: max(0.75rem, env(safe-area-inset-top));
+  padding-top: max(0.75rem, env(safe-area-inset-top, 0px));
 }
 
 /* Mobile Bottom Sheet transitions & scrolling */
