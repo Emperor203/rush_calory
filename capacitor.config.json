@@ -1,0 +1,20 @@
+{
+  "appId": "app.rushcalory.android",
+  "appName": "Rush Calory",
+  "webDir": "public",
+  "server": {
+    "url": "https://rush-calory.vercel.app",
+    "cleartext": false,
+    "allowNavigation": [
+      "rush-calory.vercel.app",
+      "*.vercel.app",
+      "accounts.google.com",
+      "*.google.com",
+      "*.supabase.co"
+    ]
+  },
+  "android": {
+    "backgroundColor": "#08090C",
+    "allowMixedContent": true
+  }
+}
