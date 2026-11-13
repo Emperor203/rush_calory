@@ -1896,7 +1896,7 @@ export default function RunnerApp() {
       <header className="absolute top-2 sm:top-4 left-3 right-3 sm:left-4 sm:right-4 z-40 flex items-center justify-between pointer-events-none safe-top">
         <div className="flex items-center gap-1.5 sm:gap-2">
           {/* Brand Chip */}
-          <div className="pointer-events-auto flex items-center gap-1.5 sm:gap-2 liquid-glass liquid-glass-interactive p-1.5 sm:px-4 sm:py-2 rounded-2xl shadow-2xl">
+          <div className="pointer-events-auto flex items-center gap-1.5 sm:gap-2 bg-[#000000]/75 backdrop-blur-xl border border-white/10 p-1.5 sm:px-4 sm:py-2 rounded-2xl shadow-2xl">
             <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl overflow-hidden border border-[#7D39EB] bg-[#000000] flex items-center justify-center shadow-lg shrink-0">
               <img src="/avatar.jpg" alt="Calorie Runner" className="w-full h-full object-cover" />
             </div>
@@ -1912,7 +1912,7 @@ export default function RunnerApp() {
 
           {/* Supabase Live Online Badge (Pure Lime & Black) */}
           <div
-            className="pointer-events-auto flex items-center gap-1 liquid-glass px-2 py-1.5 sm:px-3 sm:py-2 rounded-2xl shadow-xl text-[#C6FF33] border-2 border-[#C6FF33]/60"
+            className="pointer-events-auto flex items-center gap-1 bg-[#000000]/75 backdrop-blur-xl border-2 border-[#C6FF33] px-2 py-1.5 sm:px-3 sm:py-2 rounded-2xl shadow-xl text-[#C6FF33]"
             title={`${onlineRunners.length + (googleUser ? 1 : 0)} бегунов онлайн сейчас (Supabase Realtime)`}
           >
             <span className="relative flex h-2 w-2">
@@ -1948,7 +1948,7 @@ export default function RunnerApp() {
           <button
             type="button"
             onClick={openWorkoutHistory}
-            className="pointer-events-auto flex items-center gap-1 liquid-glass liquid-glass-interactive text-gray-200 hover:text-[#C6FF33] p-1.5 sm:px-3 sm:py-2 rounded-2xl shadow-xl font-bold text-xs transition active:scale-95"
+            className="pointer-events-auto flex items-center gap-1 bg-[#121212]/75 hover:bg-[#1c1c1c] backdrop-blur-xl border border-white/10 hover:border-[#C6FF33] text-gray-200 hover:text-[#C6FF33] p-1.5 sm:px-3 sm:py-2 rounded-2xl shadow-xl font-bold text-xs transition active:scale-95"
             title="История моих пробежек"
           >
             <History className="w-3.5 h-3.5 text-[#C6FF33]" />
@@ -1959,7 +1959,7 @@ export default function RunnerApp() {
         {/* Map Styles & GPS Target + Google User */}
         <div className="pointer-events-auto flex items-center gap-1.5 sm:gap-2">
           {/* Desktop Only Map Styles Bar */}
-          <div className="hidden md:flex items-center gap-1.5 liquid-glass p-1.5 rounded-2xl shadow-2xl">
+          <div className="hidden md:flex items-center gap-1.5 bg-[#000000]/75 backdrop-blur-xl border border-white/10 p-1.5 rounded-2xl shadow-2xl">
             <button
               onClick={() => setMapStyle('dark')}
               className={`px-2.5 py-1 rounded-xl text-[11px] font-bold transition flex items-center gap-1.5 ${
@@ -2006,7 +2006,7 @@ export default function RunnerApp() {
               setScannedInitialImage(null);
               setIsFoodScannerOpen(true);
             }}
-            className="pointer-events-auto hidden md:flex items-center gap-2 px-4 py-2 rounded-full liquid-glass-pill text-black text-xs font-heading uppercase tracking-wider font-black transition active:scale-95 ease-signature"
+            className="pointer-events-auto hidden md:flex items-center gap-2 px-4 py-2 rounded-full bg-[#C6FF33] hover:bg-[#b0f020] text-black text-xs font-heading uppercase tracking-wider font-black shadow-[0_0_20px_rgba(198,255,51,0.35)] transition active:scale-95 ease-signature"
             title="Открыть камеру и распознать еду через ИИ"
           >
             <Camera className="w-4 h-4 fill-black" />
@@ -2019,7 +2019,7 @@ export default function RunnerApp() {
             onClick={() => openStreetPass('plans')}
             className={`pointer-events-auto flex items-center gap-1 p-1 sm:px-2.5 sm:py-1 rounded-2xl shadow-xl font-black text-xs transition active:scale-95 ${
               isStreetPassActive(googleUser)
-                ? 'liquid-glass border-2 border-[#C6FF33] text-[#C6FF33] shadow-[0_0_15px_rgba(198,255,51,0.25)]'
+                ? 'bg-[#000000]/75 backdrop-blur-xl border-2 border-[#C6FF33] text-[#C6FF33] shadow-[0_0_15px_rgba(198,255,51,0.25)]'
                 : 'bg-[#7D39EB]/90 hover:bg-[#6c28d9] backdrop-blur-md text-white border border-purple-400/30'
             }`}
             title="Уличный допуск (Street Pass) — соревновательный пропуск атлета"
@@ -2046,7 +2046,7 @@ export default function RunnerApp() {
       {!activeBattle && !activeRoom && (
         <div className="md:hidden absolute top-16 left-3 z-10 flex flex-col items-start gap-2 pointer-events-none">
           {/* Floating Map Layers switcher */}
-          <div className="pointer-events-auto liquid-glass p-1 rounded-2xl shadow-2xl flex flex-col gap-1">
+          <div className="pointer-events-auto bg-[#000000]/75 backdrop-blur-xl border border-white/10 p-1 rounded-2xl shadow-2xl flex flex-col gap-1">
             <button
               onClick={() => setMapStyle('dark')}
               className={`w-8 h-8 rounded-xl text-xs transition flex items-center justify-center ${
@@ -2079,7 +2079,7 @@ export default function RunnerApp() {
           {/* Floating GPS Target button */}
           <button
             onClick={() => runStrictGpsVerification(true)}
-            className="pointer-events-auto w-9 h-9 rounded-2xl liquid-glass liquid-glass-interactive flex items-center justify-center text-[#C6FF33] shadow-2xl active:scale-95 transition"
+            className="pointer-events-auto w-9 h-9 rounded-2xl bg-[#000000]/75 backdrop-blur-xl border border-white/10 flex items-center justify-center text-[#C6FF33] hover:border-[#C6FF33] shadow-2xl active:scale-95 transition"
             title="Мой точный GPS"
           >
             <Crosshair className={`w-4 h-4 text-[#C6FF33] ${isCheckingGps ? 'animate-spin' : ''}`} />
@@ -2092,7 +2092,7 @@ export default function RunnerApp() {
               setScannedInitialImage(null);
               setIsFoodScannerOpen(true);
             }}
-            className="pointer-events-auto w-9 h-9 rounded-2xl liquid-glass-pill flex items-center justify-center text-black active:scale-95 transition"
+            className="pointer-events-auto w-9 h-9 rounded-2xl bg-[#C6FF33] flex items-center justify-center text-black shadow-[0_0_20px_rgba(198,255,51,0.4)] active:scale-95 transition"
             title="Сфотографировать еду"
           >
             <Camera className="w-4 h-4 fill-black" />
@@ -2259,7 +2259,7 @@ export default function RunnerApp() {
         /* --- MOBILE BOTTOM SHEET & DESKTOP SIDEBAR PANEL (MAP-FIRST COMPACT DOCK) --- */
         <div
           onTouchStart={(e) => e.stopPropagation()}
-          className={`fixed bottom-0 left-0 right-0 md:absolute md:bottom-auto md:left-4 md:top-16 md:right-auto md:w-80 z-20 liquid-glass-dock rounded-t-3xl md:rounded-3xl bottom-sheet transition-all duration-300 safe-bottom ${
+          className={`fixed bottom-0 left-0 right-0 md:absolute md:bottom-auto md:left-4 md:top-16 md:right-auto md:w-80 z-20 bg-[#08090C]/90 backdrop-blur-2xl border-t md:border-2 border-white/10 rounded-t-3xl md:rounded-3xl shadow-[0_8px_32px_0_rgba(0,0,0,0.85)] bottom-sheet transition-all duration-300 safe-bottom ${
             isMobileExpanded
               ? 'max-h-[85dvh] overflow-y-auto overscroll-contain p-4 pb-6 md:p-3.5'
               : 'max-h-[110px] overflow-hidden p-2.5 px-3.5 pb-2 md:overflow-y-auto md:max-h-[85vh] md:p-3.5'
@@ -2305,7 +2305,7 @@ export default function RunnerApp() {
                     type="button"
                     onClick={() => handleGenerateRoute()}
                     disabled={isGenerating}
-                    className="flex-1 py-3 px-4 liquid-glass-pill text-black font-heading text-xs tracking-wider rounded-full flex items-center justify-center gap-1.5 active:scale-95 ease-signature"
+                    className="flex-1 py-3 px-4 bg-[#C6FF33] hover:bg-[#b0f020] text-black font-heading text-xs tracking-wider rounded-full shadow-lg transition flex items-center justify-center gap-1.5 active:scale-95 ease-signature"
                   >
                     {isGenerating ? (
                       <div className="w-3.5 h-3.5 border-2 border-black border-t-transparent rounded-full animate-spin" />
@@ -2334,7 +2334,7 @@ export default function RunnerApp() {
                     setScannedInitialImage(null);
                     setIsFoodScannerOpen(true);
                   }}
-                  className="h-11 px-3.5 liquid-glass-pill text-black font-heading font-black text-xs uppercase tracking-wider rounded-full flex items-center gap-1.5 active:scale-95 shrink-0 ease-signature cursor-pointer"
+                  className="h-11 px-3.5 bg-[#C6FF33] hover:bg-[#b0f020] text-black font-heading font-black text-xs uppercase tracking-wider rounded-full transition flex items-center gap-1.5 shadow-[0_0_15px_rgba(198,255,51,0.3)] active:scale-95 shrink-0 ease-signature cursor-pointer"
                   title="Сфотографировать блюдо или выбрать из галереи"
                 >
                   <Camera className="w-4 h-4 fill-black" />
@@ -2345,7 +2345,7 @@ export default function RunnerApp() {
                   type="button"
                   onClick={openWorkoutHistory}
                   aria-label="История пробежек"
-                  className="w-11 h-11 liquid-glass liquid-glass-interactive text-gray-300 rounded-full flex items-center justify-center active:scale-95 shrink-0"
+                  className="w-11 h-11 bg-[#12151F] hover:bg-[#1a1e2b] border border-white/10 text-gray-300 rounded-full transition flex items-center justify-center active:scale-95 shrink-0"
                 >
                   <History className="w-4 h-4 text-[#C6FF33]" />
                 </button>
