@@ -103,6 +103,105 @@ body {
   box-shadow: 0 0 30px rgba(125, 57, 235, 0.4);
 }
 
+/* ==========================================================================
+   LIQUID GLASS EFFECT (Apple macOS Style)
+   ========================================================================== */
+
+.liquid-glass {
+  position: relative;
+  isolation: isolate;
+  background: rgba(10, 14, 23, 0.65) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(190%) !important;
+  backdrop-filter: blur(20px) saturate(190%) !important;
+  box-shadow:
+    0 10px 30px -5px rgba(0, 0, 0, 0.7),
+    0 0 1px 1px rgba(255, 255, 255, 0.08),
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.35),
+    inset 0 -1px 1px 0 rgba(0, 0, 0, 0.5) !important;
+  transition: transform 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+              box-shadow 0.35s ease,
+              background 0.35s ease !important;
+}
+
+.liquid-glass::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: radial-gradient(
+    140% 100% at 50% 0%,
+    rgba(255, 255, 255, 0.16) 0%,
+    rgba(255, 255, 255, 0.03) 45%,
+    transparent 70%
+  );
+  box-shadow:
+    inset 1.5px 1.5px 1px 0 rgba(255, 255, 255, 0.45),
+    inset -1px -1px 1px 1px rgba(255, 255, 255, 0.15);
+}
+
+.liquid-glass-interactive:hover {
+  background: rgba(16, 22, 36, 0.78) !important;
+  box-shadow:
+    0 16px 36px -4px rgba(0, 0, 0, 0.85),
+    0 0 25px rgba(198, 255, 51, 0.22),
+    inset 0 1.5px 2px 0 rgba(255, 255, 255, 0.55),
+    inset 0 -1px 1px 0 rgba(0, 0, 0, 0.6) !important;
+}
+
+.liquid-glass-dock {
+  position: relative;
+  isolation: isolate;
+  background: rgba(8, 9, 12, 0.72) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(200%) !important;
+  backdrop-filter: blur(24px) saturate(200%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  box-shadow:
+    0 20px 50px rgba(0, 0, 0, 0.8),
+    inset 0 1.5px 1.5px 0 rgba(255, 255, 255, 0.4),
+    inset 0 -1.5px 1.5px 0 rgba(0, 0, 0, 0.6) !important;
+}
+
+.liquid-glass-dock::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.12) 0%,
+    rgba(255, 255, 255, 0.02) 40%,
+    transparent 100%
+  );
+  box-shadow:
+    inset 1px 1px 1px 0 rgba(255, 255, 255, 0.35),
+    inset -1px -1px 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.liquid-glass-pill {
+  position: relative;
+  isolation: isolate;
+  background: rgba(198, 255, 51, 0.9) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  backdrop-filter: blur(12px) !important;
+  box-shadow:
+    0 8px 24px rgba(198, 255, 51, 0.35),
+    inset 0 1.5px 2px 0 rgba(255, 255, 255, 0.8),
+    inset 0 -1.5px 2px 0 rgba(0, 0, 0, 0.3) !important;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+}
+
+.liquid-glass-pill:hover {
+  transform: translateY(-1px) scale(1.02);
+  box-shadow:
+    0 12px 28px rgba(198, 255, 51, 0.5),
+    inset 0 2px 3px 0 rgba(255, 255, 255, 0.95),
+    inset 0 -1.5px 2px 0 rgba(0, 0, 0, 0.3) !important;
+}
+
 /* Custom scrollbars */
 ::-webkit-scrollbar {
   width: 6px;
